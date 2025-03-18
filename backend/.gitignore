@@ -1,5 +1,7 @@
 # Maven directory
 /target/
+!**/src/main/**/target/
+!**/src/test/**/target/
 
 # Maven settings
 .mvn/
@@ -15,6 +17,7 @@
 .idea/
 *.iml
 *.iws
+*.ipr
 
 # Eclipse/STS settings
 .project
@@ -22,6 +25,15 @@
 .settings/
 .apt_generated/
 .factorypath
+.springBeans
+.sts4-cache
+
+# NetBeans settings
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
 
 # OS temporary files
 .DS_Store
@@ -60,6 +72,8 @@ logs/
 
 # Build reports
 /build/
+!**/src/main/**/build/
+!**/src/test/**/build/
 /test-output/
 
 # Local dependencies
@@ -69,3 +83,7 @@ logs/
 # Sensitive configuration files
 application-*.yml
 application-*.properties
+
+# Miscellaneous
+HELP.md
+.DS_Store
