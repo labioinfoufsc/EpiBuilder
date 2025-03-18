@@ -1,4 +1,4 @@
-package ufsc.br.epibuilder_backend;
+package ufsc.br.epibuilder;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
