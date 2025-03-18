@@ -1,4 +1,4 @@
-package ufsc.br.epibuilder_backend;
+package ufsc.br.epibuilder;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
