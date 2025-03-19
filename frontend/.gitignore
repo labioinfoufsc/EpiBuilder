@@ -19,6 +19,7 @@ coverage/
 *.swo
 .DS_Store
 Thumbs.db
+.editorconfig
 
 # Environment variables
 .env
