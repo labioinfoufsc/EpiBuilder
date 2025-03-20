@@ -1,0 +1,44 @@
+html, body {
+  height: 100%;
+}
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.content {
+  flex: 1;
+}
+
+.footer {
+  background-color: white;
+  color: black;
+  position: relative;
+  width: 100%;
+  z-index: 1000;
+  margin-top: calc(5rem + 10vh);
+
+
+  i {
+    font-size: 1rem;
+    color: #6AA5D9;
+    text-decoration: none;
+    transition: color 0.3s ease;
+
+    &:hover {
+      color: #5c8ea1;
+    }
+  }
+
+  .container {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  p {
+    font-size: 1rem;
+    margin-bottom: 0;
+  }
+}
