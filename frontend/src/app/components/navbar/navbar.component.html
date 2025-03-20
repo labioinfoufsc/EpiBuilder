@@ -1,0 +1,90 @@
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+  <div class="container-fluid">
+    <a class="nav-link" style="cursor: pointer">
+      <img
+        src="../../../assets/epibuilder-logo.png"
+        alt="EpiBuilder"
+        style="width: 30%; height: 30%"
+        class="d-inline-block align-text-top"
+    /></a>
+
+    <button
+      class="navbar-toggler"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#navbarNavDropdown"
+      aria-controls="navbarNavDropdown"
+      aria-expanded="false"
+      aria-label="Toggle navigation"
+    >
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div
+      class="collapse navbar-collapse"
+      id="navbarNavDropdown"
+      *ngIf="isLoggedIn()"
+    >
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item">
+          <a
+            class="nav-link"
+            [ngClass]="{ 'selected-menu-item': isActive('new') }"
+            (click)="goToPage('new')"
+          >
+            <i class="fas fa-file-upload"></i>
+            New Task
+          </a>
+        </li>
+        <li class="nav-item">
+          <a
+            class="nav-link"
+            [ngClass]="{ 'selected-menu-item': isActive('results') }"
+            (click)="goToPage('results')"
+          >
+          <i class="fas fa-table"></i>
+            View Data
+          </a>
+        </li>
+        <li class="nav-item" *ngIf="this.user?.role === 'ADMIN'">
+          <a
+            class="nav-link"
+            [ngClass]="{ 'selected-menu-item': isActive('dbs') }"
+            (click)="goToPage('dbs')"
+          >
+            <i class="fas fa-database"></i>
+            Databases Management
+          </a>
+        </li>
+        <li class="nav-item" *ngIf="this.user?.role === 'ADMIN'">
+          <a
+            class="nav-link"
+            [ngClass]="{ 'selected-menu-item': isActive('users') }"
+            (click)="goToPage('users')"
+          >
+            <i class="fa-solid fa-users"></i>
+            Users Management
+          </a>
+        </li>
+        <li class="nav-item">
+          <a
+            class="nav-link"
+            [ngClass]="{ 'selected-menu-item': isActive('profile') }"
+            (click)="goToPage('profile')"
+          >
+            <i class="fa-solid fa-gear"></i>
+            My Profile
+          </a>
+        </li>
+        <li class="nav-item ms-auto">
+          <a class="nav-link" (click)="onLogout()">
+            <i class="fas fa-sign-out-alt"></i>
+            Logout (<b
+              ><i>{{ this.user?.username }}</i></b
+            >)
+          </a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>

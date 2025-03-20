@@ -1,0 +1,17 @@
+.nav-link {
+  color: #63a5d8;
+  font-size: smaller;
+}
+
+.nav-link:hover {
+  color: #63a5d8;
+}
+
+.selected-menu-item {
+  background-color: #63a5d8 !important;
+  color: white !important;
+}
+
+li > a {
+  cursor: pointer;
+}
