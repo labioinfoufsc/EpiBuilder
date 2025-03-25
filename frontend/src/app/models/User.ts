@@ -16,6 +16,7 @@ import { EpitopeTaskData } from "./EpitopeTaskData";
  * - `role`: The role or permission level assigned to the user (e.g., admin, user, etc.).
  * - `lastExecutions`: An optional array of `EpitopeTaskData` instances representing the 
  *   user’s recent executions or tasks performed within the system.
+ * - `token`: An optional token used for authentication and authorization purposes.
  *
  * This class is essential for managing user accounts, securing authentication, 
  * handling user-specific access, and tracking past executions or actions within the system.
