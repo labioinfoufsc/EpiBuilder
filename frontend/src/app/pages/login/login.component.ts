@@ -1,17 +1,17 @@
-import { Component } from '@angular/core';
-import { FormGroup, FormBuilder, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
-import { LoginService } from '../../services/login/login.service';
+import { Component } from "@angular/core";
+import { FormGroup, FormBuilder, Validators } from "@angular/forms";
+import { Router } from "@angular/router";
+import { LoginService } from "../../services/login/login.service";
 
 @Component({
-  selector: 'app-login',
+  selector: "app-login",
   standalone: false,
-  templateUrl: './login.component.html',
-  styleUrls: ['./login.component.scss'],
+  templateUrl: "./login.component.html",
+  styleUrls: ["./login.component.scss"],
 })
 export class LoginComponent {
   loginForm: FormGroup;
-  loginError: string = '';
+  loginError: string = "";
 
   constructor(
     private fb: FormBuilder,
@@ -19,8 +19,8 @@ export class LoginComponent {
     private router: Router
   ) {
     this.loginForm = this.fb.group({
-      username: ['', Validators.required],
-      password: ['', Validators.required],
+      username: ["", Validators.required],
+      password: ["", Validators.required],
     });
   }
 
@@ -29,7 +29,7 @@ export class LoginComponent {
    */
   onSubmit() {
     if (this.loginForm.invalid) {
-      this.loginError = 'Username and password are required';
+      this.loginError = "Username and password are required";
       return;
     }
 
@@ -37,16 +37,15 @@ export class LoginComponent {
     this.loginService.login(username, password).subscribe({
       next: (response) => {
         if (response && response.token) {
-          this.loginError = '';
-          console.log(response)
-          //this.router.navigate(['/new']);
+          this.loginError = "";
+          this.router.navigate(["/new"]);
         } else {
           this.loginError = response.message;
         }
       },
       error: (err) => {
         this.loginError =
-          err.error?.message || 'Login failed. Please try again later.';
+          err.error?.message || "Login failed. Please try again later.";
       },
     });
   }
