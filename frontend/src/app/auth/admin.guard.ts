@@ -1,48 +1,26 @@
 import { Injectable } from '@angular/core';
-import {
-  ActivatedRouteSnapshot,
-  CanActivate,
-  Router,
-  RouterStateSnapshot,
-} from '@angular/router';
+import { ActivatedRouteSnapshot, CanActivate, Router, RouterStateSnapshot } from '@angular/router';
 import { LoginService } from '../services/login/login.service';
-
-/**
- * AdminGuard is a route guard responsible for controlling access to specific routes
- * based on the user's authentication state and role.
- * It implements the CanActivate interface from Angular Router.
- */
 @Injectable({
-  providedIn: 'root',
+  providedIn: 'root'
 })
 export class AdminGuard implements CanActivate {
-  /**
-   * Creates an instance of AdminGuard.
-   * @param loginService The service responsible for user authentication and session management.
-   * @param router The Angular Router used for navigation.
-   */
   constructor(private loginService: LoginService, private router: Router) {}
 
-  /**
-   * Determines if the route can be activated based on the user's authentication and role.
-   *
-   * @param route The current activated route snapshot containing route metadata.
-   * @param state The router state snapshot, containing the URL of the target route.
-   * @returns A boolean value indicating whether the user can activate the requested route.
-   */
   canActivate(route: ActivatedRouteSnapshot, state: RouterStateSnapshot): boolean {
+    const isLoggedIn = this.loginService.getUser() !== null;
     const userRole = this.loginService.getUser()?.role;
-    const requiredRole = route.data['role'];
+    const requiredRole = route.data['role']; // Pega a role esperada da configuração da rota
 
-    // Redirect authenticated users trying to access the login page.
-    if (this.loginService.getUser() != null && state.url === '/login') {
+    // Se o usuário já está logado e tenta acessar login, redireciona para home
+    if (isLoggedIn && state.url === '/login') {
       this.router.navigate(['/new']);
       return false;
     }
 
-    // Deny access if the user's role does not match the required role for the route.
+    // Se a rota exige uma role específica e o usuário não tem essa role, bloqueia
     if (requiredRole && userRole !== requiredRole) {
-      this.router.navigate(['/']);
+      this.router.navigate(['/']); // Redireciona para home ou outra página segura
       return false;
     }
 

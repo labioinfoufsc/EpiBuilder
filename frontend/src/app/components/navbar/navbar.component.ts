@@ -1,7 +1,8 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
-import { Router } from '@angular/router';
-import { LoginService } from '../../services/login/login.service';
-import { User } from '../../models/User';
+import { Component, OnInit, ChangeDetectorRef } from "@angular/core";
+import { Router } from "@angular/router";
+import { LoginService } from "../../services/login/login.service";
+import { User } from "../../models/User";
+
 
 @Component({
   selector: 'app-navbar',
@@ -33,7 +34,7 @@ export class NavbarComponent implements OnInit {
    * @returns True if logged in, otherwise false.
    */
   isLoggedIn(): boolean {
-    return this.loginService.getUser() !== undefined;
+    return this.loginService.getUser() !== null;
   }
 
   /**
