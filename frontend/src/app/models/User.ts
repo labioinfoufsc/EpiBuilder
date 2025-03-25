@@ -1,10 +1,11 @@
+import { EpitopeTaskData } from "./EpitopeTaskData";
+
 /**
- *
  * Represents a user within the system, including their details and execution history.
  *
- * This model stores essential information about a user, including their unique
- * identifier, username, name, password, role and token.
- * It is used to manage user data, authenticate access, assign roles, and track previous
+ * This model stores essential information about a user, including their unique 
+ * identifier, username, name, password, role, and a history of their last executions.
+ * It is used to manage user data, authenticate access, assign roles, and track previous 
  * tasks or processes that the user has executed.
  *
  * Properties:
@@ -13,28 +14,27 @@
  * - `name`: The full name of the user.
  * - `password`: The password used for authenticating the user’s login.
  * - `role`: The role or permission level assigned to the user (e.g., admin, user, etc.).
- * - `token`: The authentication token used to validate the user’s session and access.
+ * - `lastExecutions`: An optional array of `EpitopeTaskData` instances representing the 
+ *   user’s recent executions or tasks performed within the system.
  *
+ * This class is essential for managing user accounts, securing authentication, 
+ * handling user-specific access, and tracking past executions or actions within the system.
  */
 export class User {
-  id?: number;
-  username!: string;
-  name!: string;
-  password?: string;
-  role!: string;
-  token?: string;
+   id?: number;
+   username!: string;
+   name!: string;
+   password!: string;
+   role!: string;
+   lastExecutions?: EpitopeTaskData[];
+   token?: string;
 
-  constructor(
-    name: string,
-    username: string,
-    password: string,
-    role: string,
-    token: string
-  ) {
-    this.name = name;
-    this.username = username;
-    this.password = password;
-    this.role = role;
-    this.token = token;
-  }
+   constructor(name: string, username: string, password: string, role: string, lastExecutions?: EpitopeTaskData[], token?: string) {
+      this.name = name;
+      this.username = username;
+      this.password = password;
+      this.role = role;
+      this.lastExecutions = lastExecutions;
+      this.token = token;
+   }
 }

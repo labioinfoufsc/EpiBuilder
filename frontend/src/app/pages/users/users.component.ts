@@ -89,7 +89,9 @@ export class UsersComponent implements OnInit {
         this.registrationForm.value.name,
         username,
         this.registrationForm.value.password,
-        this.registrationForm.value.role
+        this.registrationForm.value.role,
+        undefined,
+        ''
       );
   
       this.userService.addUser(newUser).subscribe({
