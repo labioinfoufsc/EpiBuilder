@@ -1,0 +1,39 @@
+<div class="d-flex flex-column min-vh-100">
+  <!-- Navbar -->
+  <app-navbar></app-navbar>
+
+  <!-- Login Form -->
+  <div class="login-container d-flex justify-content-center">
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+      <div *ngIf="loginError" class="alert alert-danger w-100" role="alert">
+        {{ loginError }}
+      </div>
+      <div class="mb-3">
+        <label for="username" class="form-label">Username</label>
+        <input
+          type="text"
+          id="username"
+          formControlName="username"
+          class="form-control"
+          placeholder="Username"
+          required
+        />
+      </div>
+      <div class="mb-3">
+        <label for="password" class="form-label">Password</label>
+        <input
+          type="password"
+          id="password"
+          formControlName="password"
+          class="form-control"
+          placeholder="Password"
+          required
+        />
+      </div>
+      <button type="submit" class="btn login-button w-100">Login</button>
+    </form>
+  </div>
+
+  <!-- Footer -->
+  <app-footer></app-footer>
+</div>

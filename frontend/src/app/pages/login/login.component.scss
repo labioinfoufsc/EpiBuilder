@@ -1,0 +1,28 @@
+.login-container {
+  margin-top: 7rem;
+}
+
+.login-form {
+  max-width: 400px;
+  margin: auto;
+  padding: 1.5rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 0 1rem rgba(0, 0, 0, 0.1);
+  background-color: white;
+}
+
+.login-button {
+  background-color: #6aa5d9 !important;
+  color: white !important;
+}
+
+.login-button:hover {
+  background-color: #6aa5d9;
+  color: white;
+}
+
+.login-button:focus,
+.login-button:active {
+  box-shadow: none;
+  outline: none;
+}
