@@ -9,6 +9,7 @@ import { FooterComponent } from "./components/footer/footer.component";
 import { provideHttpClient } from "@angular/common/http";
 import { UsersComponent } from "./pages/users/users.component";
 import { NewComponent } from "./pages/new/new.component";
+import { AddProteomeComponent } from "./components/add-proteome/add-proteome.component";
 
 @NgModule({
   declarations: [
@@ -17,7 +18,8 @@ import { NewComponent } from "./pages/new/new.component";
     NavbarComponent,
     LoginComponent,
     UsersComponent,
-    NewComponent
+    NewComponent,
+    AddProteomeComponent
   ],
   imports: [BrowserModule, AppRoutingModule, FormsModule, ReactiveFormsModule],
   providers: [provideHttpClient()],
