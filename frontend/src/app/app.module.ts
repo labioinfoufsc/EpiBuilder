@@ -10,6 +10,7 @@ import { provideHttpClient } from "@angular/common/http";
 import { UsersComponent } from "./pages/users/users.component";
 import { NewComponent } from "./pages/new/new.component";
 import { AddProteomeComponent } from "./components/add-proteome/add-proteome.component";
+import { RealtimeExecutionsComponent } from "./components/realtime-executions/realtime-executions.component";
 
 @NgModule({
   declarations: [
@@ -19,7 +20,8 @@ import { AddProteomeComponent } from "./components/add-proteome/add-proteome.com
     LoginComponent,
     UsersComponent,
     NewComponent,
-    AddProteomeComponent
+    AddProteomeComponent,
+    RealtimeExecutionsComponent
   ],
   imports: [BrowserModule, AppRoutingModule, FormsModule, ReactiveFormsModule],
   providers: [provideHttpClient()],
