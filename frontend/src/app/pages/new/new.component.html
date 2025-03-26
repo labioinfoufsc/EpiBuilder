@@ -1,0 +1,372 @@
+<app-navbar></app-navbar>
+
+<form
+  [formGroup]="myForm"
+  (ngSubmit)="onSubmit()"
+  enctype="multipart/form-data"
+>
+  <div class="container pt-5">
+    <div class="row justify-content-center">
+      <div class="col-8">
+        <div class="card mx-auto dynamic-card">
+          <div class="card-header custom-header">
+            <b>New Task Submission</b>
+          </div>
+
+          <!-- Alerts -->
+          <div class="card-body">
+            <div *ngIf="messages.length">
+              <div
+                *ngFor="let message of messages"
+                class="alert alert-{{
+                  message.category
+                }} alert-dismissible fade show mt-3"
+                role="alert"
+              >
+                {{ message.text }}
+                <button
+                  type="button"
+                  class="btn-close"
+                  (click)="closeMessage(message)"
+                ></button>
+              </div>
+            </div>
+
+            <div class="row justify-content-center mb-3">
+              <!-- Basic Task Information card -->
+              <div class="col-6">
+                <div class="card dynamic-card">
+                  <div class="card-header custom-header">
+                    <b>Basic Task Information</b>
+                  </div>
+                  <div class="card-body p-3">
+                    <div class="mb-3">
+                      <label for="run-name" class="form-label fw-bold"
+                        >Your Task Name:</label
+                      >
+                      <input
+                        type="text"
+                        formControlName="runName"
+                        class="form-control"
+                        id="run-name"
+                        required
+                      />
+                    </div>
+                    <div class="mb-3">
+                      <label for="fileToProcess" class="form-label fw-bold"
+                        >File to Process:</label
+                      >
+                      <input
+                        type="file"
+                        class="form-control"
+                        id="fileToProcess"
+                        accept=".csv,.fasta,.fa,.faa,.fna"
+                        (change)="onFileChange($event)"
+                        required
+                      />
+                      <small class="text-muted d-block mt-1">
+                        <i class="fa-solid fa-circle-info"></i> Allowed Formats:
+                        CSV, FASTA
+                      </small>
+                    </div>
+
+                    <!-- Action to Perform -->
+                    <div class="mb-3">
+                      <label class="form-label fw-bold"
+                        >Action to Perform:</label
+                      >
+                      <div class="form-check">
+                        <input
+                          type="radio"
+                          class="form-check-input"
+                          formControlName="action"
+                          value="predict"
+                          id="predict"
+                        />
+                        <label class="form-check-label" for="predict"
+                          >Predict epitopes</label
+                        >
+                      </div>
+                      <div class="form-check">
+                        <input
+                          type="radio"
+                          class="form-check-input"
+                          formControlName="action"
+                          value="analysis"
+                          id="analysis"
+                        />
+                        <label class="form-check-label" for="analysis"
+                          >Epitope analysis</label
+                        >
+                      </div>
+                    </div>
+
+                    <!-- Conditionally displayed inputs -->
+                    <div *ngIf="myForm.get('action')?.value === 'analysis'">
+                      <!-- Slider BepiPred Threshold -->
+                      <div class="mb-3">
+                        <label
+                          for="bepipredThreshold"
+                          class="form-label fw-bold"
+                        >
+                          BepiPred Threshold (default = 0.1512)
+                        </label>
+                        <small class="text-muted d-block mt-1">
+                          <i class="fa-solid fa-circle-info"></i> BepiPred
+                          searches for B cell epitopes
+                        </small>
+
+                        <div class="row align-items-center">
+                          <div class="col">
+                            <input
+                              type="range"
+                              class="form-range"
+                              formControlName="bepipredThreshold"
+                              min="0.0"
+                              max="1.0"
+                              step="0.01"
+                              id="bepipredThreshold"
+                              (input)="updateThreshold($event)"
+                            />
+                            <div class="d-flex justify-content-between mt-1">
+                              <small class="text-muted">0.0</small>
+                              <small class="text-muted">1.0</small>
+                            </div>
+                          </div>
+
+                          <div class="col-auto">
+                            <input
+                              type="number"
+                              class="form-control w-auto"
+                              formControlName="bepipredThreshold"
+                              min="0.0"
+                              max="1.0"
+                              step="0.01"
+                              (input)="syncSlider($event)"
+                            />
+                          </div>
+
+                          <div class="col-auto">
+                            <button
+                              class="btn btn-outline-secondary"
+                              type="button"
+                              (click)="resetThreshold()"
+                            >
+                              <i
+                                class="fa-solid fa-rotate-left"
+                                style="color: white !important"
+                              ></i>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Slider Min Epitope Length -->
+                      <div class="mb-3">
+                        <label
+                          for="minEpitopeLength"
+                          class="form-label fw-bold"
+                        >
+                          Min Epitope Length
+                        </label>
+
+                        <div class="row align-items-center">
+                          <div class="col">
+                            <input
+                              type="range"
+                              class="form-range"
+                              formControlName="minEpitopeLength"
+                              min="5"
+                              max="50"
+                              step="1"
+                              id="minEpitopeLength"
+                              (input)="updateMinEpitopeLength($event)"
+                            />
+                            <div class="d-flex justify-content-between mt-1">
+                              <small class="text-muted">5</small>
+                              <small class="text-muted">50</small>
+                            </div>
+                          </div>
+
+                          <div class="col-auto">
+                            <input
+                              type="number"
+                              class="form-control w-auto"
+                              formControlName="minEpitopeLength"
+                              min="5"
+                              max="50"
+                              step="1"
+                              (input)="syncMinEpitopeLength($event)"
+                            />
+                          </div>
+
+                          <div class="col-auto">
+                            <button
+                              class="btn btn-outline-secondary"
+                              type="button"
+                              (click)="resetMinEpitopeLength()"
+                            >
+                              <i
+                                class="fa-solid fa-rotate-left"
+                                style="color: white !important"
+                              ></i>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Slider Max Epitope Length -->
+                      <div class="mb-3">
+                        <label
+                          for="maxEpitopeLength"
+                          class="form-label fw-bold"
+                        >
+                          Max Epitope Length
+                        </label>
+
+                        <div class="row align-items-center">
+                          <div class="col">
+                            <input
+                              type="range"
+                              class="form-range"
+                              formControlName="maxEpitopeLength"
+                              min="5"
+                              max="50"
+                              step="1"
+                              id="maxEpitopeLength"
+                              (input)="updateMaxEpitopeLength($event)"
+                            />
+                            <div class="d-flex justify-content-between mt-1">
+                              <small class="text-muted">5</small>
+                              <small class="text-muted">50</small>
+                            </div>
+                          </div>
+
+                          <div class="col-auto">
+                            <input
+                              type="number"
+                              class="form-control w-auto"
+                              formControlName="maxEpitopeLength"
+                              min="5"
+                              max="50"
+                              step="1"
+                              (input)="syncMaxEpitopeLength($event)"
+                            />
+                          </div>
+
+                          <div class="col-auto">
+                            <button
+                              class="btn btn-outline-secondary"
+                              type="button"
+                              (click)="resetMaxEpitopeLength()"
+                            >
+                              <i
+                                class="fa-solid fa-rotate-left"
+                                style="color: white !important"
+                              ></i>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Optional -->
+              <div class="col-6">
+                <div class="card dynamic-card">
+                  <div class="card-header custom-header">
+                    <b>Optional</b>
+                  </div>
+                  <div class="card-body p-3">
+                    <div class="mb-3">
+                      <label class="form-label fw-bold"
+                        >Do you want to perform an epitopes search in the given
+                        proteome(s)</label
+                      >
+                      <div class="form-check">
+                        <input
+                          type="radio"
+                          class="form-check-input"
+                          formControlName="epitopeSearch"
+                          value="no_search"
+                          id="noSearch"
+                        />
+                        <label class="form-check-label" for="noSearch"
+                          >Don't search</label
+                        >
+                      </div>
+                      <div class="form-check">
+                        <input
+                          type="radio"
+                          class="form-check-input"
+                          formControlName="epitopeSearch"
+                          value="diamond_search"
+                          id="diamondSearch"
+                        />
+                        <label class="form-check-label" for="diamondSearch"
+                          >Diamond search</label
+                        >
+                      </div>
+                      <div
+                        *ngIf="
+                          myForm.get('epitopeSearch')?.value ===
+                          'diamond_search'
+                        "
+                        class="mt-3"
+                      >
+                        <label class="form-label fw-bold"
+                          >Minimum identity cutoff</label
+                        >
+                        <input
+                          type="number"
+                          class="form-control"
+                          placeholder="90"
+                        />
+                        <label class="form-label fw-bold mt-2"
+                          >Minimum cover cutoff</label
+                        >
+                        <input
+                          type="number"
+                          class="form-control"
+                          placeholder="90"
+                        />
+                        <label class="form-label fw-bold mt-2"
+                          >-word_size</label
+                        >
+                        <input
+                          type="number"
+                          class="form-control"
+                          placeholder="4"
+                        />
+
+                        <!-- Proteomes start -->
+                        <!-- End proteomes -->
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- Optional end -->
+            </div>
+          </div>
+
+          <!-- Submit Button -->
+          <div class="row justify-content-center">
+            <div class="col-7 d-flex justify-content-end">
+              <button type="submit" class="btn btn-primary btn-lg w-100">
+                <i class="fa-solid fa-rocket"></i>&nbsp;Run
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+
+<!-- Realtime executions start -->
+<!-- Realtime executions proteomes -->
+
+<app-footer></app-footer>

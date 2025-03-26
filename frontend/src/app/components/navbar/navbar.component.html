@@ -6,7 +6,8 @@
         alt="EpiBuilder"
         style="width: 30%; height: 30%"
         class="d-inline-block align-text-top"
-    /></a>
+      />
+    </a>
 
     <button
       class="navbar-toggler"
@@ -42,7 +43,7 @@
             [ngClass]="{ 'selected-menu-item': isActive('results') }"
             (click)="goToPage('results')"
           >
-          <i class="fas fa-table"></i>
+            <i class="fas fa-table"></i>
             View Data
           </a>
         </li>
@@ -79,9 +80,7 @@
         <li class="nav-item ms-auto">
           <a class="nav-link" (click)="onLogout()">
             <i class="fas fa-sign-out-alt"></i>
-            Logout (<b
-              ><i>{{ this.user?.username }}</i></b
-            >)
+            Logout (<b><i>{{ this.user?.username }}</i></b>)
           </a>
         </li>
       </ul>

@@ -3,17 +3,16 @@ import { Router } from "@angular/router";
 import { LoginService } from "../../services/login/login.service";
 import { User } from "../../models/User";
 
-
 @Component({
-  selector: 'app-navbar',
+  selector: "app-navbar",
   standalone: false,
-  templateUrl: './navbar.component.html',
-  styleUrls: ['./navbar.component.scss'],
+  templateUrl: "./navbar.component.html",
+  styleUrls: ["./navbar.component.scss"],
 })
 export class NavbarComponent implements OnInit {
-  systemName: string = 'EpiBuilder';
+  systemName: string = "EpiBuilder";
   user: User | undefined;
-  currentPage: string = '';
+  currentPage: string = "";
 
   constructor(
     private loginService: LoginService,
@@ -25,7 +24,7 @@ export class NavbarComponent implements OnInit {
    * Initializes component data on load.
    */
   ngOnInit(): void {
-    this.user = this.loginService.getUser();
+    this.user = this.loginService.getUser() || undefined;
     this.currentPage = this.router.url.substring(1); // Sets the current page based on the URL
   }
 
@@ -64,7 +63,7 @@ export class NavbarComponent implements OnInit {
    */
   onLogout(): void {
     this.loginService.logout();
-    this.router.navigate(['/login']).then(() => {
+    this.router.navigate(["/login"]).then(() => {
       this.cdr.detectChanges(); // Ensures UI updates
     });
   }

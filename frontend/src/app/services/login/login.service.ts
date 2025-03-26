@@ -1,17 +1,23 @@
-import { Injectable } from '@angular/core';
-
-import { HttpClient } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
-import { User } from '../../models/User';
+import { Injectable } from "@angular/core";
+import { HttpClient } from "@angular/common/http";
+import { Observable, BehaviorSubject, tap } from "rxjs";
+import { User } from "../../models/User";
 
 @Injectable({
-  providedIn: 'root',
+  providedIn: "root",
 })
 export class LoginService {
-  private apiUrl = 'http://localhost:8080/auth/login';
-  private user: User | undefined;
+  private apiUrl = "http://localhost:8080/auth/login";
+  private userSubject: BehaviorSubject<User | null> =
+    new BehaviorSubject<User | null>(null);
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) {
+    // Tenta recuperar o usuário do localStorage quando o serviço é inicializado
+    const userFromStorage = this.loadUserFromStorage();
+    if (userFromStorage) {
+      this.userSubject.next(userFromStorage);
+    }
+  }
 
   /**
    * Sends login request to the backend API and stores user data in local storage.
@@ -23,18 +29,15 @@ export class LoginService {
     return this.http.post<any>(this.apiUrl, { username, password }).pipe(
       tap((response) => {
         if (response && response.token) {
-          this.user = new User(
+          const user = new User(
             response.id,
             response.username,
             response.name,
             response.role,
             response.token
           );
-          localStorage.setItem('id', response.id);
-          localStorage.setItem('username', response.username);
-          localStorage.setItem('name', response.name);
-          localStorage.setItem('role', response.role);
-          localStorage.setItem('token', response.token);
+          this.saveUserToStorage(user);
+          this.userSubject.next(user);
         }
       })
     );
@@ -42,20 +45,63 @@ export class LoginService {
 
   /**
    * Retrieves the logged-in user.
-   * @returns The username object.
+   * @returns The user object if logged in, or null.
    */
-  getUser(): User | undefined {
-    return this.user;
+  getUser(): User | null {
+    return this.userSubject.value;
+  }
+
+  /**
+   * Verifies if the user is logged in.
+   * @returns true if the user is logged in, otherwise false.
+   */
+  isLoggedIn(): boolean {
+    return this.userSubject.value !== null;
   }
 
   /**
    * Logs out the current user by clearing stored credentials.
    */
   logout(): void {
-    localStorage.removeItem('id');
-    localStorage.removeItem('username');
-    localStorage.removeItem('name');
-    localStorage.removeItem('role');
-    localStorage.removeItem('token');
+    this.clearUserFromStorage();
+    this.userSubject.next(null);
+  }
+
+  /**
+   * Helper method to load user data from localStorage.
+   */
+  private loadUserFromStorage(): User | null {
+    const id = localStorage.getItem("id");
+    const username = localStorage.getItem("username");
+    const name = localStorage.getItem("name");
+    const role = localStorage.getItem("role");
+    const token = localStorage.getItem("token");
+
+    if (id && username && name && role && token) {
+      return new User(id, username, name, role, undefined, token);
+    }
+    return null;
+  }
+
+  /**
+   * Helper method to save user data to localStorage.
+   */
+  private saveUserToStorage(user: User): void {
+    localStorage.setItem("id", user.id?.toString() || "");
+    localStorage.setItem("username", user.username);
+    localStorage.setItem("name", user.name);
+    localStorage.setItem("role", user.role);
+    localStorage.setItem("token", user.token?.toString() || "");
+  }
+
+  /**
+   * Helper method to clear user data from localStorage.
+   */
+  private clearUserFromStorage(): void {
+    localStorage.removeItem("id");
+    localStorage.removeItem("username");
+    localStorage.removeItem("name");
+    localStorage.removeItem("role");
+    localStorage.removeItem("token");
   }
 }
