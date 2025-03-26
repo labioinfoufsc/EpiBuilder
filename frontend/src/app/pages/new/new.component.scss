@@ -1,0 +1,51 @@
+.form-label {
+  font-weight: bold;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  height: auto;
+  min-height: 370px;
+  max-width: 100%;
+  word-wrap: break-word;
+}
+
+.card-body {
+  flex-grow: 1;
+  overflow: auto;
+}
+
+label {
+  font-weight: bold;
+}
+
+@media (max-width: 768px) {
+  .card {
+    min-height: auto;
+  }
+}
+
+i {
+  color: #6aa5d9 !important;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: #6aa5d9;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid #4f8cc9;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: #6aa5d9;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid #4f8cc9;
+}
