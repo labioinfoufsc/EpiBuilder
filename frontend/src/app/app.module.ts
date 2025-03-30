@@ -12,6 +12,7 @@ import { NewComponent } from "./pages/new/new.component";
 import { AddProteomeComponent } from "./components/add-proteome/add-proteome.component";
 import { RealtimeExecutionsComponent } from "./components/realtime-executions/realtime-executions.component";
 import { ProfileComponent } from "./pages/profile/profile.component";
+import { DatabasesComponent } from "./pages/databases/databases.component";
 
 @NgModule({
   declarations: [
@@ -23,7 +24,8 @@ import { ProfileComponent } from "./pages/profile/profile.component";
     NewComponent,
     AddProteomeComponent,
     RealtimeExecutionsComponent,
-    ProfileComponent
+    ProfileComponent,
+    DatabasesComponent
   ],
   imports: [BrowserModule, AppRoutingModule, FormsModule, ReactiveFormsModule],
   providers: [provideHttpClient()],
