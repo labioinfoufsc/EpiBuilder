@@ -84,15 +84,17 @@ export class UsersComponent implements OnInit {
         this.showAlert('Passwords do not match.', 'danger');
         return;
       }
+
+      console.log(this.registrationForm.value.role);
   
-      let newUser: User = new User(
-        this.registrationForm.value.name,
-        username,
-        this.registrationForm.value.password,
-        this.registrationForm.value.role,
-        undefined,
-        ''
-      );
+      let newUser: User = {
+        name: this.registrationForm.value.name,
+        username: username,
+        password: this.registrationForm.value.password,
+        role: this.registrationForm.value.role,
+        lastExecutions: [],
+        token: '',
+      };
   
       this.userService.addUser(newUser).subscribe({
         next: () => {
@@ -107,6 +109,8 @@ export class UsersComponent implements OnInit {
       this.selectedUser.username = username;
       this.selectedUser.name = this.registrationForm.value.name;
       this.selectedUser.role = this.registrationForm.value.role;
+
+      console.log(this.registrationForm.value.role);
   
       if (this.registrationForm.value.password) {
         if (
