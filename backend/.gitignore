@@ -83,6 +83,7 @@ logs/
 # Sensitive configuration files
 application-*.yml
 application-*.properties
+application.properties
 
 # Miscellaneous
 HELP.md
