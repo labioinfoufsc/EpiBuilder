@@ -1,0 +1,111 @@
+<app-navbar></app-navbar>
+
+<div class="container mt-4">
+  <!-- Last executions list here -->
+  <br />
+  <div class="card">
+    <div class="card-header custom-header">
+      <b>Task #{{ selectedTask?.runName }}</b>
+    </div>
+
+    <div class="card">
+      <div class="card-header custom-header">
+        <b>Epitopes found in Task #{{ selectedTask?.runName }}</b>
+      </div>
+
+      <br />
+      <div class="mb-3">
+        <input
+          type="text"
+          [(ngModel)]="filterText"
+          placeholder="Search..."
+          (input)="applyFilters()"
+          class="form-control"
+        />
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-striped table-hover table-bordered">
+          <thead class="table-light">
+            <tr>
+              <th
+                *ngFor="let column of columns"
+                (click)="sort(column.key)"
+                class="text-center"
+              >
+                {{ column.label }}
+                <span *ngIf="sortColumn === column.key">{{
+                  sortDirection === "asc" ? "▲" : "▼"
+                }}</span>
+                <input
+                  type="text"
+                  [(ngModel)]="filters[column.key]"
+                  (input)="applyFilters()"
+                  class="form-control form-control-sm mt-1"
+                  placeholder="Filter..."
+                />
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngIf="selectedTask === null">
+              <td
+                class="text-center text-muted"
+                [attr.colspan]="columns.length"
+              >
+                No data available
+              </td>
+            </tr>
+            <tr
+              *ngFor="let epitope of selectedTask?.epitopes; let i = index"
+              (click)="selectEpitope(epitope)"
+              style="cursor: pointer"
+            >
+              <td class="text-center">{{ epitope.N }}</td>
+              <td class="text-center">{{ epitope.id }}</td>
+              <td class="text-center">
+                <span *ngIf="epitope.epitope && epitope.epitope.length <= 10">{{
+                  epitope.epitope
+                }}</span>
+                <span *ngIf="epitope.epitope && epitope.epitope.length > 10">
+                  <span *ngIf="expandedEpitopeIndex !== i">
+                    {{ epitope.epitope | slice : 0 : 10 }}...
+                    <i
+                      class="fa-solid fa-eye"
+                      style="color: #6aa5d9 !important; cursor: pointer"
+                      (click)="toggleEpitope(i)"
+                    ></i>
+                  </span>
+                  <span *ngIf="expandedEpitopeIndex === i">
+                    {{ epitope.epitope }}
+                    <i
+                      class="fa-solid fa-eye-slash"
+                      style="color: #d96a6a !important; cursor: pointer"
+                      (click)="toggleEpitope(i)"
+                    ></i>
+                  </span>
+                </span>
+              </td>
+              <td class="text-center">{{ epitope.start }}</td>
+              <td class="text-center">{{ epitope.end }}</td>
+              <td class="text-center">{{ epitope.length }}</td>
+              <td class="text-center">{{ epitope.mwKDa }}</td>
+              <td class="text-center">{{ epitope.iP }}</td>
+              <td class="text-center">{{ epitope.hydropathy }}</td>
+              <td class="text-center">{{ epitope.bepiPred3 }}</td>
+              <td class="text-center">{{ epitope.emini }}</td>
+              <td class="text-center">{{ epitope.kolaskar }}</td>
+              <td class="text-center">{{ epitope.chouFosman }}</td>
+              <td class="text-center">{{ epitope.karplusSchulz }}</td>
+              <td class="text-center">{{ epitope.parker }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <br />
+    <!-- Topology list here -->
+  </div>
+</div>
+
+<app-footer></app-footer>

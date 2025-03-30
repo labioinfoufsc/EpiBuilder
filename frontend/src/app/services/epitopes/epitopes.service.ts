@@ -5,8 +5,8 @@ import { EpitopeTaskData } from "../../models/EpitopeTaskData";
 import { HttpClient } from "@angular/common/http";
 
 import { EpitopeTopology } from "../../models/EpitopeTopology";
-import { APIResponse } from "../../models/ApiResponSe";
 import { ErrorMessages } from "../../models/ErrorMessages";
+import { APIResponse } from "../../models/APIResponse";
 
 @Injectable({
   providedIn: "root",
