@@ -1,0 +1,49 @@
+<div class="card">
+  <div class="card-header custom-header">
+    <b>Topology of Epitope ID #{{ epitopeId || 'N/A' }}</b>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-striped table-hover table-bordered">
+      <thead class="table-light" >
+        <tr>
+          <th  *ngFor="let column of columns">{{ column }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngIf="topology.length === 0">
+          <td class="text-center text-muted" [attr.colspan]="columns.length">
+            No data available
+          </td>
+        </tr>
+
+        <!-- Se houver dados, exibe as linhas -->
+        <tr *ngFor="let row of topology; let i = index">
+          <td>{{ i === 0 ? row.N : '' }}</td>
+          <td>{{ i === 0 ? row.id : '' }}</td>
+          <td>{{ row.method }}</td>
+          <td>{{ row.threshold }}</td>
+          <td>{{ row.avgScore }}</td>
+          <td>{{ row.cover }}</td>
+          <td>
+            <!-- Se o epítopo tem 10 caracteres ou menos, mostra ele normalmente -->
+            <span *ngIf="row.epitope && row.epitope.length <= 10">{{ row.epitope }}</span>
+          
+            <!-- Se o epítopo tem mais de 10 caracteres, mostra a versão truncada OU completa -->
+            <span *ngIf="row.epitope && row.epitope.length > 10">
+              <span *ngIf="expandedEpitopeIndex !== i">
+                {{ row.epitope | slice:0:10 }}...
+                <i class="fa-solid fa-eye" style="color: #6aa5d9 !important;cursor: pointer;" (click)="toggleEpitope(i)"></i>
+              </span>
+          
+              <span *ngIf="expandedEpitopeIndex === i">
+                {{ row.epitope }}
+                <i class="fa-solid fa-eye-slash" style="color: #d96a6a !important;cursor: pointer;" (click)="toggleEpitope(i)"></i>
+              </span>
+            </span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

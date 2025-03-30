@@ -13,6 +13,9 @@ import { AddProteomeComponent } from "./components/add-proteome/add-proteome.com
 import { RealtimeExecutionsComponent } from "./components/realtime-executions/realtime-executions.component";
 import { ProfileComponent } from "./pages/profile/profile.component";
 import { DatabasesComponent } from "./pages/databases/databases.component";
+import { LastExecutionsComponent } from './components/last-executions/last-executions.component';
+import { TopologyComponent } from './components/topology/topology.component';
+import { ResultsComponent } from './pages/results/results.component';
 
 @NgModule({
   declarations: [
@@ -25,7 +28,10 @@ import { DatabasesComponent } from "./pages/databases/databases.component";
     AddProteomeComponent,
     RealtimeExecutionsComponent,
     ProfileComponent,
-    DatabasesComponent
+    DatabasesComponent,
+    LastExecutionsComponent,
+    TopologyComponent,
+    ResultsComponent
   ],
   imports: [BrowserModule, AppRoutingModule, FormsModule, ReactiveFormsModule],
   providers: [provideHttpClient()],
