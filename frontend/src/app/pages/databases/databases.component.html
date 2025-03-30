@@ -1,0 +1,67 @@
+<app-navbar></app-navbar>
+<div class="container mt-5">
+    <div class="d-flex justify-content-center">
+      <div class="card col-5 mx-auto">
+        <div class="card-header custom-header">Databases Management</div>
+        <div class="card-body">
+          
+          <form (ngSubmit)="onSubmit()">
+            <div class="mb-3">
+              <label for="file" class="form-label">Upload FASTA File</label>
+              <input type="file" class="form-control" id="file" (change)="onFileChange($event)" required>
+            </div>
+            <div class="mb-3">
+              <input type="text" class="form-control" id="name" placeholder="Database name"
+                     [(ngModel)]="newDatabase.name" name="name" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Create Database</button>
+          </form>
+  
+          <table class="table table-striped mt-3">
+            <thead>
+            <tr>
+              <th>Database</th>
+              <th>Creation Date</th>
+              <th>Size (MB)</th>
+              <th>Action</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr *ngFor="let file of files">
+              <td>{{ file.name }}</td>
+              <td>{{ file.date }}</td>
+              <td>{{ file.size_mb }}</td>
+              <td>
+                <button *ngIf="file.ext === 'fasta'" class="btn btn-primary btn-sm" (click)="openConversionModal('/convert_db/' + file.name)">
+                  Convert to Diamond DB
+                </button>
+                <button *ngIf="file.ext === 'dmnd'" class="btn btn-danger btn-sm">
+                  Delete
+                </button>
+              </td>
+            </tr>
+            </tbody>
+          </table>
+  
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="modal fade" id="confirmModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Confirm Conversion</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">Are you sure you want to convert this file into Diamond DB?</div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary">Convert</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<app-footer></app-footer>
