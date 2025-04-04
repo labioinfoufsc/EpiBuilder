@@ -58,7 +58,7 @@ public class AuthService {
                 log.info("Generating token for user: {}", user.getId());
                 String token = generateToken(user);
                 log.info("Token generated successfully");
-                return new UserDTO(user.getId(), user.getName(), user.getUsername(), user.getRole(), token);
+                return new UserDTO(user.getId(), user.getName(), user.getUsername(), user.getEpitopeTaskDataList(), user.getRole(), token);
             } catch (Exception tokenException) {
                 log.error("Error generating token for user: {}", user.getId(), tokenException);
                 throw new RuntimeException("Error generating token");
