@@ -5,11 +5,16 @@ import ufsc.br.epibuilder.repository.EpitopeTaskDataRepository;
 import ufsc.br.epibuilder.model.EpitopeTaskData;
 import java.util.List;
 import java.util.Optional;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.RequestBody;
 
 /**
  * Service layer for handling operations related to EpitopeTaskData.
  */
 @Service
+@Slf4j
+@Transactional
 public class EpitopeTaskDataService {
 
     private final EpitopeTaskDataRepository epitopeTaskDataRepository;
@@ -39,6 +44,23 @@ public class EpitopeTaskDataService {
      */
     public List<EpitopeTaskData> findAll() {
         return epitopeTaskDataRepository.findAll();
+    }
+
+    public boolean deleteById(Long id) {
+        return epitopeTaskDataRepository.deleteById(id);
+    }
+
+    public List<EpitopeTaskData> findTasksByUserId(Long userId) {
+        
+        log.info("Fetching tasks for user ID: {}", userId);
+        List<EpitopeTaskData> tasks = epitopeTaskDataRepository.findTasksByUserId(userId);
+        
+        log.info("Number of tasks found: {}", tasks.size());
+        tasks.forEach(task -> log.info("Task ID: {}, User ID: {}", 
+            task.getId(), 
+            task.getUser() != null ? task.getUser().getId() : "null"));
+        
+        return tasks;
     }
 
 }
