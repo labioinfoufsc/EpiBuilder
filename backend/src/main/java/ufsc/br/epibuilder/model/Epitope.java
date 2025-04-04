@@ -4,6 +4,9 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonBackReference;
+
 /**
  * Represents an epitope entity with its biochemical properties and characteristics.
  * This class is mapped to the "epitopes" table in the database.
@@ -39,6 +42,7 @@ public class Epitope {
      */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "task_data_id", nullable = false)
+    @JsonBackReference
     private EpitopeTaskData epitopeTaskData;
 
     /**
@@ -46,6 +50,7 @@ public class Epitope {
      * Cascades all operations and removes orphaned topology.
      */
     @OneToOne(mappedBy = "epitope", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private EpitopeTopology epitopeTopology;
 
     /**

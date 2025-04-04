@@ -10,6 +10,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonBackReference;
+
 /**
  * Entity representing a user in the system.
  * Implements {@link UserDetails} for authentication and authorization purposes.
@@ -39,6 +42,7 @@ public class User implements UserDetails {
     
     /** The list of epitope tasks associated with the user. */
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private List<EpitopeTaskData> epitopeTaskDataList = new ArrayList<>();
 
     /** The role assigned to the user. */

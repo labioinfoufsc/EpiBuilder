@@ -4,6 +4,12 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import ufsc.br.epibuilder.model.Method;
+import ufsc.br.epibuilder.model.Epitope;
+
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonBackReference;
+
 /**
  * Represents the topological characteristics of an epitope, including
  * structural and spatial information predicted by various bioinformatics methods.
@@ -35,6 +41,7 @@ public class EpitopeTopology {
      */
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "epitope_id", nullable = false)
+    @JsonBackReference
     private Epitope epitope;
 
     /**
@@ -43,7 +50,7 @@ public class EpitopeTopology {
      * or "SignalP" for signal peptide prediction.
      */
     @Column(nullable = false)
-    private String method;
+    private Method method;
 
     /**
      * Threshold value used for topology classification.
