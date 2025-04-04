@@ -21,4 +21,22 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * @return an {@link Optional} containing the user if found, otherwise empty
      */
     Optional<User> findByUsername(String username);
+
+    /**
+     * Deletes a user by their username.
+     *
+     * @param username the username of the user to delete
+     */
+    void deleteByUsername(String username);
+
+    void deleteAll();
+
+    /**
+     * Checks if a user with the given username exists.
+     *
+     * @param username the username to check
+     * @return true if the user exists, false otherwise
+     */
+
+    Optional<User> findById(Long id); // This method is already provided by JpaRepository
 }
