@@ -13,12 +13,7 @@ public enum ActionType {
     /**
      * Action for analysis only.
      */
-    ANALYZE("analyze"),
-    
-    /**
-     * Combined action for both prediction and analysis.
-     */
-    PREDICT_AND_ANALYZE("predict_and_analyze");
+    ANALYZE("analyze");
 
     private final String action;
 

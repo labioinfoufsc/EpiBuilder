@@ -7,7 +7,6 @@ import lombok.Setter;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.JsonBackReference;
@@ -15,6 +14,8 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 import ufsc.br.epibuilder.model.Status;
 import ufsc.br.epibuilder.model.TaskStatus;
 import lombok.ToString;
+import java.time.LocalDateTime;
+
 /**
  * Represents a single epitope prediction task containing all configuration
  * parameters
@@ -45,7 +46,13 @@ public class EpitopeTaskData {
      * Timestamp when the task was executed
      */
     @Column(name = "execution_date")
-    private java.util.Date executionDate;
+    private LocalDateTime executionDate;
+
+    /**
+     * Timestamp when the task was finished
+     */
+    @Column(name = "finished_date")
+    private LocalDateTime finishedDate;
 
     /**
      * User who created this task (LAZY-loaded for performance)
