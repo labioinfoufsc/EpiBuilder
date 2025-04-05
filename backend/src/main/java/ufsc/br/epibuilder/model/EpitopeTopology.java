@@ -39,7 +39,7 @@ public class EpitopeTopology {
      * Associated epitope to which this topology belongs.
      * Uses LAZY loading to optimize performance.
      */
-    @OneToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "epitope_id", nullable = false)
     @JsonBackReference
     private Epitope epitope;

@@ -7,6 +7,8 @@ import lombok.Setter;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 
+import java.util.List;
+
 /**
  * Represents an epitope entity with its biochemical properties and characteristics.
  * This class is mapped to the "epitopes" table in the database.
@@ -49,9 +51,9 @@ public class Epitope {
      * The topological information associated with this epitope.
      * Cascades all operations and removes orphaned topology.
      */
-    @OneToOne(mappedBy = "epitope", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "epitope", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
-    private EpitopeTopology epitopeTopology;
+    private List<EpitopeTopology> epitopeTopologies;
 
     /**
      * The epitope sequence in string format.
