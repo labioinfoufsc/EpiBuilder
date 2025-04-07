@@ -1,8 +1,8 @@
 import { Injectable } from "@angular/core";
 import { Epitope } from "../../models/Epitope";
-import { BehaviorSubject, catchError, map, Observable, of } from "rxjs";
+import { BehaviorSubject, catchError, map, Observable, of, throwError } from "rxjs";
 import { EpitopeTaskData } from "../../models/EpitopeTaskData";
-import { HttpClient } from "@angular/common/http";
+import { HttpClient, HttpErrorResponse } from "@angular/common/http";
 
 import { EpitopeTopology } from "../../models/EpitopeTopology";
 import { ErrorMessages } from "../../models/ErrorMessages";
@@ -26,85 +26,14 @@ export class EpitopesService {
   private environment: string = "http://localhost:8080";
   private apiUrl = `${this.environment}/epitopes`;
 
-  private mockEpitopes: Epitope[] = [
-    {
-      N: 1,
-      id: "Q1ZXI9",
-      epitope: "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
-      start: 0,
-      end: 30,
-      nGlyc: "N",
-      nGlycCount: 0,
-      length: 30,
-      mwKDa: 3.44,
-      iP: 5.52,
-      hydropathy: -3.5,
-      bepiPred3: 0.77,
-      emini: 0.8,
-      kolaskar: 0.28,
-      chouFosman: 0.83,
-      karplusSchulz: 0.62,
-      parker: 1.25,
-      topology: new EpitopeTopology({
-        N: 1,
-        id: "201",
-        method: "BepiPred-3.0",
-        threshold: 0.15,
-        avgScore: 0.28,
-        epitope: "FFFFFFFFFFFFFFFFFFFFFFF",
-      }),
-    },
-  ];
-
-  private mockEpitopeTasks: EpitopeTaskData[] = [
-    {
-      id: 1,
-      runName: "Leish001",
-      fasta: new File([""], "example.fasta", { type: "text/plain" }),
-      action: "Prediction",
-      bepipredThreshold: 0.5,
-      minEpitopeLength: 8,
-      maxEpitopeLength: 15,
-      subcell: "Cytoplasm",
-      interpro: "IPR001234",
-      epitopeSearch: "HLA-A*02:01",
-      optional: "None",
-      date: new Date("2025-03-05T10:30:00Z"),
-      epitopes: this.mockEpitopes,
-    },
-    {
-      id: 2,
-      runName: "Leish002",
-      fasta: new File([""], "example.fasta", { type: "text/plain" }),
-      action: "Prediction",
-      bepipredThreshold: 0.5,
-      minEpitopeLength: 8,
-      maxEpitopeLength: 15,
-      subcell: "Cytoplasm",
-      interpro: "IPR001234",
-      epitopeSearch: "HLA-A*02:01",
-      optional: "None",
-      date: new Date("2025-03-05T10:30:00Z"),
-      epitopes: this.mockEpitopes,
-    },
-    {
-      id: 3,
-      runName: "Leish003",
-      fasta: new File([""], "example.fasta", { type: "text/plain" }),
-      action: "Prediction",
-      bepipredThreshold: 0.5,
-      minEpitopeLength: 8,
-      maxEpitopeLength: 15,
-      subcell: "Cytoplasm",
-      interpro: "IPR001234",
-      epitopeSearch: "HLA-A*02:01",
-      optional: "None",
-      date: new Date("2025-03-05T10:30:00Z"),
-      epitopes: this.mockEpitopes,
-    },
-  ];
-
   constructor(private http: HttpClient) {}
+
+  getTaskStatus(taskId: number): Observable<APIResponse<EpitopeTaskData>> {
+    return this.http.get<APIResponse<EpitopeTaskData>>(
+      `${this.apiUrl}/tasks/status/${taskId}`, 
+      { withCredentials: true }
+    );
+  }
 
   deleteTask(taskId: number): Observable<APIResponse<void>> {
     return this.http
@@ -128,7 +57,7 @@ export class EpitopesService {
     return of({ success: true, message: fastaFile });
   }
 
-  selectEpitope(epitope: Epitope) {
+  selectEpitope(epitope: Epitope | null) {
     this.selectedEpitopeSource.next(epitope);
   }
 
@@ -136,12 +65,35 @@ export class EpitopesService {
     this.selectedTaskSource.next(task);
   }
 
-  getExecutedTasksByUser(): Observable<EpitopeTaskData[]> {
-    return of(this.mockEpitopeTasks);
+  getExecutedTasksByUserId(userId: number): Observable<EpitopeTaskData[]> {
+    return this.http
+      .get<EpitopeTaskData[]>(
+        `${this.apiUrl}/tasks/user/${userId}`, // Note the /epitopes prefix
+        { withCredentials: true }
+      )
+      .pipe(
+        catchError((error) => {
+          console.error("Full error:", error);
+          return of([]);
+        })
+      );
   }
 
   submitForm(data: EpitopeTaskData): Observable<Epitope[]> {
-    this.epitopesSubject.next(this.mockEpitopes);
-    return of(this.mockEpitopes);
+    return this.http.post<APIResponse<Epitope[]>>(
+      `${this.apiUrl}/tasks/new`, 
+      data,
+      { headers: { 'Content-Type': 'application/json' } }  // Garante o header
+    ).pipe(
+      map((response) => {
+        if (!response?.success || !response.data) {
+          throw new Error(typeof response?.message === "string" ? response.message : "Invalid response");
+        }
+        return response.data as Epitope[];
+      }),
+      catchError((error: HttpErrorResponse) => {
+        return throwError(() => error);
+      })
+    );
   }
 }

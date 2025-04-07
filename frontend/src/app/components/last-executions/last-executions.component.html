@@ -3,35 +3,101 @@
     <b>Previous task runs</b>
   </div>
   <div class="card-body p-3 card-scrollable">
+    <div
+      *ngIf="alertMessage"
+      class="alert alert-{{ alertType }} alert-dismissible fade show"
+      role="alert"
+    >
+      {{ alertMessage }}
+      <button
+        type="button"
+        class="btn-close"
+        data-bs-dismiss="alert"
+        aria-label="Close"
+      ></button>
+    </div>
+    
+    
     <table id="previousRunsTable" class="table table-striped table-bordered">
       <thead class="header">
         <tr>
-          <th>Task</th>
-          <th>First created</th>
-          <th>Actions</th>
+          <th *ngFor="let column of columns">{{ column }}</th>
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let task of executedTasks">
-          <td>
-              {{ task.runName }}
-          </td>
-          <td>{{ task.date | date: 'yyyy-MM-dd' }}</td>
-          <td>
-            <div aria-label="Actions">
-              <a (click)="downloadTask(task)" title="Download task file">
-                <i style="color: #6aa5d9 !important; cursor:pointer"  class="fas fa-download"></i>
-              </a>
-              <a (click)="deleteTask(task)" title="Remove task">
-                <i style="color: #6aa5d9 !important; cursor:pointer"  class="fas fa-trash"></i>
-              </a>
-              <a (click)="selectTask(task)"  title="View task">
-                <i style="color: #6aa5d9 !important; cursor:pointer"  class="fas fa-eye"></i>
-              </a>
-            </div>
+        <tr *ngIf="executedTasks.length === 0">
+          <td class="text-center text-muted" [attr.colspan]="columns.length">
+            No data available
           </td>
         </tr>
+        <tr
+  *ngFor="let task of executedTasks"
+  (click)="selectTask(task)"
+  [ngClass]="{ 'selected-task-row': task === selectedTask }"
+  style="cursor: pointer;"
+>
+  <td>{{ task.runName }}</td>
+  <td>
+    {{ task.executionDate | date : "yyyy-MM-dd 'at' HH'h'mm'min'ss'sec'" }}
+  </td>
+  <td>
+    {{ task.finishedDate | date : "yyyy-MM-dd 'at' HH'h'mm'min'ss'sec'" }}
+  </td>
+  <td>
+    <div aria-label="Actions">
+      <a (click)="downloadTask(task); $event.stopPropagation()" title="Download task file">
+        <i class="fas fa-download" style="color: #1dd357; cursor: pointer;"></i>
+      </a>
+      <a (click)="showDeleteModal(task); $event.stopPropagation()" title="Delete task">
+        <i class="fas fa-trash" style="color: #dc3545; cursor: pointer;"></i>
+      </a>
+      <a (click)="selectTask(task); $event.stopPropagation()" title="View task">
+        <i class="fas fa-eye" style="color: #0f72b9; cursor: pointer;"></i>
+      </a>
+    </div>
+  </td>
+</tr>
       </tbody>
     </table>
+    
+    
+    
+  </div>
+</div>
+
+<div class="modal fade" #deleteModal tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirm Delete</h5>
+        <button
+          type="button"
+          class="btn-close"
+          (click)="hideDeleteModal()"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body">
+        Are you sure you want to delete task
+        <strong>{{ taskToDelete?.runName }}</strong
+        >?
+      </div>
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn btn-secondary"
+          (click)="hideDeleteModal()"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn force-bootstrap-danger"
+          (click)="deleteTask()"
+        >
+          Delete
+        </button>
+      </div>
+    </div>
   </div>
 </div>
