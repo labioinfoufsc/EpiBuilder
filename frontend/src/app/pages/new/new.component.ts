@@ -3,6 +3,7 @@ import { FormArray, FormBuilder, FormGroup } from "@angular/forms";
 import { EpitopesService } from "../../services/epitopes/epitopes.service";
 import { Router } from "@angular/router";
 import { EpitopeTaskData } from "../../models/EpitopeTaskData";
+import { LoginService } from "../../services/login/login.service";
 
 @Component({
   selector: "app-new",
@@ -17,10 +18,11 @@ export class NewComponent {
   constructor(
     private fb: FormBuilder,
     private epitopesService: EpitopesService,
+    private loginService: LoginService,
     private router: Router
   ) {
     this.myForm = this.fb.group({
-      runName: ["epibuilder"],
+      runName: ["epibuilder-task"],
       fasta: [null],
       action: ["predict"],
       bepipredThreshold: [0.1512],
@@ -55,13 +57,13 @@ export class NewComponent {
     }
 
     const epitopeSearch = this.myForm.get("epitopeSearch")?.value;
-    if (epitopeSearch === "diamond_search") {
+    if (epitopeSearch === "BLAST_search") {
       const proteomeAliases = ["proteome1", "proteome2", "proteome3"];
       for (const alias of proteomeAliases) {
         if (!this.myForm.get(alias)?.value) {
           messages.push({
             category: "danger",
-            text: `Error: The field ${alias} is required when epitopeSearch is diamond_search.`,
+            text: `Error: The field ${alias} is required when epitopeSearch is BLAST_search.`,
           });
         }
       }
@@ -75,10 +77,10 @@ export class NewComponent {
     const fileInput = this.myForm.get("fasta")?.value;
     const fastaFile: File = fileInput ? fileInput.name : "";
 
-    const epitopeTaskData: EpitopeTaskData = {
+    const epitopeTaskData: any = {
       runName: this.myForm.get("runName")?.value,
       fasta: fastaFile,
-      action: this.myForm.get("action")?.value,
+      action: this.myForm.get("action")?.value.toUpperCase(),
       bepipredThreshold: this.myForm.get("bepipredThreshold")?.value,
       minEpitopeLength: this.myForm.get("minEpitopeLength")?.value,
       maxEpitopeLength: this.myForm.get("maxEpitopeLength")?.value,
@@ -86,21 +88,24 @@ export class NewComponent {
       interpro: this.myForm.get("interpro")?.value,
       epitopeSearch: this.myForm.get("epitopeSearch")?.value,
       optional: this.myForm.get("optional")?.value,
-      date: new Date(),
+      executionDate: new Date(),
       epitopes: [],
+      user: this.loginService.getUser()
     };
 
-    this.epitopesService.submitForm(epitopeTaskData).subscribe(
-      (response) => {
-        console.log("Sending data to results:", response);
+    this.epitopesService.submitForm(epitopeTaskData).subscribe({
+      next: (response) => {
         this.router.navigate(["/results"], { state: { data: response } });
       },
-      (error) => {
+      error: (error) => {
         this.messages = [
-          { category: "danger", text: "Error processing the form." },
+          { 
+            category: "danger", 
+            text: "Failed to submit the form. Please try again." 
+          },
         ];
       }
-    );
+    });
   }
 
   /**

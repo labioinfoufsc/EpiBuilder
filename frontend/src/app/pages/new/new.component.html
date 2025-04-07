@@ -65,7 +65,7 @@
                         required
                       />
                       <small class="text-muted d-block mt-1">
-                        <i class="fa-solid fa-circle-info"></i> Allowed Formats:
+                        <i style="color:#ffc107!important" class="fa-solid fa-circle-info"></i> Allowed Formats:
                         CSV, FASTA
                       </small>
                     </div>
@@ -112,7 +112,7 @@
                           BepiPred Threshold (default = 0.1512)
                         </label>
                         <small class="text-muted d-block mt-1">
-                          <i class="fa-solid fa-circle-info"></i> BepiPred
+                          <i style="color:#ffc107!important" class="fa-solid fa-circle-info"></i> BepiPred
                           searches for B cell epitopes
                         </small>
 
@@ -302,17 +302,17 @@
                           type="radio"
                           class="form-check-input"
                           formControlName="epitopeSearch"
-                          value="diamond_search"
-                          id="diamondSearch"
+                          value="BLAST_search"
+                          id="BLASTSearch"
                         />
-                        <label class="form-check-label" for="diamondSearch"
-                          >Diamond search</label
+                        <label class="form-check-label" for="BLASTSearch"
+                          >BLAST search</label
                         >
                       </div>
                       <div
                         *ngIf="
                           myForm.get('epitopeSearch')?.value ===
-                          'diamond_search'
+                          'BLAST_search'
                         "
                         class="mt-3"
                       >
