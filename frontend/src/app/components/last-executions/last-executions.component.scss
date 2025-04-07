@@ -1,5 +1,5 @@
 .custom-header {
-  background-color: #6aa5d9;
+  background-color: #0f72b9;
   color: white;
   padding: 10px;
 }
@@ -12,5 +12,15 @@
 i {
   margin-right: 10px;
   cursor: pointer;
-  color: #6aa5d9 !important;
+  color: #0f72b9 !important;
+}
+
+.force-bootstrap-danger {
+  background-color: #dc3545 !important;
+  border-color: #dc3545 !important;
+  color: #fff !important;
+}
+
+.selected-task-row {
+  background-color: #d9ebf9 !important;
 }
