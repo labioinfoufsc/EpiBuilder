@@ -29,13 +29,12 @@ export class LoginService {
     return this.http.post<any>(this.apiUrl, { username, password }).pipe(
       tap((response) => {
         if (response && response.token) {
-          const user = new User(
-            response.id,
-            response.username,
-            response.name,
-            response.role,
-            response.token
-          );
+          const user = new User();
+          user.id = response.id;
+          user.username = response.username;
+          user.name = response.name;
+          user.role = response.role;
+          user.token = response.token;
           this.saveUserToStorage(user);
           this.userSubject.next(user);
         }
@@ -78,7 +77,13 @@ export class LoginService {
     const token = localStorage.getItem("token");
 
     if (id && username && name && role && token) {
-      return new User(id, username, name, role, undefined, token);
+      let user = new User();
+      user.id = Number(id);
+      user.username = username;
+      user.name = name;
+      user.role = role;
+      user.token = token;
+      return user;
     }
     return null;
   }

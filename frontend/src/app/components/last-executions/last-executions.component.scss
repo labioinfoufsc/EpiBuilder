@@ -1,0 +1,26 @@
+.custom-header {
+  background-color: #0f72b9;
+  color: white;
+  padding: 10px;
+}
+
+.card-scrollable {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+i {
+  margin-right: 10px;
+  cursor: pointer;
+  color: #0f72b9 !important;
+}
+
+.force-bootstrap-danger {
+  background-color: #dc3545 !important;
+  border-color: #dc3545 !important;
+  color: #fff !important;
+}
+
+.selected-task-row {
+  background-color: #d9ebf9 !important;
+}
