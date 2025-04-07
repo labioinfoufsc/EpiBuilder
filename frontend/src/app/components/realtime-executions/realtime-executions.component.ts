@@ -1,4 +1,7 @@
 import { Component } from '@angular/core';
+import { EpitopesService } from '../../services/epitopes/epitopes.service';
+import { EpitopeTaskData } from '../../models/EpitopeTaskData';
+import { LoginService } from '../../services/login/login.service';
 
 @Component({
   selector: 'app-realtime-executions',
@@ -7,9 +10,21 @@ import { Component } from '@angular/core';
   styleUrls: ['./realtime-executions.component.css']
 })
 export class RealtimeExecutionsComponent {
-  processes = [
-    { pid: 1, taskName: 'Task A', processingTime: '5s', progress: 30, command: 'run task-a' },
-    { pid: 2, taskName: 'Task B', processingTime: '10s', progress: 60, command: 'run task-b' },
-    { pid: 3, taskName: 'Task C', processingTime: '3s', progress: 90, command: 'run task-c' }
-  ];
+  processes: EpitopeTaskData[] = [];
+  columns: string[] = ['PID', 'Task name', 'Processing time', 'Progress'];
+
+  constructor(private epitopesService: EpitopesService, private loginService: LoginService) {}
+
+  ngOnInit() {
+    const userId = this.loginService.getUser()?.id;
+    if (userId !== undefined) {
+      this.epitopesService.getExecutedTasksByUserId(userId).subscribe((tasks) => {
+        this.processes = tasks;
+      });
+    } else {
+      console.error("User ID is undefined");
+    }
+
+    console.log("Processes: ", this.processes);
+  }
 }

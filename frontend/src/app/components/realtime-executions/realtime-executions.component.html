@@ -9,27 +9,27 @@
             <table class="table table-striped table-bordered">
               <thead class="header">
                 <tr>
-                  <th>PID</th>
-                  <th>Task name</th>
-                  <th>Processing time</th>
-                  <th>Progress</th>
-                  <th>Command</th>
+                  <th *ngFor="let column of columns">{{ column }}</th>
                 </tr>
               </thead>
               <tbody>
+                <tr *ngIf="processes.length === 0">
+                  <td class="text-center text-muted" [attr.colspan]="columns.length">
+                    No data available
+                  </td>
+                </tr>
                 <tr *ngFor="let process of processes">
-                  <td>{{ process.pid }}</td>
-                  <td>{{ process.taskName }}</td>
-                  <td>{{ process.processingTime }}</td>
+                  <td>{{ process.taskStatus?.taskUUID }}</td>
+                  <td>{{ process.runName }}</td>
+                  <td>{{ process.executionDate | date: 'yyyy-MM-dd' }}</td>
                   <td>
                     <div class="progress">
-                      <div class="progress-bar" style="background-color:#29cc54" role="progressbar" [style.width.%]="process.progress" 
-                        [attr.aria-valuenow]="process.progress" aria-valuemin="0" aria-valuemax="100">
-                        {{ process.progress }}%
+                      <div class="progress-bar" style="background-color:#29cc54" role="progressbar" [style.width.%]="process.taskStatus?.progress" 
+                        [attr.aria-valuenow]="process.taskStatus?.progress" aria-valuemin="0" aria-valuemax="100">
+                        {{ process.taskStatus?.progress }}%
                       </div>
                     </div>
                   </td>
-                  <td>{{ process.command }}</td>
                 </tr>
               </tbody>
             </table>
