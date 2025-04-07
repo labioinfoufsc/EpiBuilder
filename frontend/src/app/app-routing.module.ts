@@ -6,11 +6,13 @@ import { UsersComponent } from "./pages/users/users.component";
 import { AdminGuard } from "./auth/admin.guard";
 import { ProfileComponent } from "./pages/profile/profile.component";
 import { DatabasesComponent } from "./pages/databases/databases.component";
+import { ResultsComponent } from "./pages/results/results.component";
 
 const routes: Routes = [
   { path: "", redirectTo: "/login", pathMatch: "full" },
   { path: "login", component: LoginComponent },
   { path: "new", component: NewComponent, canActivate: [AdminGuard] },
+  { path: "results", component: ResultsComponent, canActivate: [AdminGuard] },
   { path: 'dbs', component: DatabasesComponent, canActivate: [AdminGuard], data: { role: 'ADMIN' } },
   {
     path: "users",

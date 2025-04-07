@@ -1,17 +1,16 @@
 import { EpitopeTopology } from "./EpitopeTopology";
 
 export class Epitope {
-  N?: number;
   id?: string;
   epitope?: string;
-  topology?: EpitopeTopology;
+  epitopeTopologies?: EpitopeTopology[];
   start?: number;
   end?: number;
   nGlyc?: string;
   nGlycCount?: number;
   length?: number;
-  mwKDa?: number;
-  iP?: number;
+  molecularWeight?: number;
+  isoelectricPoint?: number;
   hydropathy?: number;
   bepiPred3?: number;
   emini?: number;

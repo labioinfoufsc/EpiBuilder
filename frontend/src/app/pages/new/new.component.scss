@@ -27,7 +27,7 @@ label {
 }
 
 i {
-  color: #6aa5d9 !important;
+  color: #0f72b9 !important;
 }
 
 input[type="range"]::-webkit-slider-thumb {
@@ -35,7 +35,7 @@ input[type="range"]::-webkit-slider-thumb {
   appearance: none;
   width: 16px;
   height: 16px;
-  background: #6aa5d9;
+  background: #0f72b9;
   border-radius: 50%;
   cursor: pointer;
   border: 2px solid #4f8cc9;
@@ -44,7 +44,7 @@ input[type="range"]::-webkit-slider-thumb {
 input[type="range"]::-moz-range-thumb {
   width: 16px;
   height: 16px;
-  background: #6aa5d9;
+  background: #0f72b9;
   border-radius: 50%;
   cursor: pointer;
   border: 2px solid #4f8cc9;
