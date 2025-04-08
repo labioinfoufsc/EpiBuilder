@@ -67,16 +67,16 @@
 <br />
 
 <div class="proteome-actions" *ngIf="true">
-  <button type="button" class="btn btn-secondary" (click)="addProteome()">
-    + Add Proteome
+  <button type="button" class="btn btn-primary" (click)="addProteome()">
+    <i class="fa-solid fa-plus"></i>&nbsp;Add Proteome
   </button>
 
   <button
     type="button"
-    class="btn btn-danger"
+    class="btn force-bootstrap-danger"
     (click)="removeProteome(proteomes.length - 1)"
     *ngIf="proteomes.length > 0"
   >
-    - Remove Proteome
+  <i class="fa-solid fa-minus"></i>&nbsp;Remove Proteome
   </button>
 </div>

@@ -2,12 +2,15 @@
   font-weight: bold;
 }
 
+.submitButton {
+  padding-bottom: 1rem;
+}
+
 .card {
   display: flex;
   flex-direction: column;
   height: auto;
   min-height: 370px;
-  max-width: 100%;
   word-wrap: break-word;
 }
 

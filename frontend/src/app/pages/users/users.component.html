@@ -4,11 +4,20 @@
     <div class="card col-7 mx-auto">
       <div class="card-header custom-header">Users Management</div>
       <div class="card-body">
-        <div *ngIf="alertMessage" class="alert alert-{{ alertType }} alert-dismissible fade show" role="alert">
+        <div
+          *ngIf="alertMessage"
+          class="alert alert-{{ alertType }} alert-dismissible fade show"
+          role="alert"
+        >
           {{ alertMessage }}
-          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="alert"
+            aria-label="Close"
+          ></button>
         </div>
-        
+
         <form [formGroup]="registrationForm" (ngSubmit)="onSave()">
           <div class="mb-3">
             <input
@@ -16,7 +25,7 @@
               class="form-control"
               formControlName="username"
               placeholder="Username"
-              required
+              [required]="!isEditMode"
             />
             <div
               *ngIf="registrationForm.get('username')?.errors?.['invalidUsername']"
@@ -64,11 +73,11 @@
             </select>
           </div>
           <button type="submit" class="btn btn-primary">
-            {{ isEditMode ? "Save" : "Register" }}
+            <i class="fa-solid fa-floppy-disk"></i>&nbsp;Save
           </button>
           <button
             type="button"
-            class="btn btn-secondary ms-2"
+            class="btn btn-light ms-2"
             *ngIf="isEditMode"
             (click)="cancelEdit()"
           >
@@ -92,16 +101,17 @@
               <td>{{ user.role }}</td>
               <td>
                 <button
-                  class="btn btn-warning btn-sm"
+                  class="btn btn-secondary btn-sm"
                   (click)="selectUser(user)"
+                  style="margin-right: 0.5rem;"
                 >
-                  Edit
+                <i class="fa-solid fa-pen-to-square"></i>&nbsp;Edit
                 </button>
                 <button
-                  class="btn btn-danger btn-sm"
+                  class="btn force-bootstrap-danger btn-sm"
                   (click)="confirmDelete(user)"
                 >
-                  Delete
+                <i class="fa-solid fa-trash"></i>&nbsp;Delete
                 </button>
               </td>
             </tr>
@@ -125,7 +135,10 @@
           aria-label="Close"
         ></button>
       </div>
-      <div class="modal-body">Are you sure you want to delete this user?</div>
+      <div class="modal-body">
+        Are you sure you want to delete user <strong>{{ userToDelete?.username }}</strong
+        >?
+      </div>
       <div class="modal-footer">
         <button
           type="button"
@@ -134,7 +147,11 @@
         >
           Cancel
         </button>
-        <button type="button" class="btn btn-danger" (click)="onDelete()">
+        <button
+          type="button"
+          class="btn force-bootstrap-danger"
+          (click)="onDelete()"
+        >
           Delete
         </button>
       </div>
