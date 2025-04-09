@@ -1,6 +1,5 @@
 package ufsc.br.epibuilder.model;
 
-
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -19,7 +18,7 @@ import ufsc.br.epibuilder.model.Status;
 @Table(name = "task_status")
 @Getter
 @Setter
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
 public class TaskStatus {
 
     /**
@@ -29,7 +28,6 @@ public class TaskStatus {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    
     @OneToOne(mappedBy = "taskStatus", fetch = FetchType.LAZY)
     @JsonBackReference
     private EpitopeTaskData epitopeTaskData;
@@ -39,7 +37,7 @@ public class TaskStatus {
      * This is used to track the task in the background processing system
      */
     @Column
-    private String taskUUID;
+    private Long pid;
 
     /**
      * Status of the task (e.g., PENDING, RUNNING, COMPLETED, FAILED)
@@ -48,5 +46,4 @@ public class TaskStatus {
     @Enumerated(EnumType.STRING)
     private Status status;
 
-    
 }
