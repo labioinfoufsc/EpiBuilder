@@ -92,7 +92,6 @@ public class UserService {
      */
     public Optional<UserDTO> updateUser(Long id, User user) {
         user.setName(user.getName());
-        user.setUsername(user.getUsername());
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         user.setRole(user.getRole());
         User updatedUser = userRepository.save(user);

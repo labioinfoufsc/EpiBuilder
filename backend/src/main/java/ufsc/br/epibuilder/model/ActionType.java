@@ -8,24 +8,24 @@ public enum ActionType {
     /**
      * Action for prediction only.
      */
-    PREDICT("predict"),
+    PREDICT(0, "predict"),
     
     /**
      * Action for analysis only.
      */
-    ANALYZE("analyze");
+    ANALYZE(1, "analyze");
 
     private final String action;
 
     /**
-     * Constructs an ActionType enum constant.
+     * Constructor for ActionType enum.
      * 
-     * @param action The string representation of the action.
+     * @param id     The ID of the action type.
+     * @param action The string representation of the action type.
      */
-    ActionType(String action) {
+    ActionType(int id, String action) {
         this.action = action;
     }
-
     /**
      * Gets the string representation of the action.
      * 

@@ -15,6 +15,9 @@ import ufsc.br.epibuilder.model.Status;
 import ufsc.br.epibuilder.model.TaskStatus;
 import lombok.ToString;
 import java.time.LocalDateTime;
+import ufsc.br.epibuilder.model.ActionType;
+import ufsc.br.epibuilder.model.DisplayMode;
+import ufsc.br.epibuilder.model.PredictionModelType;
 
 /**
  * Represents a single epitope prediction task containing all configuration
@@ -35,12 +38,6 @@ public class EpitopeTaskData {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    /**
-     * User-defined name for the task
-     */
-    @Column(name = "task_name")
-    private String taskName;
 
     /**
      * Timestamp when the task was executed
@@ -86,12 +83,27 @@ public class EpitopeTaskData {
      * Marked as Transient as it's not persisted in the database
      */
     @Transient
-    private File fasta;
+    private File file;
+
+    @Column(nullable = false)
+    private String absolutePath;
+
+    @Column
+    private Double algPredThreshold;
+
+    @Column
+    @Enumerated(EnumType.STRING)
+    private PredictionModelType algPredictionModelType;
+
+    @Column
+    @Enumerated(EnumType.STRING)
+    private DisplayMode algPredDisplayMode;
 
     /**
      * Type of analysis to perform (PREDICT, ANALYZE, or PREDICT_AND_ANALYZE)
      */
     @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
     private ActionType action;
 
     /**
@@ -99,19 +111,19 @@ public class EpitopeTaskData {
      * This is a floating-point value that indicates the minimum score for an
      * epitope to be considered valid
      */
-    @Column(nullable = false)
+    @Column
     private Double bepipredThreshold;
 
     /**
      * Minimum allowed length for predicted epitopes (in amino acids)
      */
-    @Column(nullable = false)
+    @Column
     private Integer minEpitopeLength;
 
     /**
      * Maximum allowed length for predicted epitopes (in amino acids)
      */
-    @Column(nullable = false)
+    @Column
     private Integer maxEpitopeLength;
 
     /**
