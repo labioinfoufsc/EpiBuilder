@@ -1,0 +1,78 @@
+# Base image with CUDA support
+FROM nvidia/cuda:11.3.1-runtime-ubuntu20.04
+
+LABEL app="EpiBuilder"
+LABEL version="2.0"
+LABEL description="Bioinformatic tools container with backend, frontend, and Nextflow pipeline"
+
+# Install system dependencies
+RUN apt update && apt install --no-install-recommends -y \
+    python3 python3-pip \
+    git curl unzip nano wget \
+    libgomp1 \
+    openjdk-21-jdk \
+    nginx \
+    coreutils \
+    bash \
+    ca-certificates \
+ && apt clean && rm -rf /var/lib/apt/lists/*
+
+# Alias python -> python3
+RUN ln -s $(which python3) /usr/bin/python
+
+# Install BLAST binaries
+COPY blast/blastp /usr/bin/
+COPY blast/makeblastdb /usr/bin/
+
+# Copy and unzip BePiPred3
+COPY bepipred3.zip /
+RUN unzip /bepipred3.zip -d /bepipred3 && rm /bepipred3.zip
+
+# Install Python requirements
+COPY requirements.txt /
+RUN pip3 install --no-cache-dir -r /requirements.txt
+
+# Install ESM models
+COPY esm_encodings.tar.gz /
+RUN tar -xzf esm_encodings.tar.gz && rm esm_encodings.tar.gz
+
+RUN mkdir -p /models/
+RUN curl -L https://dl.fbaipublicfiles.com/fair-esm/regression/esm2_t33_650M_UR50D-contact-regression.pt -o /models/esm2_t33_650M_UR50D-contact-regression.pt
+RUN curl -L https://dl.fbaipublicfiles.com/fair-esm/models/esm2_t33_650M_UR50D.pt -o /models/esm2_t33_650M_UR50D.pt
+
+# Clone and install AlgPred2
+RUN git clone https://github.com/raghavagps/algpred2.git /algpred2
+WORKDIR /algpred2
+RUN pip3 install --no-cache-dir -r requirements.txt
+
+# Reset working directory
+WORKDIR /
+
+# Install Nextflow
+RUN curl -s https://get.nextflow.io | bash && mv nextflow /usr/local/bin/nextflow
+
+# Copy backend JAR
+COPY backend/epibuilder-backend.jar /epibuilder/epibuilder-backend.jar
+
+# Copy core JAR used by Nextflow
+COPY sources/epibuilder-core/target/epibuilder-core.jar /epibuilder/epibuilder-core.jar
+
+# Copy compiled Angular frontend to NGINX folder
+COPY frontend/dist/epibuilder-frontend/ /var/www/html/
+
+# Configure NGINX (proxy /api to backend)
+RUN rm /etc/nginx/sites-enabled/default
+COPY nginx.conf /etc/nginx/sites-enabled/default
+
+# Copy Nextflow pipeline files (main.nf, config, etc.)
+COPY pipeline/ /pipeline/
+
+# Add test input/output files
+COPY input.fasta /test/input.fasta
+COPY raw_output.csv /test/raw_output.csv
+
+# Expose frontend and backend ports
+EXPOSE 80 8080
+
+# Default command: run NGINX and backend together
+CMD service nginx start && java -jar /epibuilder/epibuilder-backend.jar
