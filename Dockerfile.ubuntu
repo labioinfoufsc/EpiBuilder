@@ -15,6 +15,7 @@ RUN apt update && apt install --no-install-recommends -y \
     coreutils \
     bash \
     ca-certificates \
+    mysql-server \
  && apt clean && rm -rf /var/lib/apt/lists/*
 
 # Alias python -> python3
@@ -71,8 +72,12 @@ COPY pipeline/ /pipeline/
 COPY input.fasta /test/input.fasta
 COPY raw_output.csv /test/raw_output.csv
 
+# Copy entrypoint
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 # Expose frontend and backend ports
 EXPOSE 80 8080
 
-# Default command: run NGINX and backend together
-CMD service nginx start && java -jar /epibuilder/epibuilder-backend.jar
+# Default command: start MySQL, NGINX, and backend
+CMD ["/entrypoint.sh"]
