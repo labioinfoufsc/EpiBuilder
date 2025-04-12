@@ -21,11 +21,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import jakarta.validation.Valid;
+import java.util.HashMap;
+import java.util.Map;
+
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Controller responsible for handling user-related operations.
  */
 @RestController
+@Slf4j
 @RequestMapping("/users")
 public class UserController {
 
@@ -70,6 +75,7 @@ public class UserController {
     public ResponseEntity<UserDTO> updateUser(@PathVariable Long id, @Valid @RequestBody User user) {
         try {
             log.info("Attempting to update user with ID: {}", id);
+
             Optional<UserDTO> updatedUser = userService.updateUser(id, user);
             return updatedUser.map(ResponseEntity::ok)
                     .orElseGet(() -> ResponseEntity.notFound().build());
@@ -115,6 +121,10 @@ public class UserController {
     public ResponseEntity<UserDTO> createUser(@Valid @RequestBody User user) {
         try {
             log.info("Attempting to create a user: {}", user.getName());
+            if (user.getUsername().contains("admin")) {
+                log.warn("Attempt to create admin user: {}", user.getUsername());
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
             UserDTO savedUser = userService.saveUser(user);
             return ResponseEntity.status(HttpStatus.CREATED).body(savedUser);
         } catch (Exception e) {
@@ -127,18 +137,35 @@ public class UserController {
      * Deletes a user by their ID.
      *
      * @param id the ID of the user to delete
-     * @return a ResponseEntity with no content if successful or an internal server
-     *         error status
+     * @return a ResponseEntity indicating the result of the deletion
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
+    public ResponseEntity<Map<String, String>> deleteUser(@PathVariable Long id) {
+        Map<String, String> response = new HashMap<>();
         try {
             log.info("Attempting to delete user with ID: {}", id);
-            userService.deleteUser(id);
-            return ResponseEntity.noContent().build();
+            Optional<UserDTO> user = userService.findUserById(id);
+
+            if (user.isEmpty()) {
+                log.warn("No user found with ID: {}", id);
+                response.put("message", "User not found.");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            } else if (user.get().username().toLowerCase().contains("admin")) {
+                log.warn("It is not possible to delete the default admin user.");
+                response.put("message", "It is not possible to delete the default admin user.");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+            } else {
+                log.info("User found: {}", user.get());
+                userService.deleteUser(id);
+                response.put("message", "Successfully deleted user!");
+                return ResponseEntity.ok(response);
+            }
+
         } catch (Exception e) {
             log.error("Error deleting user with ID {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            response.put("message", "Error deleting user: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
+
 }

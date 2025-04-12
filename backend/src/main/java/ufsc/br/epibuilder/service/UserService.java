@@ -35,7 +35,7 @@ public class UserService {
      *
      * @return List of UserDTOs representing all users.
      */
-    @GetMapping
+
     public List<UserDTO> getAllUsersExceptLogged() {
         String loggedUsername = getLoggedUsername();
         log.info("Listing all users except logged user: {}", loggedUsername);
@@ -91,11 +91,20 @@ public class UserService {
      *         user was not found
      */
     public Optional<UserDTO> updateUser(Long id, User user) {
-        user.setName(user.getName());
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
-        user.setRole(user.getRole());
-        User updatedUser = userRepository.save(user);
-        return Optional.of(toDto(updatedUser));
+        return userRepository.findById(id).map(existingUser -> {
+            if (user.getName() != null)
+                existingUser.setName(user.getName());
+            if (user.getUsername() != null)
+                existingUser.setUsername(user.getUsername());
+            if (user.getPassword() != null && !user.getPassword().isBlank()) {
+                existingUser.setPassword(passwordEncoder.encode(user.getPassword()));
+            }
+            if (user.getRole() != null)
+                existingUser.setRole(user.getRole());
+
+            User updatedUser = userRepository.save(existingUser);
+            return toDto(updatedUser);
+        });
     }
 
     /**
