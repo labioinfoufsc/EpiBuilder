@@ -10,7 +10,8 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 import java.util.List;
 
 /**
- * Represents an epitope entity with its biochemical properties and characteristics.
+ * Represents an epitope entity with its biochemical properties and
+ * characteristics.
  * This class is mapped to the "epitopes" table in the database.
  */
 @Entity
@@ -18,7 +19,7 @@ import java.util.List;
 @Getter
 @Setter
 public class Epitope {
-    
+
     /**
      * The unique identifier for the epitope.
      */
@@ -42,7 +43,7 @@ public class Epitope {
      * The associated task data that produced this epitope.
      * Uses lazy fetching to improve performance.
      */
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "task_data_id", nullable = false)
     @JsonBackReference
     private EpitopeTaskData epitopeTaskData;
@@ -51,7 +52,7 @@ public class Epitope {
      * The topological information associated with this epitope.
      * Cascades all operations and removes orphaned topology.
      */
-    @OneToMany(mappedBy = "epitope", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "epitope", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private List<EpitopeTopology> epitopeTopologies;
 

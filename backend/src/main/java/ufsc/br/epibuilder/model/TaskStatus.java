@@ -28,7 +28,7 @@ public class TaskStatus {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(mappedBy = "taskStatus", fetch = FetchType.LAZY)
+    @OneToOne(mappedBy = "taskStatus")
     @JsonBackReference
     private EpitopeTaskData epitopeTaskData;
 

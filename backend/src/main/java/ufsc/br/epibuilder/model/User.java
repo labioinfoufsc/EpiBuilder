@@ -39,16 +39,15 @@ public class User implements UserDetails {
 
     /** The hashed password of the user. */
     private String password;
-    
+
     /** The list of epitope tasks associated with the user. */
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "user", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private List<EpitopeTaskData> epitopeTaskDataList = new ArrayList<>();
 
     /** The role assigned to the user. */
     @Enumerated(EnumType.STRING)
     private Role role;
-
 
     /**
      * Returns the authorities granted to the user.

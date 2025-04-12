@@ -12,7 +12,8 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 
 /**
  * Represents the topological characteristics of an epitope, including
- * structural and spatial information predicted by various bioinformatics methods.
+ * structural and spatial information predicted by various bioinformatics
+ * methods.
  * This entity is mapped to the "epitope_topologies" database table.
  */
 @Entity
@@ -39,7 +40,7 @@ public class EpitopeTopology {
      * Associated epitope to which this topology belongs.
      * Uses LAZY loading to optimize performance.
      */
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "epitope_id", nullable = false)
     @JsonBackReference
     private Epitope epitope;
