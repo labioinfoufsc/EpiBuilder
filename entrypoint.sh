@@ -9,9 +9,8 @@ echo "Waiting for MariaDB to be ready..."
 until mysqladmin ping -h "127.0.0.1" --silent; do
     sleep 2
 done
-echo "MariaDB is ready!"
 
-# Create database and user
+# Create database and set up privileges
 echo "Creating database 'epibuilder' and configuring user..."
 mysql -u root <<-EOSQL
     CREATE DATABASE IF NOT EXISTS epibuilder;
@@ -23,9 +22,13 @@ EOSQL
 # Start NGINX
 echo "Starting NGINX..."
 nginx
-echo "NGINX started!"
+echo "NGINX started."
 
-# Start the backend application
+# Wait for NGINX to be ready
+until curl -s http://localhost:8080/ > /dev/null; do
+    sleep 2
+done
+
+# Start Spring Boot backend
 echo "Starting backend..."
 exec java -jar /epibuilder/epibuilder-backend.jar
-echo "Backend started!"
