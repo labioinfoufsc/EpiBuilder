@@ -9,13 +9,13 @@ public enum ActionType {
      * Action for prediction only.
      */
     PREDICT(0, "predict"),
-    
+
     /**
      * Action for analysis only.
      */
-    ANALYZE(1, "analyze");
+    ANALYSIS(1, "analysis");
 
-    private final String action;
+    private final String desc;
 
     /**
      * Constructor for ActionType enum.
@@ -23,16 +23,17 @@ public enum ActionType {
      * @param id     The ID of the action type.
      * @param action The string representation of the action type.
      */
-    ActionType(int id, String action) {
-        this.action = action;
+    ActionType(int id, String desc) {
+        this.desc = desc;
     }
+
     /**
      * Gets the string representation of the action.
      * 
      * @return The action as a string.
      */
-    public String getAction() {
-        return action;
+    public String getDesc() {
+        return desc;
     }
 
     /**
@@ -44,7 +45,7 @@ public enum ActionType {
      */
     public static ActionType fromString(String action) {
         for (ActionType type : ActionType.values()) {
-            if (type.action.equalsIgnoreCase(action)) {
+            if (type.desc.equalsIgnoreCase(action)) {
                 return type;
             }
         }

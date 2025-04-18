@@ -46,11 +46,12 @@ public class EpitopeTopology {
     private Epitope epitope;
 
     /**
-     * Bioinformatics method used for topology prediction.
-     * Examples might include "TMHMM" for transmembrane helices
-     * or "SignalP" for signal peptide prediction.
+     * Method used for topology prediction.
+     * Enumerated type to restrict values to predefined methods.
+     * 
      */
     @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
     private Method method;
 
     /**

@@ -89,6 +89,9 @@ public class EpitopeTaskData {
     private String absolutePath;
 
     @Column
+    private String completeBasename;
+
+    @Column
     private Double algPredThreshold;
 
     @Column
@@ -105,6 +108,20 @@ public class EpitopeTaskData {
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private ActionType action;
+
+    @Column
+    private Integer blastMinIdentityCutoff;
+
+    @Column
+    private Integer blastMinCoverCutoff;
+
+    @Column
+    private Integer blastWordSize;
+
+    // @OneToOne(cascade = CascadeType.ALL)
+    // @JoinColumn(name = "blast_proteome_id", referencedColumnName = "id")
+    // @JsonManagedReference
+    // private List<Database> blastProteome;
 
     /**
      * Threshold for epitope prediction using the BEPIPRED algorithm
@@ -125,15 +142,5 @@ public class EpitopeTaskData {
      */
     @Column
     private Integer maxEpitopeLength;
-
-    /**
-     * Subcellular localization filter (e.g., "Secreted", "Membrane")
-     */
-    private String subcell;
-
-    /**
-     * InterPro domain filter for targeted epitope prediction
-     */
-    private String interpro;
 
 }

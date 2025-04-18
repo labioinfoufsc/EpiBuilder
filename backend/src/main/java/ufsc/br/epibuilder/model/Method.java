@@ -1,15 +1,15 @@
 package ufsc.br.epibuilder.model;
 
 public enum Method {
-    BepiPred("BepiPred"),
-    Emini("Emini"),
-    ChouFasman("Chou Fasman"),
-    Kolaskar("Kolaskar"),
-    KarplusSchulz("Karplus Schulz"),
-    Parker("Parker"),
-    All("All matches"),
-    NGlyc("N-Glyc"),
-    Hydropathy("Hidropathy");
+    BEPIPRED("BepiPred"),
+    EMINI("Emini"),
+    CHOU_FASMAN("Chou Fasman"),
+    KOLASKAR("Kolaskar"),
+    KARPLUS_SCHULZ("Karplus Schulz"),
+    PARKER("Parker"),
+    ALL("All matches"),
+    NGLYC("N-Glyc"),
+    HYDROPATHY("Hidropathy");
 
     private String description;
 
