@@ -13,54 +13,39 @@ params.proteomes   = params.proteomes   ?: null
 
 workflow {
     def input_file_path = file(params.input_file)
-    def jar_path = file('epibuilder/epibuilder-core.jar')
+    def jar_path = file('/epibuilder/epibuilder-core.jar')
+    // Garante que params.basename está definido
+    if (!params.basename) {
+        error "You must provide a value for 'params.basename'"
+    }
 
+    // Cria o diretório se não existir
+    def outputDir = new File(params.basename).absoluteFile
+    if (!outputDir.exists()) {
+        println "Creating output directory: ${outputDir}"
+        outputDir.mkdirs()
+    } else {
+        println "Output directory already exists: ${outputDir}"
+    }
     if (params.input_file.endsWith('.fasta')) {
-        validate_fasta(params.input_file)
-        run_bepipred(input_file_path)
-        def epibuilder = run_epibuilder(run_bepipred.out, jar_path)
-        copy_results(epibuilder.out).view()
+        def result = validate_fasta(params.input_file)
+        println "Any valid proteins? ${result.status}"
+        if (result.valid_proteins) println "Valid proteins saved at: ${result.valid_proteins}"
+        if (result.invalid_proteins) println "Invalid proteins saved at: ${result.invalid_proteins}"
+
+        if(result.status){
+            run_bepipred(result.valid_proteins)
+            def epibuilder = run_epibuilder(run_bepipred.out, jar_path)
+            copy_results(epibuilder.out).view()
+        }else{
+            error "Review the fasta file, ${result.invalid_proteins} invalid proteins "
+        }
     } else if (params.input_file.endsWith('.csv')) {
         def epibuilder = run_epibuilder(input_file_path, jar_path)
         copy_results(epibuilder.out).view()
     } else {
         error "Unsupported file type. Use .fasta or .csv"
     }
-}
-
-/*
- * Process: copy_results
- * Description:
- *   Copies the results from the generated output directory to a new directory
- *   named after the `params.basename` parameter. It ensures a clean copy of results
- *   into a clearly labeled and user-defined location.
- * 
- * Inputs:
- *   - output_dir: The directory containing the results to be copied.
- * 
- * Outputs:
- *   - stdout: A message confirming the location of the copied results.
- */
-process copy_results2 {
-    input:
-    path output_dir
-
-    output:
-    stdout
-
-    script:
-    """
-    echo "starting copy"
-    echo "$output_dir"
-    realpath ${output_dir}
-    echo "${params.basename}"
-    echo "${PWD}"
-    rm -rf "${params.basename}"
-    mkdir -p "${params.basename}"
-    cp -r \$(realpath ${output_dir})/* "${params.basename}/"
-    echo "Your results are in \$(realpath ${params.basename})"
-
-    """
 }
 
 /**
@@ -89,11 +74,10 @@ process copy_results {
     echo "Basename: ${params.basename}"
     echo "Current dir: \${PWD}"
 
-    # Resolve path
-    final_path=\$(realpath ${params.basename})
+    # Define temporary path
+    final_path="\${PWD}/${params.basename}/temp"
 
-    # Remove old results
-    rm -rf "\$final_path"
+    # Create temp directory
     mkdir -p "\$final_path"
 
     # Copy new results
@@ -124,11 +108,16 @@ process copy_results {
         echo "No files with prefix 'epibuilder-' found."
     fi
 
+    # Move all contents from temp to final output directory
+    echo "Moving results from temp to ${params.basename}"
+    mv \$final_path/* "${params.basename}/"
 
-    echo "Your results are in \$final_path"
+    # Optionally remove empty temp dir
+    rmdir "\$final_path"
+
+    echo "Your results are in \$(realpath ${params.basename})"
     """
 }
-
 
 /*
  * Process: run_bepipred
@@ -230,6 +219,8 @@ def isValidSequence(String seq) {
  *   - Two files: proteins_valid.fasta and proteins_invalid.fasta containing valid and invalid sequences respectively.
  */
 def validate_fasta(String fastaPath) {
+    println "Current execution directory: ${workflow.workDir}"
+
     def valid = []
     def invalid = []
 
@@ -253,6 +244,7 @@ def validate_fasta(String fastaPath) {
         }
     }
 
+    // process last sequence
     if (currentHeader != null) {
         def seq = currentSeq.toString().replaceAll("\\s", "").toUpperCase()
         if (isValidSequence(seq)) {
@@ -262,21 +254,41 @@ def validate_fasta(String fastaPath) {
         }
     }
 
-    new File("proteins_valid.fasta").withWriter { w ->
-        valid.each {
-            w.println(it.header)
-            w.println(it.seq)
-        }
-    }
+    //def timestamp = System.currentTimeMillis()
+    //def tmpDir = new File("/pipeline/work/tmp/${timestamp}")
+    //tmpDir.mkdirs()
 
-    if (invalid) {
-        new File("proteins_invalid.fasta").withWriter { w ->
-            invalid.each {
-                w.println(it.header)
+    def outputDir = new File(params.basename).absoluteFile
+
+    def result = [:]
+    
+    if (valid) {
+        def validFile = new File(outputDir, "proteins_valid.fasta")
+        validFile.withWriter { w ->
+            valid.each {
+                def cleanHeader = it.header.split(' ')[0]
+                w.println(cleanHeader)
                 w.println(it.seq)
             }
         }
+        result.status = true
+        result.valid_proteins = validFile.absolutePath
+    }
+
+    if (invalid) {
+        def invalidFile = new File(outputDir, "proteins_invalid.fasta")
+        invalidFile.withWriter { w ->
+            invalid.each {
+                def cleanHeader = it.header.split(' ')[0]
+                w.println(cleanHeader)
+                w.println(it.seq)
+            }
+        }
+        result.invalid_proteins = invalidFile.absolutePath
     }
 
     println "Valid sequences: ${valid.size()}, Invalid sequences: ${invalid.size()}"
+    println "Files saved in: ${outputDir.absolutePath}"
+
+    return result
 }

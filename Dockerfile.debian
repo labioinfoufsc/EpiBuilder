@@ -44,7 +44,7 @@ COPY pipeline/ /pipeline/
 
 # Copy backend and core JAR files
 COPY backend/epibuilder-backend.jar /epibuilder/epibuilder-backend.jar
-COPY sources/epibuilder-core/target/epibuilder-core.jar /epibuilder/epibuilder-core.jar
+COPY core/epibuilder-core.jar /epibuilder/epibuilder-core.jar
 
 # Copy compiled frontend
 COPY frontend/dist/epibuilder-frontend/browser/ /var/www/html/
