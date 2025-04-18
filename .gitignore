@@ -1,5 +1,6 @@
 .nextflow/
 __MACOSX/
+bp3/
 venv/
 *.DS_Store
 *.log
