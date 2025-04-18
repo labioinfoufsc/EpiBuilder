@@ -1,0 +1,8 @@
+.nextflow/
+__MACOSX/
+venv/
+*.DS_Store
+*.log
+*.out
+*.err
+*.tmp
