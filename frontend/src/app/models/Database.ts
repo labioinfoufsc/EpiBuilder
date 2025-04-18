@@ -1,3 +1,6 @@
 export class Database {
-  constructor(public path: string, public name: string) {}
+  id?: number;
+  absolutePath!: string;
+  fileName!: string;
+  date?: Date;
 }

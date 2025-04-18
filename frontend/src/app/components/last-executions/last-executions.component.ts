@@ -1,11 +1,11 @@
-import { Component, ElementRef, ViewChild } from "@angular/core";
-import { EpitopesService } from "../../services/epitopes/epitopes.service";
-import { EpitopeTaskData } from "../../models/EpitopeTaskData";
 import { DatePipe } from "@angular/common";
-import { SuccessMessages } from "../../models/SuccessMessages";
-import { APIResponse } from "../../models/APIResponse";
-import { LoginService } from "../../services/login/login.service";
+import { Component, ElementRef, ViewChild } from "@angular/core";
 import { Modal } from "bootstrap";
+import { APIResponse } from "../../models/APIResponse";
+import { EpitopeTaskData } from "../../models/EpitopeTaskData";
+import { SuccessMessages } from "../../models/SuccessMessages";
+import { EpitopesService } from "../../services/epitopes/epitopes.service";
+import { LoginService } from "../../services/login/login.service";
 
 @Component({
   selector: "app-last-executions",
@@ -45,14 +45,14 @@ export class LastExecutionsComponent {
   }
 
   downloadTask(task: EpitopeTaskData): void {
-    if (!task?.fasta) {
+    if (!task?.file) {
       console.error("Error: No file URL available");
       alert("Error: No file URL available");
       return;
     }
 
-    if (task.fasta) {
-      this.epitopeService.downloadFasta(task.fasta).subscribe({
+    if (task.file) {
+      this.epitopeService.downloadFasta(task.file).subscribe({
         next: (response: APIResponse<Blob>) => {
           if (response.success && response.message) {
             saveAs(response.message, "file.fasta");
@@ -126,6 +126,7 @@ export class LastExecutionsComponent {
   }
 
   selectTask(task: EpitopeTaskData): void {
+    console.log(task);
     this.selectedTask = task;
     this.epitopeService.selectTask(task);
   }

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import {
   AbstractControl,
   FormArray,
@@ -16,7 +16,7 @@ import { DatabasesService } from '../../services/databases/databases.service';
   templateUrl: './add-proteome.component.html',
   styleUrl: './add-proteome.component.scss',
 })
-export class AddProteomeComponent {
+export class AddProteomeComponent implements OnInit {
   myForm: FormGroup;
   dbs: Database[] = [];
   messages: { category: string; text: string }[] = [];
@@ -32,6 +32,9 @@ export class AddProteomeComponent {
     this.myForm = this.fb.group({
       proteomes: this.fb.array([]),
     });
+  }
+  ngOnInit(): void {
+    this.addProteome();
   }
 
   get proteomes(): FormArray {
@@ -54,8 +57,8 @@ export class AddProteomeComponent {
   onDBFileChange(event: any, index: number) {
     const file = event.target.files[0];
     if (file) {
-      this.proteomes.at(index).get('selectDBFile')?.setValue(file.name);
-      console.log(`File selected for proteome ${index + 1}:`, file.name);
+      this.proteomes.at(index).get('selectDBFile')?.setValue(file.fileName);
+      console.log(`File selected for proteome ${index + 1}:`, file.fileName);
     }
   }
 

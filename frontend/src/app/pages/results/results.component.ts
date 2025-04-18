@@ -1,7 +1,7 @@
 import { Component } from "@angular/core";
 import { Epitope } from "../../models/Epitope";
-import { EpitopesService } from "../../services/epitopes/epitopes.service";
 import { EpitopeTaskData } from "../../models/EpitopeTaskData";
+import { EpitopesService } from "../../services/epitopes/epitopes.service";
 import { LoginService } from "../../services/login/login.service";
 
 @Component({
@@ -60,7 +60,11 @@ export class ResultsComponent {
   applyFilters() {
     const search = this.filterText.toLowerCase().trim();
 
-    if (!search && !Array.isArray(this.selectedTask) && this.selectedTask?.epitopes) {
+    if (
+      !search &&
+      !Array.isArray(this.selectedTask) &&
+      this.selectedTask?.epitopes
+    ) {
       this.epitopes = this.selectedTask.epitopes;
       return;
     }

@@ -1,10 +1,10 @@
 export class TaskStatus {
-  taskUUID: number;
+  pid: number;
   status: string;
   progress: number;
 
   constructor(pid: number, status: string, progress: number) {
-    this.taskUUID = pid;
+    this.pid = pid;
     this.status = status;
     this.progress = progress;
   }

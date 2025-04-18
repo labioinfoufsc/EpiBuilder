@@ -1,8 +1,7 @@
 import { Component } from "@angular/core";
 import { FormArray, FormBuilder, FormGroup } from "@angular/forms";
-import { EpitopesService } from "../../services/epitopes/epitopes.service";
 import { Router } from "@angular/router";
-import { EpitopeTaskData } from "../../models/EpitopeTaskData";
+import { EpitopesService } from "../../services/epitopes/epitopes.service";
 import { LoginService } from "../../services/login/login.service";
 
 @Component({
@@ -15,6 +14,7 @@ export class NewComponent {
   myForm: FormGroup;
   messages: { category: string; text: string }[] = [];
 
+
   constructor(
     private fb: FormBuilder,
     private epitopesService: EpitopesService,
@@ -23,7 +23,7 @@ export class NewComponent {
   ) {
     this.myForm = this.fb.group({
       runName: ["epibuilder-task"],
-      fasta: [null],
+      file: [null],
       action: ["predict"],
       bepipredThreshold: [0.1512],
       minEpitopeLength: [10],
@@ -34,7 +34,27 @@ export class NewComponent {
         enableFeature: [false],
         threshold: [0.5],
       }),
+      algpredThreshold: [0.3],
+      algPredPredictionModelType: ["1"],
+      algPredDisplayMode: ["1"],
     });
+  }
+
+  updateAlgpredThreshold(event: Event): void {
+    const value = parseFloat((event.target as HTMLInputElement).value);
+    this.myForm.get("algpredThreshold")?.setValue(value, { emitEvent: false });
+  }
+
+  syncAlgpredThreshold(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    let value = parseFloat(input.value);
+    if (value < 0) value = 0;
+    if (value > 1) value = 1;
+    this.myForm.get("algpredThreshold")?.setValue(value, { emitEvent: false });
+  }
+
+  resetAlgpredThreshold(): void {
+    this.myForm.get("algpredThreshold")?.setValue(0.3, { emitEvent: false });
   }
 
   /**
@@ -47,12 +67,12 @@ export class NewComponent {
 
     if (
       !this.myForm.get("runName")?.value ||
-      !this.myForm.get("fasta")?.value ||
-      !fileRegex.test(this.myForm.get("fasta")?.value || "")
+      !this.myForm.get("file")?.value ||
+      !fileRegex.test(this.myForm.get("file")?.value || "")
     ) {
       messages.push({
         category: "danger",
-        text: "Error: runName and fasta are required and cannot be empty.",
+        text: "Error: runName and file are required and cannot be empty.",
       });
     }
 
@@ -74,12 +94,12 @@ export class NewComponent {
       return;
     }
 
-    const fileInput = this.myForm.get("fasta")?.value;
-    const fastaFile: File = fileInput ? fileInput.name : "";
+    const fileInput = this.myForm.get("file")?.value;
+    const fastaFile: File =
+      fileInput instanceof File ? fileInput : fileInput?.files?.[0];
 
     const epitopeTaskData: any = {
       runName: this.myForm.get("runName")?.value,
-      fasta: fastaFile,
       action: this.myForm.get("action")?.value.toUpperCase(),
       bepipredThreshold: this.myForm.get("bepipredThreshold")?.value,
       minEpitopeLength: this.myForm.get("minEpitopeLength")?.value,
@@ -90,28 +110,34 @@ export class NewComponent {
       optional: this.myForm.get("optional")?.value,
       executionDate: new Date(),
       epitopes: [],
-      user: this.loginService.getUser()
+      user: this.loginService.getUser(),
+      algpredThreshold: this.myForm.get("threshold")?.value,
+      algPredPredictionModelType: this.myForm.get("model")?.value,
+      algPredDisplayMode: this.myForm.get("display")?.value,
     };
 
-    this.epitopesService.submitForm(epitopeTaskData).subscribe({
+    const formData = new FormData();
+    formData.append(
+      "data",
+      new Blob([JSON.stringify(epitopeTaskData)], { type: "application/json" })
+    );
+    formData.append("file", fastaFile);
+
+    this.epitopesService.submitForm(formData).subscribe({
       next: (response) => {
         this.router.navigate(["/results"], { state: { data: response } });
       },
       error: (error) => {
-        this.messages = [
-          { 
-            category: "danger", 
-            text: "Failed to submit the form. Please try again." 
-          },
-        ];
-      }
+        const serverMsg = error?.error?.message || "Failed to submit the form. Please try again.";
+        this.messages = [{ category: "danger", text: serverMsg }];
+      },
     });
   }
 
   /**
    * Handles file input change and validates the file extension.
    * If the file is valid, it updates the form with the file.
-   * 
+   *
    * @param event The file input change event.
    */
   onFileChange(event: any): void {
@@ -121,7 +147,7 @@ export class NewComponent {
       const fileExtension = file.name.split(".").pop()?.toLowerCase();
 
       if (fileExtension && validExtensions.includes(fileExtension)) {
-        this.myForm.patchValue({ fasta: file });
+        this.myForm.patchValue({ file: file });
       } else {
         alert("Invalid file type! Please upload a CSV or FASTA file.");
         event.target.value = "";
@@ -138,7 +164,7 @@ export class NewComponent {
 
   /**
    * Closes the specified message from the messages array.
-   * 
+   *
    * @param message The message to be closed.
    */
   closeMessage(message: { category: string; text: string }): void {
@@ -147,7 +173,7 @@ export class NewComponent {
 
   /**
    * Updates the bepipredThreshold value based on the slider input.
-   * 
+   *
    * @param event The slider input event.
    */
   updateThreshold(event: Event): void {
@@ -159,7 +185,7 @@ export class NewComponent {
 
   /**
    * Syncs the bepipredThreshold slider with the form value, ensuring it remains between 0.0 and 1.0.
-   * 
+   *
    * @param event The slider input event.
    */
   syncSlider(event: Event): void {
@@ -170,9 +196,10 @@ export class NewComponent {
     this.myForm.patchValue({ bepipredThreshold: value });
   }
 
+
   /**
    * Updates the minimum epitope length value.
-   * 
+   *
    * @param event The input event.
    */
   updateMinEpitopeLength(event: Event): void {
@@ -182,7 +209,7 @@ export class NewComponent {
 
   /**
    * Syncs the minimum epitope length value based on the input event.
-   * 
+   *
    * @param event The input event.
    */
   syncMinEpitopeLength(event: Event): void {
@@ -199,7 +226,7 @@ export class NewComponent {
 
   /**
    * Updates the maximum epitope length value.
-   * 
+   *
    * @param event The input event.
    */
   updateMaxEpitopeLength(event: Event): void {
@@ -209,7 +236,7 @@ export class NewComponent {
 
   /**
    * Syncs the maximum epitope length value based on the input event.
-   * 
+   *
    * @param event The input event.
    */
   syncMaxEpitopeLength(event: Event): void {

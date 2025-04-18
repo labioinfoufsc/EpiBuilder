@@ -1,12 +1,18 @@
-import { Injectable } from "@angular/core";
-import { Epitope } from "../../models/Epitope";
-import { BehaviorSubject, catchError, map, Observable, of, throwError } from "rxjs";
-import { EpitopeTaskData } from "../../models/EpitopeTaskData";
 import { HttpClient, HttpErrorResponse } from "@angular/common/http";
+import { Injectable } from "@angular/core";
+import {
+  BehaviorSubject,
+  catchError,
+  map,
+  Observable,
+  of,
+  throwError,
+} from "rxjs";
+import { Epitope } from "../../models/Epitope";
+import { EpitopeTaskData } from "../../models/EpitopeTaskData";
 
-import { EpitopeTopology } from "../../models/EpitopeTopology";
-import { ErrorMessages } from "../../models/ErrorMessages";
 import { APIResponse } from "../../models/APIResponse";
+import { ErrorMessages } from "../../models/ErrorMessages";
 
 @Injectable({
   providedIn: "root",
@@ -26,11 +32,11 @@ export class EpitopesService {
   private environment: string = "http://localhost:8080";
   private apiUrl = `${this.environment}/epitopes`;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   getTaskStatus(taskId: number): Observable<APIResponse<EpitopeTaskData>> {
     return this.http.get<APIResponse<EpitopeTaskData>>(
-      `${this.apiUrl}/tasks/status/${taskId}`, 
+      `${this.apiUrl}/tasks/status/${taskId}`,
       { withCredentials: true }
     );
   }
@@ -79,21 +85,37 @@ export class EpitopesService {
       );
   }
 
-  submitForm(data: EpitopeTaskData): Observable<Epitope[]> {
-    return this.http.post<APIResponse<Epitope[]>>(
-      `${this.apiUrl}/tasks/new`, 
-      data,
-      { headers: { 'Content-Type': 'application/json' } }  // Garante o header
-    ).pipe(
-      map((response) => {
-        if (!response?.success || !response.data) {
-          throw new Error(typeof response?.message === "string" ? response.message : "Invalid response");
-        }
-        return response.data as Epitope[];
-      }),
-      catchError((error: HttpErrorResponse) => {
-        return throwError(() => error);
-      })
-    );
+  getExecutedTasksByUserIdAndStatus(userId: number): Observable<EpitopeTaskData[]> {
+    return this.http
+      .get<EpitopeTaskData[]>(
+        `${this.apiUrl}/tasks/user/${userId}/status`, // Note the /epitopes prefix
+        { withCredentials: true }
+      )
+      .pipe(
+        catchError((error) => {
+          console.error("Full error:", error);
+          return of([]);
+        })
+      );
+  }
+
+  submitForm(data: FormData): Observable<Epitope[]> {
+    return this.http
+      .post<APIResponse<Epitope[]>>(`${this.apiUrl}/tasks/new`, data)
+      .pipe(
+        map((response) => {
+          if (!response?.success || !response.data) {
+            throw new Error(
+              typeof response?.message === "string"
+                ? response.message
+                : "Invalid response"
+            );
+          }
+          return response.data as Epitope[];
+        }),
+        catchError((error: HttpErrorResponse) => {
+          return throwError(() => error);
+        })
+      );
   }
 }

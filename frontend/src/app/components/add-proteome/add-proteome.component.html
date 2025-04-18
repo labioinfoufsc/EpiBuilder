@@ -1,68 +1,39 @@
-<div
-  *ngFor="
+<div *ngFor="
     let proteome of proteomes.controls;
     let i = index;
     trackBy: trackByIndex
-  "
-  class="mt-3 proteome-card"
-  [formGroup]="getFormGroup(proteome)"
->
+  " class="mt-3 proteome-card" [formGroup]="getFormGroup(proteome)">
   <label class="form-label fw-bold">Proteome {{ i + 1 }} file</label>
 
   <div class="mb-3">
     <div class="form-check">
-      <input
-        type="radio"
-        class="form-check-input"
-        formControlName="selectDB"
-        value="database"
-        id="selectDB{{ i }}"
-      />
+      <input type="radio" class="form-check-input" formControlName="selectDB" value="database" id="selectDB{{ i }}" />
       <label class="form-check-label" for="selectDB{{ i }}">
         Select a database (proteome {{ i + 1 }})
       </label>
     </div>
 
-    <select
-      *ngIf="proteome.get('selectDB')?.value === 'database'"
-      formControlName="selectDBFile"
-      class="form-control mt-2"
-    >
-      <option *ngFor="let db of dbs" [value]="db.path">{{ db.name }}</option>
+    <select *ngIf="proteome.get('selectDB')?.value === 'database'" formControlName="selectDBFile"
+      class="form-control mt-2">
+      <option *ngFor="let db of dbs" [value]="db.absolutePath">{{ db.fileName }}</option>
     </select>
 
     <div class="form-check mt-3">
-      <input
-        type="radio"
-        class="form-check-input"
-        formControlName="selectDB"
-        value="fasta_diamond"
-        id="fastaDB{{ i }}"
-      />
+      <input type="radio" class="form-check-input" formControlName="selectDB" value="fasta_diamond"
+        id="fastaDB{{ i }}" />
       <label class="form-check-label" for="fastaDB{{ i }}">
         Upload a FASTA database file (Proteome {{ i + 1 }})
       </label>
     </div>
 
-    <input
-      *ngIf="proteome.get('selectDB')?.value === 'fasta_diamond'"
-      type="file"
-      id="fastaDBFile{{ i }}"
-      class="form-control mt-2"
-      accept=".fasta,.fa,.faa,.fna"
-      (change)="onDBFileChange($event, i)"
-    />
+    <input *ngIf="proteome.get('selectDB')?.value === 'fasta_diamond'" type="file" id="fastaDBFile{{ i }}"
+      class="form-control mt-2" accept=".fasta,.fa,.faa,.fna" (change)="onDBFileChange($event, i)" />
   </div>
 
   <label class="form-label fw-bold mt-2">
     Proteome {{ i + 1 }} alias - appears in the report file
   </label>
-  <input
-    type="text"
-    id="proteomeAlias{{ i }}"
-    class="form-control"
-    formControlName="proteomeAlias"
-  />
+  <input type="text" id="proteomeAlias{{ i }}" class="form-control" formControlName="proteomeAlias" />
 </div>
 <br />
 
@@ -71,12 +42,8 @@
     <i class="fa-solid fa-plus"></i>&nbsp;Add Proteome
   </button>
 
-  <button
-    type="button"
-    class="btn force-bootstrap-danger"
-    (click)="removeProteome(proteomes.length - 1)"
-    *ngIf="proteomes.length > 0"
-  >
-  <i class="fa-solid fa-minus"></i>&nbsp;Remove Proteome
+  <button type="button" class="btn force-bootstrap-danger" (click)="removeProteome(proteomes.length - 1)"
+    *ngIf="proteomes.length > 0">
+    <i class="fa-solid fa-minus"></i>&nbsp;Remove Proteome
   </button>
 </div>

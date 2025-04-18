@@ -5,7 +5,7 @@ export class EpitopeTaskData {
   id?: number;
   taskStatus?: TaskStatus;
   runName!: string;
-  fasta!: File;
+  file!: File;
   action!: string;
   bepipredThreshold!: number;
   minEpitopeLength!: number;
@@ -16,6 +16,8 @@ export class EpitopeTaskData {
   optional!: string;
   executionDate!: Date;
   finishedDate?: Date;
-  /*results_folder!: File;*/
   epitopes?: Epitope[];
+  algpredThreshold?: number;
+  algPredPredictionModelType?: string;
+  algPredDisplayMode?: string;
 }
