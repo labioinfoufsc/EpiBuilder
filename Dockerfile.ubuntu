@@ -1,83 +1,112 @@
-# Base image with CUDA support
-FROM nvidia/cuda:11.3.1-runtime-ubuntu20.04
+FROM nvidia/cuda:12.3.2-runtime-ubuntu22.04
 
 LABEL app="EpiBuilder"
 LABEL version="2.0"
-LABEL description="Bioinformatic tools container with backend, frontend, and Nextflow pipeline"
+LABEL description="Bioinformatic tools environment for epitope prediction"
 
 # Install system dependencies
-RUN apt update && apt install --no-install-recommends -y \
-    python3 python3-pip \
-    git curl unzip nano wget \
-    libgomp1 \
-    openjdk-21-jdk \
-    nginx \
-    coreutils \
-    bash \
-    ca-certificates \
-    mysql-server \
- && apt clean && rm -rf /var/lib/apt/lists/*
+RUN apt-get update
+RUN apt install --no-install-recommends python3-venv python3 python3-pip libgomp1 git unzip nano wget nginx curl mariadb-server -y
 
-# Alias python -> python3
+RUN apt clean -y
+RUN rm -rf /var/lib/apt/lists/*
+
+# Set Python alias
 RUN ln -s $(which python3) /usr/bin/python
 
-# Install BLAST binaries
-COPY blast/blastp /usr/bin/
-COPY blast/makeblastdb /usr/bin/
+RUN wget -P /tmp https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.16.0+-x64-linux.tar.gz
+RUN tar -xzf /tmp/ncbi-blast-2.16.0+-x64-linux.tar.gz -C /tmp
+RUN mv /tmp/ncbi-blast-2.16.0+/bin/blastp /usr/local/bin
+RUN mv /tmp/ncbi-blast-2.16.0+/bin/makeblastdb /usr/local/bin
+RUN rm -rf /tmp/ncbi-blast-2.16.0+
+RUN rm /tmp/ncbi-blast-2.16.0+-x64-linux.tar.gz
 
-# Copy and unzip BePiPred3
-COPY bepipred3.zip /
-RUN unzip /bepipred3.zip -d /bepipred3 && rm /bepipred3.zip
+# Install OpenJDK 21
+RUN wget -P /tmp https://download.oracle.com/java/21/latest/jdk-21_linux-x64_bin.tar.gz
+RUN mkdir /usr/local/java
+RUN tar -xzf /tmp/jdk-21_linux-x64_bin.tar.gz -C /usr/local/java && rm /tmp/jdk-21_linux-x64_bin.tar.gz
+RUN ln -s $(ls -d /usr/local/java/jdk-21*) /usr/local/java/default-java
+ENV JAVA_HOME=/usr/local/java/default-java
+ENV PATH=$JAVA_HOME/bin:$PATH
 
-# Install Python requirements
-COPY requirements.txt /
-RUN pip3 install --no-cache-dir -r /requirements.txt
-
-# Install ESM models
-COPY esm_encodings.tar.gz /
-RUN tar -xzf esm_encodings.tar.gz && rm esm_encodings.tar.gz
-
-RUN mkdir -p /models/
-RUN curl -L https://dl.fbaipublicfiles.com/fair-esm/regression/esm2_t33_650M_UR50D-contact-regression.pt -o /models/esm2_t33_650M_UR50D-contact-regression.pt
-RUN curl -L https://dl.fbaipublicfiles.com/fair-esm/models/esm2_t33_650M_UR50D.pt -o /models/esm2_t33_650M_UR50D.pt
-
-# Clone and install AlgPred2
-RUN git clone https://github.com/raghavagps/algpred2.git /algpred2
-WORKDIR /algpred2
-RUN pip3 install --no-cache-dir -r requirements.txt
-
-# Reset working directory
-WORKDIR /
+# Set working directory
+WORKDIR /opt/tools
 
 # Install Nextflow
-RUN curl -s https://get.nextflow.io | bash && mv nextflow /usr/local/bin/nextflow
+RUN curl -s -o nextflow https://get.nextflow.io
+RUN chmod +x nextflow
+RUN mv nextflow /usr/local/bin/nextflow
+ENV PATH="/usr/local/bin/nextflow:${PATH}"
 
-# Copy backend JAR
+# Copy NextFlow pipeline script
+COPY pipeline/ /pipeline/
+
+# Copy backend and core JAR files
 COPY backend/epibuilder-backend.jar /epibuilder/epibuilder-backend.jar
+COPY core/epibuilder-core.jar /epibuilder/epibuilder-core.jar
 
-# Copy core JAR used by Nextflow
-COPY sources/epibuilder-core/target/epibuilder-core.jar /epibuilder/epibuilder-core.jar
+# Copy compiled frontend
+COPY frontend/dist/epibuilder-frontend/browser/ /var/www/html/
 
-# Copy compiled Angular frontend to NGINX folder
-COPY frontend/dist/epibuilder-frontend/ /var/www/html/
-
-# Configure NGINX (proxy /api to backend)
+# NGINX configuration
 RUN rm /etc/nginx/sites-enabled/default
 COPY nginx.conf /etc/nginx/sites-enabled/default
 
-# Copy Nextflow pipeline files (main.nf, config, etc.)
-COPY pipeline/ /pipeline/
+# Clone and setup AlgPred2
+# RUN git clone https://github.com/raghavagps/algpred2.git /algpred2
 
-# Add test input/output files
-COPY input.fasta /test/input.fasta
-COPY raw_output.csv /test/raw_output.csv
+# Copy and unzip BePiPred3
+COPY bepipred3.zip /tmp/bepipred3.zip
+RUN unzip /tmp/bepipred3.zip -d /
+RUN rm /tmp/bepipred3.zip
 
-# Copy entrypoint
+WORKDIR /
+
+# Cria o ambiente virtual e instala as dependências
+RUN python3 -m venv venv
+RUN . venv/bin/activate
+COPY requirements.txt /opt/tools/requirements.txt
+RUN pip install -r opt/tools/requirements.txt
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# CUDA installation
+# Configura o repositório CUDA
+RUN apt-get update
+RUN apt-get install -y gnupg curl
+RUN mkdir -p /usr/share/keyrings
+RUN curl -fsSL https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-archive-keyring.gpg -o /usr/share/keyrings/cuda-archive-keyring.gpg
+RUN echo "deb [signed-by=/usr/share/keyrings/cuda-archive-keyring.gpg] https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/ /" > /etc/apt/sources.list.d/cuda.list
+RUN apt-get update
+RUN apt-get install --no-install-recommends cuda-runtime-12-2 -y
+
+# Instala o CUDA 12.2
+RUN apt-get update
+RUN apt-get install -y --no-install-recommends cuda-runtime-12-2 keyboard-configuration
+RUN apt-get clean
+RUN rm -rf /var/lib/apt/lists/*
+
+ENV PATH=/usr/local/cuda/bin:${PATH}
+ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:${LD_LIBRARY_PATH}
+
+
+RUN mkdir /models/
+RUN curl https://dl.fbaipublicfiles.com/fair-esm/regression/esm2_t33_650M_UR50D-contact-regression.pt -o /models/esm2_t33_650M_UR50D-contact-regression.pt
+RUN curl https://dl.fbaipublicfiles.com/fair-esm/models/esm2_t33_650M_UR50D.pt -o /models/esm2_t33_650M_UR50D.pt
+
+# Copy the entrypoint and epibuilder scripts into the container
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+COPY epibuilder.sh /epibuilder.sh
+
+# Fix line endings (in case files came from Windows), set executable permissions, and create symlink for epibuilder
+#RUN sed -i -e 's/\r$//' /entrypoint.sh && sed -i -e 's/\r$//' /epibuilder.sh && chmod +x /entrypoint.sh /epibuilder.sh && ln -s /epibuilder.sh /usr/local/bin/epibuilder
 
 # Expose frontend and backend ports
-EXPOSE 80 8080
+EXPOSE 80
+EXPOSE 8080
 
-# Default command: start MySQL, NGINX, and backend
+# Set the working directory to the root
+WORKDIR /
+
+# Define the entrypoint script to run when the container starts
 CMD ["/entrypoint.sh"]
