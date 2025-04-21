@@ -1,31 +1,26 @@
 package ufsc.br.epibuilder.service;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.stream.Stream;
+
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.io.*;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.*;
-
-import ufsc.br.epibuilder.model.EpitopeTaskData;
-import ufsc.br.epibuilder.model.TaskStatus;
-import ufsc.br.epibuilder.model.Status;
 import lombok.extern.slf4j.Slf4j;
-
-import org.springframework.scheduling.annotation.Async;
-import java.nio.file.*;
-import java.util.List;
-import java.util.ArrayList;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.EnableAsync;
-import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.transaction.annotation.Transactional;
-import java.util.stream.Stream;
+import ufsc.br.epibuilder.model.EpitopeTaskData;
 import ufsc.br.epibuilder.model.Status;
-import ufsc.br.epibuilder.service.AuthService;
+import ufsc.br.epibuilder.model.TaskStatus;
 import ufsc.br.epibuilder.model.User;
-import java.util.concurrent.*;
 
 @Service
 @Slf4j
@@ -41,25 +36,29 @@ public class PipelineService {
         this.authService = authService;
     }
 
-    @Async
     public Process runPipeline(EpitopeTaskData taskData) {
         log.info("Starting pipeline for task: {}", taskData.getId());
 
         try {
-            List<String> command = new ArrayList<>(List.of(
-                    "nextflow", "run", "/pipeline/main.nf",
-                    "--input_file", taskData.getFile().getAbsolutePath(),
-                    "--basename", taskData.getCompleteBasename()));
+            List<String> command = new ArrayList<>();
+            command.add("bash");
+            command.add("-c");
 
+            String fullCommand = String.join(" ", List.of(
+                    "source /venv/bin/activate",
+                    "&& nextflow run /pipeline/main.nf",
+                    "--input_file " + taskData.getFile().getAbsolutePath(),
+                    "--basename " + taskData.getCompleteBasename()));
+
+            command.add(fullCommand);
             addOptionalParameter(command, "--threshold", taskData.getBepipredThreshold());
             addOptionalParameter(command, "--min-length", taskData.getMinEpitopeLength());
             addOptionalParameter(command, "--max-length", taskData.getMaxEpitopeLength());
             addOptionalParameter(command, "--search", "none");
             addOptionalParameter(command, "--proteomes", "none");
 
-            String logFilePath = taskData.getUser().getUsername() + "_" + taskData.getExecutionDate() + "_"
-                    + taskData.getRunName() + ".log";
-            command.add(">>");
+            String logFilePath = "/" + taskData.getRunName() + ".log";
+            command.add(">");
             command.add(logFilePath);
 
             log.info("Command to run: {}", String.join(" ", command));
