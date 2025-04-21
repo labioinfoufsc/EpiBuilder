@@ -7,7 +7,7 @@ import { LoginService } from '../../services/login/login.service';
   selector: 'app-realtime-executions',
   standalone: false,
   templateUrl: './realtime-executions.component.html',
-  styleUrls: ['./realtime-executions.component.css']
+  styleUrls: ['./realtime-executions.component.scss']
 })
 export class RealtimeExecutionsComponent {
   processes: EpitopeTaskData[] = [];

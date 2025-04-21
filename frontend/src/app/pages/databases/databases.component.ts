@@ -7,7 +7,7 @@ import { DatabasesService } from '../../services/databases/databases.service';
   selector: 'app-databases',
   standalone: false,
   templateUrl: './databases.component.html',
-  styleUrls: ['./databases.component.css']
+  styleUrls: ['./databases.component.scss']
 })
 export class DatabasesComponent {
   newDatabase?: Database;

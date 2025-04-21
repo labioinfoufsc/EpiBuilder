@@ -1,12 +1,12 @@
-import { ChangeDetectorRef, Component } from "@angular/core";
-import { EpitopesService } from "../../services/epitopes/epitopes.service";
+import { Component } from "@angular/core";
 import { EpitopeTopology } from "../../models/EpitopeTopology";
+import { EpitopesService } from "../../services/epitopes/epitopes.service";
 
 @Component({
   selector: "app-topology",
   standalone: false,
   templateUrl: "./topology.component.html",
-  styleUrls: ["./topology.component.css"],
+  styleUrls: ["./topology.component.scss"],
 })
 export class TopologyComponent {
   epitopeTopologies: EpitopeTopology[] = [];
@@ -36,8 +36,8 @@ export class TopologyComponent {
         this.epitopeTopologies = Array.isArray(epitope.epitopeTopologies)
           ? epitope.epitopeTopologies
           : epitope.epitopeTopologies
-          ? [epitope.epitopeTopologies]
-          : [];
+            ? [epitope.epitopeTopologies]
+            : [];
       } else {
         this.epitopeTopologies = [];
       }
