@@ -1,4 +1,5 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { EpitopeTaskData } from '../../models/EpitopeTaskData';
 import { EpitopesService } from '../../services/epitopes/epitopes.service';
 import { LoginService } from '../../services/login/login.service';
@@ -9,23 +10,44 @@ import { LoginService } from '../../services/login/login.service';
   templateUrl: './realtime-executions.component.html',
   styleUrls: ['./realtime-executions.component.scss']
 })
-export class RealtimeExecutionsComponent {
+export class RealtimeExecutionsComponent implements OnInit, OnDestroy {
   processes: EpitopeTaskData[] = [];
   columns: string[] = ['PID', 'Task name', 'Started At', 'Status'];
+  userId: number | undefined;
+  taskListChangedSubscription: Subscription | undefined;
 
-  constructor(private epitopesService: EpitopesService, private loginService: LoginService) { }
+  constructor(
+    private epitopesService: EpitopesService,
+    private loginService: LoginService
+  ) { }
 
   ngOnInit() {
-    const userId = this.loginService.getUser()?.id;
-    if (userId !== undefined) {
-      this.epitopesService.getExecutedTasksByUserIdAndStatus(userId).subscribe((tasks) => {
-        this.processes = tasks;
-        console.log(tasks)
+    this.userId = this.loginService.getUser()?.id;
+    if (this.userId !== undefined) {
+      this.loadTasks();  // Carrega as tarefas inicialmente
+      // Inscreve-se no observable de mudanças da lista de tarefas
+      this.taskListChangedSubscription = this.epitopesService.taskListChanged$.subscribe(() => {
+        this.loadTasks();  // Recarrega as tarefas quando há uma mudança
       });
     } else {
       console.error("User ID is undefined");
     }
+  }
 
-    console.log("Processes: ", this.processes);
+  ngOnDestroy() {
+    if (this.taskListChangedSubscription) {
+      this.taskListChangedSubscription.unsubscribe();
+    }
+  }
+
+  loadTasks(): void {
+    this.userId = this.loginService.getUser()?.id;
+    if (this.userId !== undefined) {
+      this.epitopesService
+        .getExecutedTasksByUserIdAndStatus(this.userId)
+        .subscribe((tasks) => {
+          this.processes = tasks;
+        });
+    }
   }
 }

@@ -6,6 +6,7 @@ export class EpitopeTaskData {
   taskStatus?: TaskStatus;
   runName!: string;
   file!: File;
+  absolutePath?: string;
   action!: string;
   bepipredThreshold!: number;
   minEpitopeLength!: number;
