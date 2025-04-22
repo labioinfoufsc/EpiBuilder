@@ -1,6 +1,5 @@
 import { Component } from "@angular/core";
 import { FormArray, FormBuilder, FormGroup } from "@angular/forms";
-import { Router } from "@angular/router";
 import { EpitopesService } from "../../services/epitopes/epitopes.service";
 import { LoginService } from "../../services/login/login.service";
 
@@ -18,8 +17,7 @@ export class NewComponent {
   constructor(
     private fb: FormBuilder,
     private epitopesService: EpitopesService,
-    private loginService: LoginService,
-    private router: Router
+    private loginService: LoginService
   ) {
     this.myForm = this.fb.group({
       runName: ["epibuilder-task"],
@@ -125,13 +123,19 @@ export class NewComponent {
 
     this.epitopesService.submitForm(formData).subscribe({
       next: (response) => {
-        this.router.navigate(["/results"], { state: { data: response } });
+        console.log("Success response:", response);
+        this.myForm.reset();
+        this.messages = [{ category: "success", text: response.message }];
+
+        this.epitopesService.notifyTaskListChanged();
       },
       error: (error) => {
+        console.error("Error response:", error);
         const serverMsg = error?.error?.message || "Failed to submit the form. Please try again.";
         this.messages = [{ category: "danger", text: serverMsg }];
       },
     });
+
   }
 
   /**

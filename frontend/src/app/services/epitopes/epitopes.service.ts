@@ -1,16 +1,15 @@
-import { HttpClient, HttpErrorResponse } from "@angular/common/http";
+import { HttpClient, HttpResponse } from "@angular/common/http";
 import { Injectable } from "@angular/core";
 import {
   BehaviorSubject,
   catchError,
-  map,
   Observable,
-  of,
-  throwError,
+  of
 } from "rxjs";
 import { Epitope } from "../../models/Epitope";
 import { EpitopeTaskData } from "../../models/EpitopeTaskData";
 
+import { Subject } from 'rxjs';
 import { APIResponse } from "../../models/APIResponse";
 import { ErrorMessages } from "../../models/ErrorMessages";
 
@@ -28,6 +27,13 @@ export class EpitopesService {
     null
   );
   selectedTask$ = this.selectedTaskSource.asObservable();
+
+  private taskListChanged = new Subject<void>();
+  taskListChanged$ = this.taskListChanged.asObservable();
+
+  notifyTaskListChanged(): void {
+    this.taskListChanged.next();
+  }
 
   private environment: string = "http://localhost:8080";
   private apiUrl = `${this.environment}/epitopes`;
@@ -52,15 +58,11 @@ export class EpitopesService {
       );
   }
 
-  downloadFasta(fastaFile: File): Observable<APIResponse<File>> {
-    if (!fastaFile.name.endsWith(".fasta")) {
-      return of({
-        success: false,
-        message: "Invalid file type. Please upload a .fasta file.",
-      });
-    }
-
-    return of({ success: true, message: fastaFile });
+  downloadFile(taskId: number | undefined): Observable<HttpResponse<Blob>> {
+    return this.http.get(`${this.apiUrl}/task/${taskId}/download`, {
+      observe: 'response',
+      responseType: 'blob'
+    });
   }
 
   selectEpitope(epitope: Epitope | null) {
@@ -85,10 +87,10 @@ export class EpitopesService {
       );
   }
 
-  getExecutedTasksByUserIdAndStatus(userId: number): Observable<EpitopeTaskData[]> {
+  getExecutedTasksByUserIdAndStatus(userId: number | undefined): Observable<EpitopeTaskData[]> {
     return this.http
       .get<EpitopeTaskData[]>(
-        `${this.apiUrl}/tasks/user/${userId}/status`, // Note the /epitopes prefix
+        `${this.apiUrl}/tasks/user/${userId}/status`,
         { withCredentials: true }
       )
       .pipe(
@@ -99,23 +101,7 @@ export class EpitopesService {
       );
   }
 
-  submitForm(data: FormData): Observable<Epitope[]> {
-    return this.http
-      .post<APIResponse<Epitope[]>>(`${this.apiUrl}/tasks/new`, data)
-      .pipe(
-        map((response) => {
-          if (!response?.success || !response.data) {
-            throw new Error(
-              typeof response?.message === "string"
-                ? response.message
-                : "Invalid response"
-            );
-          }
-          return response.data as Epitope[];
-        }),
-        catchError((error: HttpErrorResponse) => {
-          return throwError(() => error);
-        })
-      );
+  submitForm(data: FormData): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/tasks/new`, data);
   }
 }
