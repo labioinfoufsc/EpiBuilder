@@ -1,6 +1,7 @@
 import { DatePipe } from "@angular/common";
 import { Component, ElementRef, ViewChild } from "@angular/core";
 import { Modal } from "bootstrap";
+import { saveAs } from 'file-saver';
 import { APIResponse } from "../../models/APIResponse";
 import { EpitopeTaskData } from "../../models/EpitopeTaskData";
 import { SuccessMessages } from "../../models/SuccessMessages";
@@ -31,7 +32,7 @@ export class LastExecutionsComponent {
 
   constructor(
     private epitopeService: EpitopesService,
-    loginService: LoginService,
+    private loginService: LoginService,
     private datePipe: DatePipe
   ) {
     const userId = loginService.getUser()?.id;
@@ -45,30 +46,28 @@ export class LastExecutionsComponent {
   }
 
   downloadTask(task: EpitopeTaskData): void {
-    if (!task?.file) {
+    if (!task?.absolutePath) {
       console.error("Error: No file URL available");
       alert("Error: No file URL available");
       return;
     }
 
-    if (task.file) {
-      this.epitopeService.downloadFasta(task.file).subscribe({
-        next: (response: APIResponse<Blob>) => {
-          if (response.success && response.message) {
-            saveAs(response.message, "file.fasta");
-            console.log("File downloaded successfully");
-          } else {
-            console.error("Error: " + response.message);
-            alert("Error: " + response.message);
-          }
-        },
-        error: (error) => {
-          console.error("Download failed:", error);
-          alert("Error: Download failed. Please try again later.");
-        },
-      });
-    }
+    this.epitopeService.downloadFile(task.id).subscribe({
+      next: (response) => {
+        const parts = task?.absolutePath?.split('/') || [];
+        const fileName = parts.length >= 5 ? parts[4] : 'downloaded_file';
+
+        saveAs(response.body!, fileName);
+        console.log("File downloaded successfully:", fileName);
+      },
+      error: (error) => {
+        console.error("Download failed:", error);
+        alert("Error: Download failed. Please try again later.");
+      },
+    });
   }
+
+
 
   deleteTask(): void {
     const task: EpitopeTaskData | null = this.taskToDelete;
@@ -130,7 +129,4 @@ export class LastExecutionsComponent {
     this.selectedTask = task;
     this.epitopeService.selectTask(task);
   }
-}
-function saveAs(message: string | Blob, arg1: string) {
-  throw new Error("Function not implemented.");
 }
