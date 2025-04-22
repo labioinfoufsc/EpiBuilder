@@ -7,11 +7,11 @@ public enum Method {
     KOLASKAR("Kolaskar"),
     KARPLUS_SCHULZ("Karplus Schulz"),
     PARKER("Parker"),
-    ALL("All matches"),
-    NGLYC("N-Glyc"),
-    HYDROPATHY("Hidropathy");
+    ALL_MATCHES("All matches"),
+    N_GLYC("N-Glyc"),
+    HYDROPATHY("Hydropathy");
 
-    private String description;
+    private final String description;
 
     Method(String description) {
         this.description = description;
@@ -19,5 +19,14 @@ public enum Method {
 
     public String getDescription() {
         return description;
+    }
+
+    public static Method fromDescription(String description) {
+        for (Method method : values()) {
+            if (method.description.equalsIgnoreCase(description)) {
+                return method;
+            }
+        }
+        throw new IllegalArgumentException("No method found with description: " + description);
     }
 }

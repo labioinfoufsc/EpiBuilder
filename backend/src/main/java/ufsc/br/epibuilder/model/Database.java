@@ -16,6 +16,8 @@ public class Database {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @Transient
+    private String alias;
     @Column(nullable = false)
     private String fileName;
     @Column(nullable = false)

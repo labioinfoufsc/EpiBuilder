@@ -24,8 +24,14 @@ public class Epitope {
      * The unique identifier for the epitope.
      */
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY) 
     private Long id;
+
+    @Column
+    private String epitopeId;
+
+    @Column
+    private Long N;
 
     /**
      * The amino acid sequence of the epitope.
@@ -59,56 +65,67 @@ public class Epitope {
     /**
      * The epitope sequence in string format.
      */
+    @Column
     private String epitope;
 
     /**
      * The starting position of the epitope in the parent protein sequence.
      */
+    @Column
     private Integer start;
 
     /**
      * The ending position of the epitope in the parent protein sequence.
      */
+    @Column
     private Integer end;
 
     /**
      * The length of the epitope sequence.
      */
+    @Column
     private Integer length;
 
     /**
      * The hydropathy index of the epitope.
      */
+    @Column
     private Double hydropathy;
 
     /**
      * The isoelectric point (pI) of the epitope.
      */
+    @Column
     private Double isoelectricPoint;
 
     /**
      * The molecular weight of the epitope in Daltons.
      */
+    @Column
     private Double molecularWeight;
 
     /**
      * The Parker hydrophilicity prediction score.
      */
+    @Column
     private Double parker;
 
     /**
      * The N-glycosylation potential of the epitope.
      */
+    @Column
     private Integer nGlyc;
 
     /**
      * The count of potential N-glycosylation sites.
      */
+    @Column
     private Integer nGlycCount;
 
     /**
      * The Karplus-Schulz flexibility prediction score.
      */
+    @Column
     private Double karplusSchulz;
 
     /**
@@ -119,15 +136,18 @@ public class Epitope {
     /**
      * The Chou-Fasman secondary structure prediction score.
      */
+    @Column
     private Double chouFosman;
 
     /**
      * The Emini surface accessibility prediction score.
      */
+    @Column
     private Double emini;
 
     /**
      * The BepiPred 3.0 linear epitope prediction score.
      */
+    @Column
     private Double bepiPred3;
 }

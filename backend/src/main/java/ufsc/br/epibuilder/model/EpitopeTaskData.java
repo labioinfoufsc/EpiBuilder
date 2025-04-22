@@ -15,9 +15,7 @@ import ufsc.br.epibuilder.model.Status;
 import ufsc.br.epibuilder.model.TaskStatus;
 import lombok.ToString;
 import java.time.LocalDateTime;
-import ufsc.br.epibuilder.model.ActionType;
-import ufsc.br.epibuilder.model.DisplayMode;
-import ufsc.br.epibuilder.model.PredictionModelType;
+import ufsc.br.epibuilder.model.*;
 
 /**
  * Represents a single epitope prediction task containing all configuration
@@ -118,10 +116,15 @@ public class EpitopeTaskData {
     @Column
     private Integer blastWordSize;
 
-    // @OneToOne(cascade = CascadeType.ALL)
-    // @JoinColumn(name = "blast_proteome_id", referencedColumnName = "id")
-    // @JsonManagedReference
-    // private List<Database> blastProteome;
+    @Transient
+    private boolean doBlast;
+
+    @OneToMany(mappedBy = "epitopeTaskData", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JsonManagedReference
+    private List<Blast> blasts = new ArrayList<>();
+
+    @Transient
+    private List<Database> proteomes;
 
     /**
      * Threshold for epitope prediction using the BEPIPRED algorithm
