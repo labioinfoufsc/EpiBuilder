@@ -34,12 +34,6 @@ public class Epitope {
     private Long N;
 
     /**
-     * The amino acid sequence of the epitope.
-     */
-    @Column(name = "sequence")
-    private String sequence;
-
-    /**
      * The prediction score assigned to the epitope.
      */
     @Column(name = "score")

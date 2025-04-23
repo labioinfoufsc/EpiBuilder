@@ -13,8 +13,10 @@ public interface EpitopeTaskDataRepository extends JpaRepository<EpitopeTaskData
 
     public List<EpitopeTaskData> findTasksByUserId(Long userId);
 
-    public boolean deleteById(Long id);
+    public Long deleteById(Long id);
 
-    public List<EpitopeTaskData> findByUserIdAndTaskStatusStatus(Long userId, Status status);
+    public EpitopeTaskData findById(Long id);
+
+    public List<EpitopeTaskData> findTasksByTaskStatusStatus(Status status);
 
 }

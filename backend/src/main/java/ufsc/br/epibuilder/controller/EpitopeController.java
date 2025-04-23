@@ -1,50 +1,36 @@
 package ufsc.br.epibuilder.controller;
 
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import ufsc.br.epibuilder.model.ActionType;
-import ufsc.br.epibuilder.model.Epitope;
-import ufsc.br.epibuilder.model.EpitopeTaskData;
-import ufsc.br.epibuilder.service.EpitopeService;
-import ufsc.br.epibuilder.service.EpitopeTaskDataService;
-import ufsc.br.epibuilder.service.PipelineService;
-
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.util.List;
-import java.util.Optional;
-
-import java.util.HashMap;
-import java.util.Map;
-import ufsc.br.epibuilder.model.Status;
-import ufsc.br.epibuilder.model.TaskStatus;
-
-import lombok.extern.slf4j.Slf4j;
-import java.time.LocalDateTime;
-import java.util.UUID;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import org.springframework.http.MediaType;
-import org.springframework.web.multipart.MultipartFile;
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
-import java.util.UUID;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
+import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import java.nio.file.*;
+
+import lombok.extern.slf4j.Slf4j;
+import ufsc.br.epibuilder.model.*;
+import ufsc.br.epibuilder.service.EpitopeTaskDataService;
+import ufsc.br.epibuilder.service.PipelineService;
+import org.springframework.core.io.UrlResource;
+import org.springframework.core.io.Resource;
 
 @RestController
 @Slf4j
@@ -72,36 +58,35 @@ public class EpitopeController {
             return ResponseEntity.badRequest().body(errorResponse);
         }
 
-        if (taskData.getAction().getDesc().equalsIgnoreCase(ActionType.ANALYSIS.getDesc())) {
+        if (taskData.getAction().getDesc().equalsIgnoreCase(ActionType.PREDICT.getDesc())) {
             taskData.setAlgPredDisplayMode(null);
             taskData.setAlgPredictionModelType(null);
             taskData.setAlgPredDisplayMode(null);
             taskData.setBepipredThreshold(null);
             taskData.setMinEpitopeLength(null);
             taskData.setMaxEpitopeLength(null);
-        }
-
-        String username = taskData.getUser().getUsername();
-        String runName = taskData.getRunName();
-
-        Path basePath = Paths.get(System.getProperty("user.dir"));
-        Path taskDir = basePath.resolve(username).resolve(runName);
+        }      
 
         try {
-            log.info("Saving file to: {}", taskDir);
-
-            // Input file path
-            Files.createDirectories(taskDir);
-            Path filePath = taskDir.resolve(file.getOriginalFilename());
-            file.transferTo(filePath.toFile());
-            taskData.setFile(filePath.toFile());
-            taskData.setAbsolutePath(taskDir.toString());
-
-            // Results files path
+            String username = taskData.getUser().getUsername();
+            String runName = taskData.getRunName();
             String timestamp = String.valueOf(System.currentTimeMillis());
-            Path workDir = Paths.get("/www", username, runName + "_" + timestamp);
-            Files.createDirectories(workDir);
-            taskData.setCompleteBasename(workDir.toString());
+
+            log.info("Creating directory structure for user: {}", username);
+            String paths = "/www/" + username + "/" + runName + "_" + timestamp;
+            Path baseDir = Paths.get(paths);
+            Files.createDirectories(baseDir);
+            log.info("Directory structure created: {}", baseDir);
+
+            // Salva o arquivo diretamente no diretório base
+            log.info("Saving file: {}", file.getOriginalFilename());
+            Path filePath = baseDir.resolve(file.getOriginalFilename());
+            file.transferTo(filePath.toFile());
+            log.info("File saved: {}", filePath);
+
+            taskData.setFile(filePath.toFile());
+            taskData.setAbsolutePath(filePath.toString());  // Caminho absoluto: /www/username/runname_timestamp/arquivo.extensao
+            taskData.setCompleteBasename(baseDir.toString());  // completeBasename: /www/username/runname_timestamp/
 
             Process process = pipelineService.runPipeline(taskData);
 
@@ -117,7 +102,8 @@ public class EpitopeController {
             log.info("Task persisted with DB ID {}", savedTask.getId());
 
             Map<String, Object> response = new HashMap<>();
-            response.put("message", String.format("Task successfully created. Task ID: %d", savedTask.getId()));
+            response.put("message",
+                    String.format("Task successfully created. Task PID: %d", savedTask.getTaskStatus().getPid()));
             response.put("taskId", savedTask.getId());
 
             return ResponseEntity.ok(response);
@@ -135,6 +121,48 @@ public class EpitopeController {
         }
     }
 
+    @GetMapping("/task/{id}/download")
+    public ResponseEntity<Resource> downloadFile(@PathVariable Long id) {
+        try {
+            EpitopeTaskData task = epitopeTaskDataService.findById(id);
+
+            Path taskDir = Paths.get(task.getCompleteBasename()).normalize(); // Caminho do diretório da tarefa
+            if (!Files.exists(taskDir) || !Files.isDirectory(taskDir)) {
+                throw new RuntimeException("Task directory not found or is not a directory");
+            }
+
+            Path zipFilePath = Files.createTempFile("task_" + id + "_", ".zip");
+            try (ZipOutputStream zipOut = new ZipOutputStream(Files.newOutputStream(zipFilePath))) {
+                Files.walk(taskDir)
+                        .filter(path -> !Files.isDirectory(path))
+                        .forEach(filePath -> {
+                            try {
+                                ZipEntry zipEntry = new ZipEntry(taskDir.relativize(filePath).toString());
+                                zipOut.putNextEntry(zipEntry);
+                                Files.copy(filePath, zipOut);
+                                zipOut.closeEntry();
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        });
+            } catch (IOException e) {
+                throw new RuntimeException("Error creating ZIP file", e);
+            }
+
+            Resource resource = new UrlResource(zipFilePath.toUri());
+
+            if (resource.exists() && resource.isReadable()) {
+                return ResponseEntity.ok()
+                        .header("Content-Disposition", "attachment; filename=\"" + zipFilePath.getFileName() + "\"")
+                        .body(resource);
+            } else {
+                throw new RuntimeException("File not found or not readable");
+            }
+        } catch (IOException | InvalidPathException ex) {
+            return ResponseEntity.status(500).body(null);
+        }
+    }
+
     @GetMapping("/tasks/user/{userId}")
     public ResponseEntity<?> getTasksByUser(@PathVariable Long userId) {
         List<EpitopeTaskData> tasks = epitopeTaskDataService.findTasksByUserId(userId);
@@ -146,15 +174,18 @@ public class EpitopeController {
 
     @DeleteMapping("/tasks/{id}")
     public ResponseEntity<Map<String, String>> deleteTask(@PathVariable Long id) {
-        epitopeTaskDataService.deleteById(id);
+        Long deleted = epitopeTaskDataService.deleteById(id);
+        if (deleted == 0) {
+            return ResponseEntity.notFound().build();
+        }
         Map<String, String> response = new HashMap<>();
         response.put("message", "Task deleted successfully");
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/tasks/user/{userId}/status")
-    public ResponseEntity<List<EpitopeTaskData>> findByUserIdAndTaskStatusStatus(@PathVariable Long userId) {
-        List<EpitopeTaskData> tasks = epitopeTaskDataService.findByUserIdAndTaskStatusStatus(userId, Status.RUNNING);
+    public ResponseEntity<List<EpitopeTaskData>> findTasksByTaskStatusStatus(@PathVariable Long userId) {
+        List<EpitopeTaskData> tasks = epitopeTaskDataService.findTasksByTaskStatusStatus(Status.RUNNING);
         if (tasks.isEmpty()) {
             return ResponseEntity.notFound().build();
         }

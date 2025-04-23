@@ -38,6 +38,10 @@ public class EpitopeTaskDataService {
         return epitopeTaskDataRepository.save(epitopeTaskData);
     }
 
+    public EpitopeTaskData findById(Long id) {
+        return epitopeTaskDataRepository.findById(id);
+    }
+
     /**
      * Retrieves all epitopes.
      *
@@ -47,11 +51,11 @@ public class EpitopeTaskDataService {
         return epitopeTaskDataRepository.findAll();
     }
 
-    public List<EpitopeTaskData> findByUserIdAndTaskStatusStatus(Long userId, Status status) {
-        return epitopeTaskDataRepository.findByUserIdAndTaskStatusStatus(userId, status);
+    public List<EpitopeTaskData> findTasksByTaskStatusStatus(Status status) {
+        return epitopeTaskDataRepository.findTasksByTaskStatusStatus(status);
     }
 
-    public boolean deleteById(Long id) {
+    public Long deleteById(Long id) {
         return epitopeTaskDataRepository.deleteById(id);
     }
 
