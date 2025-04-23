@@ -26,6 +26,7 @@ import ufsc.br.epibuilder.model.*;
 import ufsc.br.epibuilder.model.EpitopeTopology;
 import ufsc.br.epibuilder.model.Method;
 import ufsc.br.epibuilder.model.Status;
+import ufsc.br.epibuilder.service.*;
 import java.util.Scanner;
 
 @Service
@@ -35,11 +36,15 @@ public class PipelineService {
     private final ExecutorService executor = Executors.newCachedThreadPool();
     private final Map<String, TaskStatus> tasks = new ConcurrentHashMap<>();
     private final EpitopeTaskDataService epitopeTaskDataService;
+    private final EpitopeService epitopeService;
+    private final EpitopeTopologyService epitopeTopologyService;
     private final AuthService authService;
 
-    public PipelineService(EpitopeTaskDataService epitopeTaskDataService, AuthService authService) {
+    public PipelineService(EpitopeTaskDataService epitopeTaskDataService, EpitopeTopologyService epitopeTopologyService, EpitopeService epitopeService, AuthService authService) {
         this.epitopeTaskDataService = epitopeTaskDataService;
         this.authService = authService;
+        this.epitopeTopologyService = epitopeTopologyService;
+        this.epitopeService = epitopeService;
     }
 
     public Process runPipeline(EpitopeTaskData taskData) {
@@ -186,6 +191,10 @@ public class PipelineService {
             // Associate the task with the epitopes
             for (Epitope epitope : epitopes) {
                 epitope.setEpitopeTaskData(task);
+                Epitope epitopeSaved = epitopeService.save(epitope);
+                epitope.setId(epitopeSaved.getId());
+                log.info("Epitope saved: {}", epitope.getEpitopeId());
+
             }
             task.setEpitopes(epitopes);
 
@@ -213,7 +222,8 @@ public class PipelineService {
         while ((line = reader.readLine()) != null) {
             String[] columns = line.split("\t");
             Epitope epitope = new Epitope();
-
+            log.info("Columns length: {}", columns.length);
+            log.info("Columns: {}", (Object) columns);
             log.info("Processing line: {}", line);
 
             epitope.setN(Long.parseLong(columns[0]));
@@ -221,18 +231,18 @@ public class PipelineService {
             epitope.setEpitope(columns[2]);
             epitope.setStart(Integer.parseInt(columns[3]));
             epitope.setEnd(Integer.parseInt(columns[4]));
-            epitope.setNGlyc(columns[5].equals("Y") ? 1 : 0);
+            epitope.setNGlyc(columns[5]);
             epitope.setNGlycCount(Integer.parseInt(columns[6]));
             epitope.setLength(Integer.parseInt(columns[8]));
             epitope.setMolecularWeight(Double.parseDouble(columns[9]));
             epitope.setIsoelectricPoint(Double.parseDouble(columns[10]));
             epitope.setHydropathy(Double.parseDouble(columns[11]));
-            epitope.setBepiPred3(Double.parseDouble(columns[15]));
-            epitope.setEmini(Double.parseDouble(columns[16]));
-            epitope.setKolaskar(Double.parseDouble(columns[17]));
-            epitope.setChouFosman(Double.parseDouble(columns[18]));
-            epitope.setKarplusSchulz(Double.parseDouble(columns[19]));
-            epitope.setParker(Double.parseDouble(columns[20]));
+            epitope.setBepiPred3(Double.parseDouble(columns[14])); 
+            epitope.setEmini(Double.parseDouble(columns[15]));      
+            epitope.setKolaskar(Double.parseDouble(columns[16]));   
+            epitope.setChouFosman(Double.parseDouble(columns[17])); 
+            epitope.setKarplusSchulz(Double.parseDouble(columns[18]));
+            epitope.setParker(Double.parseDouble(columns[19]));  
 
             epitopes.add(epitope);
         }

@@ -108,7 +108,7 @@ public class Epitope {
      * The N-glycosylation potential of the epitope.
      */
     @Column
-    private Integer nGlyc;
+    private String nGlyc;
 
     /**
      * The count of potential N-glycosylation sites.
