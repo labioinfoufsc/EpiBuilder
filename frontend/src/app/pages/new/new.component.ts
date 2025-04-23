@@ -12,6 +12,23 @@ import { LoginService } from "../../services/login/login.service";
 export class NewComponent {
   myForm: FormGroup;
   messages: { category: string; text: string }[] = [];
+  defaultFormValues = {
+    runName: "epibuilder-task",
+    file: null,
+    action: "predict",
+    bepipredThreshold: 0.1512,
+    minEpitopeLength: 10,
+    maxEpitopeLength: 30,
+    epitopeSearch: "no_search",
+    proteomes: [],
+    optional: {
+      enableFeature: false,
+      threshold: 0.5,
+    },
+    algpredThreshold: 0.3,
+    algPredPredictionModelType: "1",
+    algPredDisplayMode: "1",
+  };
 
 
   constructor(
@@ -124,7 +141,7 @@ export class NewComponent {
     this.epitopesService.submitForm(formData).subscribe({
       next: (response) => {
         console.log("Success response:", response);
-        this.myForm.reset();
+        this.myForm.reset(this.defaultFormValues);
         this.messages = [{ category: "success", text: response.message }];
 
         this.epitopesService.notifyTaskListChanged();
