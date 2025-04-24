@@ -87,7 +87,6 @@ export class UsersComponent implements OnInit {
         return;
       }
 
-      console.log(this.registrationForm.value.role);
 
       let newUser: User = {
         name: this.registrationForm.value.name,
@@ -113,7 +112,6 @@ export class UsersComponent implements OnInit {
       this.selectedUser.name = this.registrationForm.value.name;
       this.selectedUser.role = this.registrationForm.value.role;
 
-      console.log(this.registrationForm.value.role);
 
       if (this.registrationForm.value.password) {
         if (

@@ -44,7 +44,6 @@ export class ProfileComponent implements OnInit {
    * Loads user data from localStorage and populates the form.
    */
   private loadUser(): void {
-    console.log(this.loginService.getUser());
     this.user = this.loginService.getUser();
 
     this.profileForm.patchValue({
@@ -101,7 +100,6 @@ export class ProfileComponent implements OnInit {
 
     // Only add password to the update if it's not empty
     if (this.profileForm.value.password) {
-      console.log('entrou aqui')
       updatedUser.password = this.profileForm.value.password;
     }
 

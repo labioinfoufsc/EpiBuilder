@@ -58,7 +58,6 @@ export class AddProteomeComponent implements OnInit {
     const file = event.target.files[0];
     if (file) {
       this.proteomes.at(index).get('selectDBFile')?.setValue(file.fileName);
-      console.log(`File selected for proteome ${index + 1}:`, file.fileName);
     }
   }
 
