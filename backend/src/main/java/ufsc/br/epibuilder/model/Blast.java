@@ -36,8 +36,8 @@ public class Blast {
     private String sseq;
 
     @ManyToOne
-    @JoinColumn(name = "epitope_task_data_id")
+    @JoinColumn(name = "epitope_id")
     @JsonBackReference
-    private EpitopeTaskData epitopeTaskData;
+    private Epitope epitope;
 
 }

@@ -1,14 +1,19 @@
 package ufsc.br.epibuilder.model;
 
-import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonBackReference;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
-
-import ufsc.br.epibuilder.model.Method;
-import ufsc.br.epibuilder.model.Epitope;
-
-import com.fasterxml.jackson.annotation.JsonManagedReference;
-import com.fasterxml.jackson.annotation.JsonBackReference;
 
 /**
  * Represents the topological characteristics of an epitope, including
@@ -40,8 +45,8 @@ public class EpitopeTopology {
      * Associated epitope to which this topology belongs.
      * Uses LAZY loading to optimize performance.
      */
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "epitope_id", nullable = false)
+    @ManyToOne
+    @JoinColumn(name = "epitope_id")
     @JsonBackReference
     private Epitope epitope;
 
@@ -50,7 +55,7 @@ public class EpitopeTopology {
      * Enumerated type to restrict values to predefined methods.
      * 
      */
-    @Column(nullable = false)
+    @Column
     @Enumerated(EnumType.STRING)
     private Method method;
 
@@ -58,20 +63,20 @@ public class EpitopeTopology {
      * Threshold value used for topology classification.
      * Represents the cutoff score for considering a feature as present.
      */
-    @Column(nullable = false)
+    @Column(nullable = true)
     private Double threshold;
 
     /**
      * Average prediction score across the entire epitope sequence.
      * Indicates the confidence level of the topology prediction.
      */
-    @Column(nullable = false)
+    @Column
     private Double avgScore;
 
     /**
      * Percentage of the epitope sequence covered by the predicted topology feature.
      * Expressed as a decimal value between 0 and 1.
      */
-    @Column(nullable = false)
+    @Column
     private Double cover;
 }

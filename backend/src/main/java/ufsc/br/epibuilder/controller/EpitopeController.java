@@ -65,7 +65,7 @@ public class EpitopeController {
             taskData.setBepipredThreshold(null);
             taskData.setMinEpitopeLength(null);
             taskData.setMaxEpitopeLength(null);
-        }      
+        }
 
         try {
             String username = taskData.getUser().getUsername();
@@ -85,9 +85,11 @@ public class EpitopeController {
             log.info("File saved: {}", filePath);
 
             taskData.setFile(filePath.toFile());
-            taskData.setAbsolutePath(filePath.toString());  // Caminho absoluto: /www/username/runname_timestamp/arquivo.extensao
-            taskData.setCompleteBasename(baseDir.toString());  // completeBasename: /www/username/runname_timestamp/
+            taskData.setAbsolutePath(filePath.toString()); // Caminho absoluto:
+                                                           // /www/username/runname_timestamp/arquivo.extensao
+            taskData.setCompleteBasename(baseDir.toString()); // completeBasename: /www/username/runname_timestamp/
 
+            taskData.setDoBlast(true);
             Process process = pipelineService.runPipeline(taskData);
 
             TaskStatus taskStatus = new TaskStatus();
@@ -121,7 +123,7 @@ public class EpitopeController {
         }
     }
 
-    @GetMapping("/task/{id}/download")
+    @GetMapping("/tasks/{id}/download")
     public ResponseEntity<Resource> downloadFile(@PathVariable Long id) {
         try {
             EpitopeTaskData task = epitopeTaskDataService.findById(id);
@@ -160,6 +162,36 @@ public class EpitopeController {
             }
         } catch (IOException | InvalidPathException ex) {
             return ResponseEntity.status(500).body(null);
+        }
+    }
+
+    @GetMapping("/tasks/{id}/log")
+    public ResponseEntity<?> getTaskLog(@PathVariable Long id) {
+        EpitopeTaskData task = epitopeTaskDataService.findById(id);
+        if (task == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Path taskDir = Paths.get(task.getCompleteBasename()).normalize();
+        if (!Files.exists(taskDir) || !Files.isDirectory(taskDir)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Task directory not found or is not a directory");
+        }
+
+        Path logFile = taskDir.resolve("pipeline.log");
+        if (!Files.exists(logFile)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Log file not found");
+        }
+
+        try {
+            String logContent = Files.readString(logFile);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body(logContent);
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error reading log file: " + e.getMessage());
         }
     }
 

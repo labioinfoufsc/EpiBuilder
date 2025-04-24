@@ -7,6 +7,7 @@ import lombok.Setter;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -24,7 +25,7 @@ public class Epitope {
      * The unique identifier for the epitope.
      */
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY) 
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column
@@ -38,6 +39,10 @@ public class Epitope {
      */
     @Column(name = "score")
     private Double score;
+
+    @OneToMany(mappedBy = "epitope", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private List<Blast> blasts = new ArrayList<>();
 
     /**
      * The associated task data that produced this epitope.
