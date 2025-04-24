@@ -4,6 +4,7 @@ import { TaskStatus } from "./TaskStatus"; // Ensure TaskStatus is defined in th
 export class EpitopeTaskData {
   id?: number;
   taskStatus?: TaskStatus;
+  elapsedTime?: any;
   runName!: string;
   file!: File;
   absolutePath?: string;
@@ -11,6 +12,7 @@ export class EpitopeTaskData {
   bepipredThreshold!: number;
   minEpitopeLength!: number;
   maxEpitopeLength!: number;
+  proteomeSize?: number;
   subcell!: string;
   interpro!: string;
   epitopeSearch!: string;
@@ -18,6 +20,9 @@ export class EpitopeTaskData {
   executionDate!: Date;
   finishedDate?: Date;
   epitopes?: Epitope[];
+  minIdentityCutoff?: number;
+  maxIdentityCutoff?: number;
+  wordSize?: number;
   algpredThreshold?: number;
   algPredPredictionModelType?: string;
   algPredDisplayMode?: string;

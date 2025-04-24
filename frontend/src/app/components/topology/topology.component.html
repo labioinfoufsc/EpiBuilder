@@ -1,29 +1,91 @@
 <div class="card">
+
   <div class="card-header custom-header">
-    <b>Topology of Epitope ID #{{ epitopeId || 'N/A' }}</b>
+    <b>Topology of Protein ID <span style="color: #ffff00;">#{{ proteinId || 'N/A' }}</span> - Epitope N <span
+        style="color: #ffff00;">#{{ epitopeId || 'N/A' }}</span></b>
   </div>
 
   <div class="table-responsive">
-    <table class="table table-striped table-hover table-bordered">
-      <thead class="table-light" >
+    <table class="table table-striped table-hover table-bordered" style="text-align: center;">
+      <thead class="table-light">
         <tr>
-          <th  *ngFor="let column of columns">{{ column }}</th>
+          <th>Method</th>
+          <th>Threshold</th>
+          <th>Avg Score</th>
+          <th>Cover</th>
+          <th [attr.colspan]="epitopeTopologies[0]?.epitope?.length || 1" class="text-center">Epitope</th>
         </tr>
       </thead>
       <tbody>
         <tr *ngIf="epitopeTopologies.length === 0">
-          <td class="text-center text-muted" [attr.colspan]="columns.length">
+          <td class="text-center text-muted" [attr.colspan]="4 + (epitopeTopologies[0]?.epitope?.length || 1)">
             No data available
           </td>
         </tr>
 
-        <!-- Se houver dados, exibe as linhas -->
-        <tr *ngFor="let row of epitopeTopologies; let i = index">
-          <td>{{ i === 0 ? row.id : '' }}</td>
+        <tr *ngFor="let row of epitopeTopologies">
           <td>{{ row.method }}</td>
-          <td>{{ row.threshold }}</td>
-          <td>{{ row.avgScore }}</td>
-          <td>{{ row.cover }}</td>
+          <td>{{ row.threshold === undefined ? '-' : row.threshold }}</td>
+          <td>{{ row.avgScore === undefined ? '-' : row.avgScore }}</td>
+          <td>{{ row.cover === undefined ? '-' : (row.cover | number:'1.2-2') }}</td>
+
+          <td *ngFor="let char of row.epitope?.split('') || []" [class.bg-danger]="char === '.'"
+            [class.text-danger]="char === '.'" [class.bg-primary]="char !== '.'" [class.text-primary]="char !== '.'"
+            class="text-center fw-bold p-2">
+            {{ char }}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card-header custom-header">
+    <b>BLAST of Protein ID <span style="color: #ffff00;">#{{ proteinId || 'N/A' }}</span> - Epitope N <span
+        style="color: #ffff00;">#{{ epitopeId || 'N/A' }}</span> - using <span style="color: #ffff00;">{{
+        database || 'N/A' }}</span> database</b>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-striped table-hover table-bordered" style="text-align: center;">
+      <thead class="table-light">
+        <tr>
+          <th *ngFor="let column of blastColumns">{{ column }}</th>
+        </tr>
+      </thead>
+      <tbody style="text-align: center;">
+        <tr *ngIf="blasts.length === 0">
+          <td class="text-center text-muted" [attr.colspan]="columns.length">
+            No data available
+          </td>
+        </tr>
+        <!-- sacc?: string;
+      pident?: number;
+      qcovs?: number;
+      qseq?: string;
+      sseq?: string;
+      qacc?: string;-->
+
+        <!-- Se houver dados, exibe as linhas -->
+        <tr *ngFor="let row of blasts; let i = index">
+          <td style="width: 15%;">
+            <ng-container *ngIf="database === 'IEDB'; else plainText">
+              <div class="d-flex align-items-center">
+                <span class="me-2">{{ row.sacc }}</span>
+                <a href="https://www.iedb.org/epitope/{{ row.sacc.split('-').pop() }}" target="_blank"
+                  class="text-primary text-decoration-none">
+                  <i class="fas fa-external-link-alt"></i>
+                </a>
+              </div>
+            </ng-container>
+            <ng-template #plainText>
+              {{ row.sacc }}
+            </ng-template>
+          </td>
+
+          <td>{{ row.pident === undefined ? '-' : (row.pident | number:'1.2-2') }}</td>
+          <td>{{ row.qcovs === undefined ? '-' : (row.qcovs | number:'1.2-2') }}</td>
+          <td>{{ row.qseq }}</td>
+          <td>{{ row.sseq }}</td>
         </tr>
       </tbody>
     </table>

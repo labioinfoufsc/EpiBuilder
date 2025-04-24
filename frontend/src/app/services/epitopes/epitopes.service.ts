@@ -58,12 +58,19 @@ export class EpitopesService {
       );
   }
 
-  downloadFile(taskId: number | undefined): Observable<HttpResponse<Blob>> {
-    return this.http.get(`${this.apiUrl}/task/${taskId}/download`, {
-      observe: 'response',
+  getLogByTaskId(taskId: number): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/tasks/${taskId}/log`, {
       responseType: 'blob'
     });
   }
+
+  downloadFile(taskId: number): Observable<HttpResponse<Blob>> {
+    return this.http.get<Blob>(`${this.apiUrl}/tasks/${taskId}/download`, {
+      observe: 'response',
+      responseType: 'blob' as 'json' // Para garantir que a resposta seja um Blob
+    });
+  }
+
 
   selectEpitope(epitope: Epitope | null) {
     this.selectedEpitopeSource.next(epitope);
@@ -80,7 +87,7 @@ export class EpitopesService {
         { withCredentials: true }
       )
       .pipe(
-        catchError((error) => {
+        catchError((error: any) => {
           console.error("Full error:", error);
           return of([]);
         })
@@ -94,7 +101,7 @@ export class EpitopesService {
         { withCredentials: true }
       )
       .pipe(
-        catchError((error) => {
+        catchError((error: any) => {
           console.error("Full error:", error);
           return of([]);
         })
@@ -104,4 +111,11 @@ export class EpitopesService {
   submitForm(data: FormData): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/tasks/new`, data);
   }
+
+  getTaskLog(id: number): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/tasks/${id}/log`, { responseType: 'blob' });
+  }
+
+
+
 }

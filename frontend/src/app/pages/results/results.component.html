@@ -20,42 +20,46 @@
             <p><strong>FASTA File:</strong> {{ selectedTask.file }}</p>
           </div>
 
+
           <div class="col-md-6 mb-3">
-            <p><strong>Action:</strong> {{ selectedTask.action }}</p>
-          </div>
-          <div class="col-md-6 mb-3">
-            <p><strong>BepiPred Threshold:</strong> {{ selectedTask.bepipredThreshold }}</p>
+            <p><strong>BepiPred Threshold:</strong> {{ selectedTask.bepipredThreshold === null ? '0.1512' :
+              selectedTask.bepipredThreshold}}</p>
           </div>
 
           <div class="col-md-6 mb-3">
-            <p><strong>Min Epitope Length:</strong> {{ selectedTask.minEpitopeLength }}</p>
+            <p><strong>Min Epitope Length:</strong> {{ selectedTask.minEpitopeLength === null? 10 :
+              selectedTask.minEpitopeLength}}</p>
           </div>
           <div class="col-md-6 mb-3">
-            <p><strong>Max Epitope Length:</strong> {{ selectedTask.maxEpitopeLength }}</p>
+            <p><strong>Max Epitope Length:</strong> {{ selectedTask.maxEpitopeLength === null ? 30:
+              selectedTask.maxEpitopeLength}}</p>
           </div>
 
           <div class="col-md-6 mb-3">
-            <p><strong>Subcellular Localization:</strong> {{ selectedTask.subcell }}</p>
+            <p><strong>BLAST min identity cutoff:</strong> {{ selectedTask.minIdentityCutoff === undefined ? 90 :
+              selectedTask.minIdentityCutoff}}</p>
           </div>
           <div class="col-md-6 mb-3">
-            <p><strong>InterPro:</strong> {{ selectedTask.interpro }}</p>
+            <p><strong>BLAST max cover cutoff:</strong> {{ selectedTask.maxIdentityCutoff === undefined ? 90 :
+              selectedTask.maxIdentityCutoff }}</p>
+          </div>
+          <div class="col-md-6 mb-3">
+            <p><strong>BLAST word size:</strong> {{ selectedTask.wordSize === undefined ? 3 :
+              selectedTask.maxIdentityCutoff }}</p>
           </div>
         </div>
 
         <!-- Epitopes Summary and Search -->
         <div class="row align-items-center mb-3">
           <div class="col-md-6">
-            <h5 class="mb-0">Epitopes Found: {{ epitopes.length }}</h5>
+            <h5 class="mb-0">
+              Epitopes Found: <span [ngClass]="{ 'text-danger': epitopes.length > 1 }">{{ epitopes.length }}</span>
+            </h5>
           </div>
+
           <div class="col-md-6 text-end">
-            <input
-              type="text"
-              [(ngModel)]="filterText"
-              placeholder="Search..."
-              (input)="applyFilters()"
-              class="form-control w-75 float-end"
-              aria-label="Search epitopes"
-            />
+            <input type="text" [(ngModel)]="filterText" placeholder="Search..." (input)="applyFilters()"
+              class="form-control w-75 float-end" aria-label="Search epitopes" />
           </div>
         </div>
       </div>
@@ -65,7 +69,8 @@
         <table class="table table-striped table-hover table-bordered">
           <thead class="table-light">
             <tr>
-              <th *ngFor="let column of columns" (click)="sort(column.key)" class="text-center" style="cursor: pointer;">
+              <th *ngFor="let column of columns" (click)="sort(column.key)" class="text-center"
+                style="cursor: pointer;">
                 {{ column.label }}
                 <span *ngIf="sortColumn === column.key">
                   {{ sortDirection === 'asc' ? '▲' : '▼' }}
@@ -79,44 +84,20 @@
                 No data available
               </td>
             </tr>
-            <tr
-              *ngFor="let epitope of epitopes; let i = index"
-              (click)="selectEpitope(epitope)"
-              style="cursor: pointer;"
-            >
-              <td class="text-center">{{ epitope.id }}</td>
+            <tr *ngFor="let epitope of epitopes; let i = index" (click)="selectEpitope(epitope)"
+              style="cursor: pointer;">
+              <td class="text-center">{{ epitope.n }}</td>
+              <td class="text-center">{{ epitope.epitopeId }}</td>
               <td class="text-center" style="font-family: 'Courier New', Courier, monospace;">
-                <ng-container *ngIf="epitope.epitope">
-                  <ng-container *ngIf="epitope.epitope.length <= 10">
-                    {{ epitope.epitope }}
-                  </ng-container>
-                  <ng-container *ngIf="epitope.epitope.length > 10">
-                    <ng-container *ngIf="expandedEpitopeIndex !== i">
-                      {{ epitope.epitope | slice : 0 : 10 }}...
-                      <i
-                        class="fa-solid fa-eye ms-1"
-                        style="color: #6aa5d9; cursor: pointer;"
-                        (click)="toggleEpitope(i); $event.stopPropagation();"
-                        title="Show full epitope"
-                      ></i>
-                    </ng-container>
-                    <ng-container *ngIf="expandedEpitopeIndex === i">
-                      {{ epitope.epitope }}
-                      <i
-                        class="fa-solid fa-eye-slash ms-1"
-                        style="color: #d96a6a; cursor: pointer;"
-                        (click)="toggleEpitope(i); $event.stopPropagation();"
-                        title="Hide epitope"
-                      ></i>
-                    </ng-container>
-                  </ng-container>
-                </ng-container>
+                {{epitope.epitope}}
               </td>
               <td class="text-center">{{ epitope.start }}</td>
               <td class="text-center">{{ epitope.end }}</td>
               <td class="text-center">{{ epitope.length }}</td>
               <td class="text-center">{{ epitope.molecularWeight }}</td>
               <td class="text-center">{{ epitope.isoelectricPoint }}</td>
+              <td class="text-center">{{ epitope.nglyc }}</td>
+              <td class="text-center">{{ epitope.nglycCount }}</td>
               <td class="text-center">{{ epitope.hydropathy }}</td>
               <td class="text-center">{{ epitope.bepiPred3 }}</td>
               <td class="text-center">{{ epitope.emini }}</td>
