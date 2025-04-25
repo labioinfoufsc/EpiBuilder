@@ -19,16 +19,17 @@ export class DatabasesService {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
 
-  uploadDatabase(file: File): Observable<Database> {
+  uploadDatabase(file: File, alias: string): Observable<Database> {
     const formData = new FormData();
 
-    const dataBlob = new Blob(
-      [JSON.stringify({ name })],
-      { type: 'application/json' }
-    );
-    formData.append('data', dataBlob);
+    formData.append('file', file, file.name);
 
-    formData.append('file', file);
+    const metadata = {
+      alias: alias,
+    };
+    formData.append('data', new Blob([JSON.stringify(metadata)], {
+      type: 'application/json'
+    }));
 
     return this.http.post<Database>(this.apiUrl, formData);
   }

@@ -41,21 +41,31 @@ export class DatabasesComponent {
       return;
     }
 
-    const formData = new FormData();
+    const originalName = this.selectedFile.name;
+    const fileNameWithoutExtension = originalName.replace(/\.[^/.]+$/, "");
+    const formattedAlias = fileNameWithoutExtension
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9_-]/g, '_')
+      .toLowerCase();
 
-    formData.append("file", this.selectedFile);
+    const databaseToUpload: Partial<Database> = {
+      alias: formattedAlias,
+      fileName: this.selectedFile.name,
+    };
 
-    this.databasesService.uploadDatabase(this.selectedFile).subscribe({
-      next: (res: Database) => {
-        this.files.push(res);
-        this.newDatabase = new Database();
-        this.selectedFile = undefined!;
-        this.showAlert("Database uploaded successfully", "success");
-        this.resetForm();
+    this.databasesService.uploadDatabase(this.selectedFile, databaseToUpload.alias!).subscribe({
+      next: (res) => {
+        if (res) {
+          this.showAlert("Database successfully uploaded!", "success");
+          this.loadDatabases();
+        }
       },
-      error: (err: any) => {
-        this.showAlert(err, "danger");
-      },
+      error: (err) => {
+        if (err.status) {
+          this.showAlert(err.status, "danger");
+        }
+      }
     });
   }
 
