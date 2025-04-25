@@ -4,7 +4,6 @@ import { FormsModule, ReactiveFormsModule } from "@angular/forms";
 import { BrowserModule } from "@angular/platform-browser";
 import { AppRoutingModule } from "./app-routing.module";
 import { AppComponent } from "./app.component";
-import { AddProteomeComponent } from "./components/add-proteome/add-proteome.component";
 import { FooterComponent } from "./components/footer/footer.component";
 import { LastExecutionsComponent } from './components/last-executions/last-executions.component';
 import { NavbarComponent } from "./components/navbar/navbar.component";
@@ -25,7 +24,6 @@ import { UsersComponent } from "./pages/users/users.component";
     LoginComponent,
     UsersComponent,
     NewComponent,
-    AddProteomeComponent,
     RealtimeExecutionsComponent,
     ProfileComponent,
     DatabasesComponent,

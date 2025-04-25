@@ -1,5 +1,7 @@
-import { Component } from "@angular/core";
-import { FormArray, FormBuilder, FormGroup } from "@angular/forms";
+import { Component, OnInit } from "@angular/core";
+import { AbstractControl, FormArray, FormBuilder, FormGroup, Validators } from "@angular/forms";
+import { Database } from "../../models/Database";
+import { DatabasesService } from "../../services/databases/databases.service";
 import { EpitopesService } from "../../services/epitopes/epitopes.service";
 import { LoginService } from "../../services/login/login.service";
 
@@ -9,50 +11,129 @@ import { LoginService } from "../../services/login/login.service";
   templateUrl: "./new.component.html",
   styleUrls: ["./new.component.scss"],
 })
-export class NewComponent {
+export class NewComponent implements OnInit {
   myForm: FormGroup;
   messages: { category: string; text: string }[] = [];
-  defaultFormValues = {
-    runName: "epibuilder-task",
-    file: null,
-    action: "predict",
-    bepipredThreshold: 0.1512,
-    minEpitopeLength: 10,
-    maxEpitopeLength: 30,
-    epitopeSearch: "no_search",
-    proteomes: [],
-    optional: {
-      enableFeature: false,
-      threshold: 0.5,
-    },
-    algpredThreshold: 0.3,
-    algPredPredictionModelType: "1",
-    algPredDisplayMode: "1",
-  };
-
+  databases: Database[] = [];
 
   constructor(
     private fb: FormBuilder,
     private epitopesService: EpitopesService,
-    private loginService: LoginService
+    private loginService: LoginService,
+    private databasesService: DatabasesService
   ) {
-    this.myForm = this.fb.group({
-      runName: ["epibuilder-task"],
-      file: [null],
-      action: ["predict"],
-      bepipredThreshold: [0.1512],
-      minEpitopeLength: [10],
-      maxEpitopeLength: [30],
-      epitopeSearch: ["no_search"],
-      proteomes: this.fb.array([]),
-      optional: this.fb.group({
-        enableFeature: [false],
-        threshold: [0.5],
-      }),
-      algpredThreshold: [0.3],
-      algPredPredictionModelType: ["1"],
-      algPredDisplayMode: ["1"],
+
+    this.databasesService.getDatabases().subscribe((databases) => {
+      this.databases = databases;
     });
+
+    this.myForm = this.fb.group({
+      runName: 'epibuilder-task',
+      file: [null],
+      action: 'predict',
+      bepipredThreshold: 0.1512,
+      minEpitopeLength: 10,
+      maxEpitopeLength: 30,
+      epitopeSearch: 'no_search',
+      optional: {
+        enableFeature: false,
+        threshold: 0.5
+      },
+      algpredThreshold: 0.3,
+      algPredPredictionModelType: '1',
+      algPredDisplayMode: '1',
+      minIdentityCutoff: [90],
+      minCoverCutoff: [90],
+      wordSize: [4],
+      proteomes: this.fb.array([])
+    });
+  }
+  ngOnInit(): void {
+    this.addProteome();
+  }
+
+  trackByIndex(index: number, obj: any): any {
+    return index;
+  }
+
+  getFormGroup(control: AbstractControl | null): FormGroup {
+    return control as FormGroup;
+  }
+
+  resetForm(): void {
+    this.myForm.reset({
+      runName: 'epibuilder-task',
+      file: [null],
+      action: 'predict',
+      bepipredThreshold: 0.1512,
+      minEpitopeLength: 10,
+      maxEpitopeLength: 30,
+      epitopeSearch: 'no_search',
+      optional: {
+        enableFeature: false,
+        threshold: 0.5
+      },
+      algpredThreshold: 0.3,
+      algPredPredictionModelType: '1',
+      algPredDisplayMode: '1',
+      minIdentityCutoff: 90,
+      minCoverCutoff: 90,
+      wordSize: 4,
+      proteomes: this.fb.array([])
+    });
+
+    const fileInput = document.getElementById('fileToProcess') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = '';
+    }
+
+    const proteomes = this.myForm.get('proteomes') as FormArray;
+    if (proteomes) {
+      while (proteomes.length) {
+        proteomes.removeAt(0);
+      }
+    }
+  }
+
+  onDBFileChange(event: Event, index: number): void {
+    const input = event.target as HTMLInputElement;
+
+    if (input.files && input.files.length > 0) {
+      const file = input.files[0];
+
+      // Você pode realizar algumas validações no arquivo, por exemplo:
+      if (file.type !== 'application/x-fasta' && !file.name.endsWith('.fasta')) {
+        console.error('Arquivo não suportado. Por favor, selecione um arquivo FASTA.');
+        return;
+      }
+
+      this.proteomes.at(index).get('selectDBFile')?.setValue(file);
+
+    }
+  }
+
+
+  addProteome(): void {
+    const proteomeGroup = this.fb.group({
+      selectDB: ['database'],               // Campo para selecionar a base de dados
+      selectDBFile: [''],           // Campo para selecionar o arquivo da base de dados
+      proteomeAlias: ['', Validators.required], // Campo para alias do proteoma
+    });
+
+    this.proteomes.push(proteomeGroup);
+  }
+
+  removeProteome(index: number): void {
+    if (this.proteomes.length > 0) {
+      this.proteomes.removeAt(index);
+    }
+  }
+
+  showMessage(message: { category: string; text: string }): void {
+    this.messages.push(message);
+    setTimeout(() => {
+      this.messages = this.messages.filter((msg) => msg !== message);
+    }, 2000);
   }
 
   updateAlgpredThreshold(event: Event): void {
@@ -72,10 +153,6 @@ export class NewComponent {
     this.myForm.get("algpredThreshold")?.setValue(0.3, { emitEvent: false });
   }
 
-  /**
-   * Handles form submission and validates required fields.
-   * If validation passes, it sends data to the Epitope service.
-   */
   onSubmit(): void {
     const messages: { category: string; text: string }[] = [];
     const fileRegex = /.+/;
@@ -105,7 +182,7 @@ export class NewComponent {
     }
 
     if (messages.length > 0) {
-      this.messages = messages;
+      messages.forEach(msg => this.showMessage(msg));
       return;
     }
 
@@ -141,18 +218,18 @@ export class NewComponent {
     this.epitopesService.submitForm(formData).subscribe({
       next: (response) => {
         console.log("Success response:", response);
-        this.myForm.reset(this.defaultFormValues);
-        this.messages = [{ category: "success", text: response.message }];
+        // Reset form to default values
+        this.resetForm();
 
+        this.showMessage({ category: "success", text: response.message });
         this.epitopesService.notifyTaskListChanged();
       },
       error: (error) => {
         console.error("Error response:", error);
         const serverMsg = error?.error?.message || "Failed to submit the form. Please try again.";
-        this.messages = [{ category: "danger", text: serverMsg }];
+        this.showMessage({ category: "danger", text: serverMsg });
       },
     });
-
   }
 
   /**
@@ -165,13 +242,17 @@ export class NewComponent {
     const file = event.target.files[0];
     if (file) {
       const validExtensions = ["csv", "fasta", "fa", "faa", "fna"];
-      const fileExtension = file.name.split(".").pop()?.toLowerCase();
+      const fileExtension = file.name.split('.').pop()?.toLowerCase();
 
       if (fileExtension && validExtensions.includes(fileExtension)) {
         this.myForm.patchValue({ file: file });
       } else {
-        alert("Invalid file type! Please upload a CSV or FASTA file.");
-        event.target.value = "";
+        this.showMessage({
+          category: 'danger',
+          text: 'Invalid file type! Please upload a CSV or FASTA file.'
+        });
+        this.myForm.get('file')?.setValue(null);
+        event.target.value = '';
       }
     }
   }

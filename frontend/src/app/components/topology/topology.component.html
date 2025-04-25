@@ -13,12 +13,12 @@
           <th>Threshold</th>
           <th>Avg Score</th>
           <th>Cover</th>
-          <th [attr.colspan]="epitopeTopologies[0]?.epitope?.length || 1" class="text-center">Epitope</th>
+          <th [attr.colspan]="epitopeTopologies != undefined || 1" class="text-center">Epitope</th>
         </tr>
       </thead>
       <tbody>
-        <tr *ngIf="epitopeTopologies.length === 0">
-          <td class="text-center text-muted" [attr.colspan]="4 + (epitopeTopologies[0]?.epitope?.length || 1)">
+        <tr *ngIf="epitopeTopologies === undefined || epitopeTopologies.length === 0">
+          <td class="text-center text-muted" [attr.colspan]="columns.length">
             No data available
           </td>
         </tr>
@@ -58,14 +58,7 @@
             No data available
           </td>
         </tr>
-        <!-- sacc?: string;
-      pident?: number;
-      qcovs?: number;
-      qseq?: string;
-      sseq?: string;
-      qacc?: string;-->
 
-        <!-- Se houver dados, exibe as linhas -->
         <tr *ngFor="let row of blasts; let i = index">
           <td style="width: 15%;">
             <ng-container *ngIf="database === 'IEDB'; else plainText">

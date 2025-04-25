@@ -1,4 +1,5 @@
 import { DatePipe } from "@angular/common";
+import { HttpResponse } from "@angular/common/http";
 import { Component, ElementRef, ViewChild } from "@angular/core";
 import { Modal } from "bootstrap";
 import { saveAs } from 'file-saver';
@@ -27,7 +28,11 @@ export class LastExecutionsComponent {
     'Task',
     'Started At',
     'Completed At',
+    'Duration',
+    'Proteome size',
+    'Status',
     'Actions'
+
   ];
 
   constructor(
@@ -38,7 +43,162 @@ export class LastExecutionsComponent {
     const userId = loginService.getUser()?.id;
     if (userId !== undefined) {
       epitopeService.getExecutedTasksByUserId(userId).subscribe((tasks) => {
-        this.executedTasks = tasks;
+        const filteredTasks = tasks.filter(task =>
+          task.taskStatus?.status === 'COMPLETED' || task.taskStatus?.status === 'FINISHED'
+        );
+
+        this.executedTasks = filteredTasks;
+
+        for (const task of filteredTasks) {
+          if (task.epitopes) {
+            task.epitopes[0].epitopeTopologies = [
+              {
+                "N": 1,
+                "id": "7jum_A",
+                "method": "BepiPred-3.0",
+                "threshold": 0.15,
+                "avgScore": 0.25,
+                "epitope": "SKTEDDNKKG"
+              },
+              {
+                "N": 1,
+                "id": "7jum_A",
+                "method": "Emini",
+                "threshold": 1,
+                "avgScore": 2.97,
+                "cover": 1,
+                "epitope": "EEEEEEEEEE"
+              },
+              {
+                "N": 1,
+                "id": "7jum_A",
+                "method": "Kolaskar",
+                "threshold": 1.04,
+                "avgScore": 0.88,
+                "cover": 0,
+                "epitope": ".........."
+              },
+              {
+                "N": 1,
+                "id": "7jum_A",
+                "method": "Chou Fosman",
+                "threshold": 0.99,
+                "avgScore": 1.25,
+                "cover": 1,
+                "epitope": "EEEEEEEEEE"
+              },
+              {
+                "N": 1,
+                "id": "7jum_A",
+                "method": "Karplus Schulz",
+                "threshold": 1.01,
+                "avgScore": 1.09,
+                "cover": 1,
+                "epitope": "EEEEEEEEEE"
+              },
+              {
+                "N": 1,
+                "id": "7jum_A",
+                "method": "Parker",
+                "threshold": 2.08,
+                "avgScore": 7.03,
+                "cover": 1,
+                "epitope": "EEEEEEEEEE"
+              },
+              {
+                "N": 1,
+                "id": "7jum_A",
+                "method": "All matches",
+                "cover": 0,
+                "epitope": ".........."
+              },
+              {
+                "N": 1,
+                "id": "7jum_A",
+                "method": "N-Glyc",
+                "cover": 0,
+                "epitope": ".........."
+              }
+            ];
+
+            task.epitopes[0].blasts = [
+              {
+                "qacc": "1-SFDNQTVHNSSKQ",
+                "sacc": "Infectious-1668106",
+                "pident": 46.154,
+                "qcovs": 100,
+                "qseq": "SFDNQTVHNSSKQ",
+                "sseq": "SFNNLLGFDSSKP",
+                "database": "IEDB"
+              },
+              {
+                "qacc": "1-SFDNQTVHNSSKQ",
+                "sacc": "Healthy-1668106",
+                "pident": 46.154,
+                "qcovs": 100,
+                "qseq": "SFDNQTVHNSSKQ",
+                "sseq": "SFNNLLGFDSSKP",
+                "database": "IEDB"
+              },
+              {
+                "qacc": "1-SFDNQTVHNSSKQ",
+                "sacc": "Infectious-1694454",
+                "pident": 46.154,
+                "qcovs": 100,
+                "qseq": "SFDNQTVHNSSKQ",
+                "sseq": "SFNNLLGFDSSKP",
+                "database": "IEDB"
+              },
+              {
+                "qacc": "1-SFDNQTVHNSSKQ",
+                "sacc": "Infectious-1677717",
+                "pident": 46.154,
+                "qcovs": 100,
+                "qseq": "SFDNQTVHNSSKQ",
+                "sseq": "SFNNLLGFDSSKP",
+                "database": "IEDB"
+              },
+              {
+                "qacc": "1-SFDNQTVHNSSKQ",
+                "sacc": "Infectious-1644485",
+                "pident": 50,
+                "qcovs": 92,
+                "qseq": "SFDNQTVHNSSK",
+                "sseq": "SFNNLLGFDSSK",
+                "database": "IEDB"
+              },
+              {
+                "qacc": "1-SFDNQTVHNSSKQ",
+                "sacc": "Infectious-1693039",
+                "pident": 46.154,
+                "qcovs": 100,
+                "qseq": "SFDNQTVHNSSKQ",
+                "sseq": "SFNNLLGFDSSKP",
+                "database": "IEDB"
+              },
+              {
+                "qacc": "1-SFDNQTVHNSSKQ",
+                "sacc": "Healthy-1693039",
+                "pident": 46.154,
+                "qcovs": 100,
+                "qseq": "SFDNQTVHNSSKQ",
+                "sseq": "SFNNLLGFDSSKP",
+                "database": "IEDB"
+              },
+              {
+                "qacc": "1-SFDNQTVHNSSKQ",
+                "sacc": "Infectious-1486823",
+                "pident": 41.667,
+                "qcovs": 92,
+                "qseq": "SFDNQTVHNSSK",
+                "sseq": "PFNNMLGYNPSK",
+                "database": "IEDB"
+              }
+            ];
+          }
+
+
+        }
       });
     } else {
       console.error("User ID is undefined");
@@ -46,28 +206,36 @@ export class LastExecutionsComponent {
   }
 
   downloadTask(task: EpitopeTaskData): void {
-    if (!task?.absolutePath) {
-      console.error("Error: No file URL available");
-      alert("Error: No file URL available");
+    if (!task || task.id === undefined) {
+      console.error('ID da tarefa inválido');
       return;
     }
 
     this.epitopeService.downloadFile(task.id).subscribe({
-      next: (response) => {
-        const parts = task?.absolutePath?.split('/') || [];
-        const fileName = parts.length >= 5 ? parts[4] : 'downloaded_file';
-
-        saveAs(response.body!, fileName);
-        console.log("File downloaded successfully:", fileName);
-      },
-      error: (error) => {
-        console.error("Download failed:", error);
-        alert("Error: Download failed. Please try again later.");
-      },
+      next: (response: any) => {
+        if (response && response.blob) {
+          const filename = response.filename || `task_${task.id}.zip`;
+          const blob = new Blob([response.blob], { type: 'application/zip' });
+          saveAs(blob, filename);
+        } else {
+          console.error('Erro ao baixar o arquivo');
+        }
+      }
     });
   }
 
-
+  calculateExecutionTime(date: any, date2: any): string {
+    if (!date || !date2) {
+      return "N/A";
+    }
+    const startDate = new Date(date);
+    const endDate = new Date(date2);
+    const diff = endDate.getTime() - startDate.getTime();
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+    return `${hours}h ${minutes}m ${seconds}s`;
+  }
 
   deleteTask(): void {
     const task: EpitopeTaskData | null = this.taskToDelete;

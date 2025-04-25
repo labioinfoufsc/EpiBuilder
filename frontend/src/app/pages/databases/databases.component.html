@@ -36,13 +36,13 @@
               <td>{{ file.fileName }}</td>
               <td>{{ file.date | date: 'dd-MM-yyyy' }}</td>
               <td>
-                <a (click)="confirmDelete(file)" title="Delete task">
+                <a *ngIf="!file.fileName.includes('iedb')" (click)="confirmDelete(file)" title="Delete task">
                   <i class="fas fa-trash" style="color: #dc3545 !important; cursor: pointer;"></i>
                 </a>
-
               </td>
             </tr>
           </tbody>
+
         </table>
 
       </div>

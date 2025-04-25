@@ -4,66 +4,33 @@
     <div class="card col-7 mx-auto">
       <div class="card-header custom-header"><b>Users Management</b></div>
       <div class="card-body">
-        <div
-          *ngIf="alertMessage"
-          class="alert alert-{{ alertType }} alert-dismissible fade show"
-          role="alert"
-        >
+        <div *ngIf="alertMessage" class="alert alert-{{ alertType }} alert-dismissible fade show" role="alert">
           {{ alertMessage }}
-          <button
-            type="button"
-            class="btn-close"
-            data-bs-dismiss="alert"
-            aria-label="Close"
-          ></button>
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
 
         <form [formGroup]="registrationForm" (ngSubmit)="onSave()">
           <div class="mb-3">
-            <input
-              type="text"
-              class="form-control"
-              formControlName="username"
-              placeholder="Username"
-              [required]="!isEditMode"
-            />
-            <div
-              *ngIf="registrationForm.get('username')?.errors?.['invalidUsername']"
-              class="alert alert-danger mt-2"
-            >
+            <input type="text" class="form-control" formControlName="username" placeholder="Username"
+              [required]="!isEditMode" />
+            <div *ngIf="registrationForm.get('username')?.errors?.['invalidUsername']" class="alert alert-danger mt-2">
               Username can only contain letters and numbers (no spaces or
               special characters).
             </div>
           </div>
           <div class="mb-3">
-            <input
-              type="password"
-              class="form-control"
-              formControlName="password"
-              placeholder="Password"
-              [required]="!isEditMode"
-            />
+            <input type="password" class="form-control" formControlName="password" placeholder="Password"
+              [required]="!isEditMode" />
           </div>
           <div class="mb-3">
-            <input
-              type="password"
-              class="form-control"
-              formControlName="confirmPassword"
-              placeholder="Confirm the password"
-              [required]="!isEditMode"
-            />
+            <input type="password" class="form-control" formControlName="confirmPassword"
+              placeholder="Confirm the password" [required]="!isEditMode" />
             <div *ngIf="errorMessage" class="alert alert-danger mt-2">
               {{ errorMessage }}
             </div>
           </div>
           <div class="mb-3">
-            <input
-              type="text"
-              class="form-control"
-              formControlName="name"
-              placeholder="Name"
-              required
-            />
+            <input type="text" class="form-control" formControlName="name" placeholder="Name" required />
           </div>
           <div class="mb-3">
             <label class="form-label">Role</label>
@@ -75,12 +42,7 @@
           <button type="submit" class="btn btn-primary">
             <i class="fa-solid fa-floppy-disk"></i>&nbsp;Save
           </button>
-          <button
-            type="button"
-            class="btn btn-light ms-2"
-            *ngIf="isEditMode"
-            (click)="cancelEdit()"
-          >
+          <button type="button" class="btn btn-light ms-2" *ngIf="isEditMode" (click)="cancelEdit()">
             Cancel
           </button>
         </form>
@@ -100,18 +62,11 @@
               <td>{{ user.username }}</td>
               <td>{{ user.role }}</td>
               <td>
-                <button
-                  class="btn btn-secondary btn-sm"
-                  (click)="selectUser(user)"
-                  style="margin-right: 0.5rem;"
-                >
-                <i class="fa-solid fa-pen-to-square"></i>&nbsp;Edit
+                <button class="btn btn-secondary btn-sm" (click)="selectUser(user)" style="margin-right: 0.5rem;">
+                  <i class="fa-solid fa-pen-to-square"></i>&nbsp;Edit
                 </button>
-                <button
-                  class="btn force-bootstrap-danger btn-sm"
-                  (click)="confirmDelete(user)"
-                >
-                <i class="fa-solid fa-trash"></i>&nbsp;Delete
+                <button class="btn force-bootstrap-danger btn-sm" (click)="confirmDelete(user)">
+                  <i class="fa-solid fa-trash"></i>&nbsp;Delete
                 </button>
               </td>
             </tr>
@@ -128,30 +83,16 @@
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title">Confirm Delete</h5>
-        <button
-          type="button"
-          class="btn-close"
-          (click)="hideDeleteModal()"
-          aria-label="Close"
-        ></button>
+        <button type="button" class="btn-close" (click)="hideDeleteModal()" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        Are you sure you want to delete user <strong>{{ userToDelete?.username }}</strong
-        >?
+        Are you sure you want to delete user <strong>{{ userToDelete?.username }}</strong>?
       </div>
       <div class="modal-footer">
-        <button
-          type="button"
-          class="btn btn-secondary"
-          (click)="hideDeleteModal()"
-        >
+        <button type="button" class="btn btn-secondary" (click)="hideDeleteModal()">
           Cancel
         </button>
-        <button
-          type="button"
-          class="btn force-bootstrap-danger"
-          (click)="onDelete()"
-        >
+        <button type="button" class="btn force-bootstrap-danger" (click)="onDelete()">
           Delete
         </button>
       </div>

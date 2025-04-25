@@ -3,6 +3,7 @@ import { Injectable } from "@angular/core";
 import {
   BehaviorSubject,
   catchError,
+  map,
   Observable,
   of
 } from "rxjs";
@@ -58,12 +59,49 @@ export class EpitopesService {
       );
   }
 
-  downloadFile(taskId: number | undefined): Observable<HttpResponse<Blob>> {
-    return this.http.get(`${this.apiUrl}/task/${taskId}/download`, {
-      observe: 'response',
-      responseType: 'blob'
-    });
+  downloadFile(taskId: number): any {
+    return this.http
+      .get(`${this.apiUrl}/tasks/${taskId}/download`, {
+        responseType: "blob",
+        observe: "response",
+        withCredentials: true,
+      })
+      .pipe(
+        map((response: HttpResponse<Blob>) => {
+          const filename = this.extractFilenameFromResponse(response);
+          const blob = response.body;
+          if (!blob) {
+            throw new Error("Blob is null or undefined");
+          }
+          return { blob, filename };
+        }),
+        catchError((error) => {
+          console.error("Error downloading file", error);
+          return of(null);
+        })
+      );
   }
+
+
+  private extractFilenameFromResponse(response: HttpResponse<Blob>): string | null {
+    try {
+      const contentDisposition = response.headers.get('Content-Disposition');
+      if (!contentDisposition) return null;
+
+      // Suporta formatos: 
+      // filename="arquivo.zip"
+      // filename*=UTF-8''arquivo.zip
+      // filename=arquivo.zip
+      const filenameRegex = /filename\*?=["']?(?:UTF-\d['"]*)?([^;"'\n]*)["']?;?/i;
+      const matches = filenameRegex.exec(contentDisposition);
+
+      return matches && matches[1] ? matches[1].trim() : null;
+    } catch (e) {
+      console.warn('Erro ao extrair nome do arquivo', e);
+      return null;
+    }
+  }
+
 
   getTaskLog(taskId: number): Observable<Blob> {
     return this.http.get(`${this.apiUrl}/tasks/${taskId}/log`, {
@@ -111,3 +149,5 @@ export class EpitopesService {
     return this.http.post<any>(`${this.apiUrl}/tasks/new`, data);
   }
 }
+
+
