@@ -52,11 +52,9 @@ export class ResultsComponent implements OnInit {
 
   getData() {
     const userId = this.loginService.getUser()?.id;
-    console.log("User ID:", userId);
 
     if (userId !== undefined) {
       this.epitopeService.getExecutedTasksByUserId(userId).subscribe((tasks) => {
-        console.log("Tasks:", tasks);
         this.epitopeTaskData = tasks;
       });
     } else {
