@@ -39,9 +39,6 @@ export class NewComponent implements OnInit {
         enableFeature: false,
         threshold: 0.5
       },
-      algpredThreshold: 0.3,
-      algPredPredictionModelType: '1',
-      algPredDisplayMode: '1',
       minIdentityCutoff: [90],
       minCoverCutoff: [90],
       wordSize: [4],
@@ -73,12 +70,9 @@ export class NewComponent implements OnInit {
         enableFeature: false,
         threshold: 0.5
       },
-      algpredThreshold: 0.3,
-      algPredPredictionModelType: '1',
-      algPredDisplayMode: '1',
-      minIdentityCutoff: 90,
-      minCoverCutoff: 90,
-      wordSize: 4,
+      minIdentityCutoff: [90],
+      minCoverCutoff: [90],
+      wordSize: [4],
       proteomes: this.fb.array([])
     });
 
@@ -136,23 +130,6 @@ export class NewComponent implements OnInit {
     }, 2000);
   }
 
-  updateAlgpredThreshold(event: Event): void {
-    const value = parseFloat((event.target as HTMLInputElement).value);
-    this.myForm.get("algpredThreshold")?.setValue(value, { emitEvent: false });
-  }
-
-  syncAlgpredThreshold(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    let value = parseFloat(input.value);
-    if (value < 0) value = 0;
-    if (value > 1) value = 1;
-    this.myForm.get("algpredThreshold")?.setValue(value, { emitEvent: false });
-  }
-
-  resetAlgpredThreshold(): void {
-    this.myForm.get("algpredThreshold")?.setValue(0.3, { emitEvent: false });
-  }
-
   onSubmit(): void {
     const messages: { category: string; text: string }[] = [];
     const fileRegex = /.+/;
@@ -170,15 +147,16 @@ export class NewComponent implements OnInit {
 
     const epitopeSearch = this.myForm.get("epitopeSearch")?.value;
     if (epitopeSearch === "BLAST_search") {
-      const proteomeAliases = ["proteome1", "proteome2", "proteome3"];
-      for (const alias of proteomeAliases) {
-        if (!this.myForm.get(alias)?.value) {
+      const proteomesArray = this.proteomes;
+      proteomesArray.controls.forEach((control, idx) => {
+        const alias = control.get('proteomeAlias')?.value;
+        if (!alias) {
           messages.push({
             category: "danger",
-            text: `Error: The field ${alias} is required when epitopeSearch is BLAST_search.`,
+            text: `Error: Proteome ${idx + 1} alias is required when epitopeSearch is BLAST_search.`,
           });
         }
-      }
+      });
     }
 
     if (messages.length > 0) {
@@ -196,16 +174,18 @@ export class NewComponent implements OnInit {
       bepipredThreshold: this.myForm.get("bepipredThreshold")?.value,
       minEpitopeLength: this.myForm.get("minEpitopeLength")?.value,
       maxEpitopeLength: this.myForm.get("maxEpitopeLength")?.value,
-      subcell: this.myForm.get("subcell")?.value,
-      interpro: this.myForm.get("interpro")?.value,
       epitopeSearch: this.myForm.get("epitopeSearch")?.value,
       optional: this.myForm.get("optional")?.value,
-      executionDate: new Date(),
       epitopes: [],
       user: this.loginService.getUser(),
-      algpredThreshold: this.myForm.get("threshold")?.value,
-      algPredPredictionModelType: this.myForm.get("model")?.value,
-      algPredDisplayMode: this.myForm.get("display")?.value,
+      minIdentityCutoff: [90],
+      minCoverCutoff: [90],
+      wordSize: [4],
+      proteomes: this.myForm.get("proteomes")?.value.map((proteome: any) => ({
+        selectDB: proteome.selectDB,
+        selectDBFile: proteome.selectDBFile,
+        proteomeAlias: proteome.proteomeAlias,
+      })),
     };
 
     const formData = new FormData();
@@ -226,7 +206,7 @@ export class NewComponent implements OnInit {
       },
       error: (error) => {
         console.error("Error response:", error);
-        const serverMsg = error?.error?.message || "Failed to submit the form. Please try again.";
+        const serverMsg = JSON.stringify(error?.error || error);
         this.showMessage({ category: "danger", text: serverMsg });
       },
     });

@@ -8,22 +8,17 @@ export class EpitopeTaskData {
   runName!: string;
   file!: File;
   absolutePath?: string;
-  action!: string;
+  actionType?: string;
   bepipredThreshold!: number;
   minEpitopeLength!: number;
   maxEpitopeLength!: number;
   proteomeSize?: number;
-  subcell!: string;
-  interpro!: string;
   epitopeSearch!: string;
-  optional!: string;
   executionDate!: Date;
   finishedDate?: Date;
   epitopes?: Epitope[];
   minIdentityCutoff?: number;
   maxIdentityCutoff?: number;
   wordSize?: number;
-  algpredThreshold?: number;
-  algPredPredictionModelType?: string;
-  algPredDisplayMode?: string;
 }
+

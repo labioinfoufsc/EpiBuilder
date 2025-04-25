@@ -1,6 +1,9 @@
 export class Database {
   id?: number;
-  absolutePath!: string;
+  alias?: string;
   fileName!: string;
+  absolutePath!: string;
   date?: Date;
+  sourceType?: string;
+  dbFile?: File;
 }

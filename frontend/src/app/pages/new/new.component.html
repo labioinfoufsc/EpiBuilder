@@ -59,49 +59,6 @@
 
                     <!-- Conditionally displayed inputs -->
                     <div *ngIf="myForm.get('action')?.value === 'analysis'">
-                      <!-- <div class="mb-3">
-                        <label for="algpredThreshold" class="form-label fw-bold">
-                          AlgPred Threshold (default = 0.3)
-                        </label>
-                        <div class="row align-items-center">
-                          <div class="col">
-                            <input type="range" class="form-range" formControlName="algpredThreshold" min="0.0"
-                              max="1.0" step="0.01" id="threshold" (input)="updateAlgpredThreshold($event)" />
-                            <div class="d-flex justify-content-between mt-1">
-                              <small class="text-muted">0.0</small>
-                              <small class="text-muted">1.0</small>
-                            </div>
-                          </div>
-
-                          <div class="col-auto">
-                            <input type="number" class="form-control w-auto" formControlName="algpredThreshold"
-                              min="0.0" max="1.0" step="0.01" (input)="syncAlgpredThreshold($event)" />
-                          </div>
-
-                          <div class="col-auto">
-                            <button class="btn btn-outline-secondary" type="button" (click)="resetAlgpredThreshold()">
-                              <i class="fa-solid fa-rotate-left" style="color: white !important"></i>
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-
-                    <div class="mb-3">
-                        <label for="model" class="form-label fw-bold">Prediction Model</label>
-                        <select class="form-select" formControlName="algPredPredictionModelType"
-                          id="algPredPredictionModelType">
-                          <option [value]="1">AAC based RF</option>
-                          <option [value]="2">Hybrid</option>
-                        </select>
-                      </div>
-
-                    <div class="mb-3">
-                        <label for="display" class="form-label fw-bold">Display Mode</label>
-                        <select class="form-select" formControlName="algPredDisplayMode" id="algPredDisplayMode">
-                          <option [value]="1">Allergen Peptides Only</option>
-                          <option [value]="2">All Peptides</option>
-                        </select>
-                      </div>-->
 
                       <!-- Slider BepiPred Threshold -->
                       <div class="mb-3">

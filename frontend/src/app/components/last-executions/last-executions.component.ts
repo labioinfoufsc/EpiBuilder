@@ -293,7 +293,6 @@ export class LastExecutionsComponent {
   }
 
   selectTask(task: EpitopeTaskData): void {
-    console.log(task);
     this.selectedTask = task;
     this.epitopeService.selectTask(task);
   }
