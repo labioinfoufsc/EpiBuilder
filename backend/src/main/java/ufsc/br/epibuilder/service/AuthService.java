@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 import ufsc.br.epibuilder.dto.UserDTO;
 import ufsc.br.epibuilder.model.User;
 import ufsc.br.epibuilder.repository.UserRepository;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.Authentication;
 
 import java.security.Key;
 import java.util.Date;
@@ -33,11 +35,13 @@ public class AuthService {
     private String secretKey;
 
     /**
-     * Authenticates a user and generates a JWT token upon successful authentication.
+     * Authenticates a user and generates a JWT token upon successful
+     * authentication.
      *
      * @param request the user credentials for authentication
      * @return a {@link UserDTO} containing user details and the generated token
-     * @throws RuntimeException if authentication fails or token generation encounters an error
+     * @throws RuntimeException if authentication fails or token generation
+     *                          encounters an error
      */
     public UserDTO authenticate(User request) {
         try {
@@ -45,7 +49,7 @@ public class AuthService {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
             log.info("Authentication successful");
-    
+
             log.info("Searching user in database: {}", request.getUsername());
             User user = userRepository.findByUsername(request.getUsername())
                     .orElseThrow(() -> {
@@ -53,12 +57,18 @@ public class AuthService {
                         return new RuntimeException("User not found");
                     });
             log.info("User found: {}", user.getId());
-    
+
+            // Salvar o usuário logado no SecurityContextHolder
+            Authentication authentication = new UsernamePasswordAuthenticationToken(user.getUsername(), null,
+                    user.getAuthorities());
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+
             try {
                 log.info("Generating token for user: {}", user.getId());
                 String token = generateToken(user);
                 log.info("Token generated successfully");
-                return new UserDTO(user.getId(), user.getName(), user.getUsername(), user.getRole(), token);
+                return new UserDTO(user.getId(), user.getName(), user.getUsername(), user.getEpitopeTaskDataList(),
+                        user.getRole(), token);
             } catch (Exception tokenException) {
                 log.error("Error generating token for user: {}", user.getId(), tokenException);
                 throw new RuntimeException("Error generating token");
@@ -74,7 +84,18 @@ public class AuthService {
             throw new RuntimeException("Internal server error");
         }
     }
-    
+
+    public User getLoggedInUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated()) {
+            String username = authentication.getName();
+            return userRepository.findByUsername(username)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+        } else {
+            throw new RuntimeException("No user is logged in");
+        }
+    }
+
     /**
      * Generates a JWT token for an authenticated user.
      *
@@ -113,9 +134,9 @@ public class AuthService {
     /**
      * Extracts a specific claim from the JWT token.
      *
-     * @param token the JWT token
+     * @param token          the JWT token
      * @param claimsResolver a function to resolve the desired claim
-     * @param <T> the type of the claim
+     * @param <T>            the type of the claim
      * @return the extracted claim value
      */
     private <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {

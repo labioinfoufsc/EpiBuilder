@@ -1,17 +1,18 @@
 package ufsc.br.epibuilder.model;
 
+import lombok.*;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import jakarta.persistence.*;
+
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
-
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 /**
  * Entity representing a user in the system.
@@ -23,6 +24,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class User implements UserDetails {
 
     /** The unique identifier of the user. */
@@ -34,10 +36,16 @@ public class User implements UserDetails {
     private String name;
 
     /** The username used for authentication. */
+    @Column(nullable = false, unique = true)
     private String username;
 
     /** The hashed password of the user. */
     private String password;
+
+    /** The list of epitope tasks associated with the user. */
+    @OneToMany(mappedBy = "user", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private List<EpitopeTaskData> epitopeTaskDataList = new ArrayList<>();
 
     /** The role assigned to the user. */
     @Enumerated(EnumType.STRING)
@@ -96,7 +104,8 @@ public class User implements UserDetails {
     /**
      * Indicates whether the user's credentials (password) are expired.
      *
-     * @return {@code true} if the credentials are not expired, {@code false} otherwise
+     * @return {@code true} if the credentials are not expired, {@code false}
+     *         otherwise
      */
     @Override
     public boolean isCredentialsNonExpired() {
