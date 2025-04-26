@@ -16,6 +16,8 @@ echo "export JWT_SECRET=\"$JWT_SECRET\"" | sudo tee -a /etc/environment > /dev/n
 # 2. Current Session Configuration:
 # Export the variable for immediate use in the current shell session
 export JWT_SECRET="$JWT_SECRET"
+export DB_USER=
+export DB_PASS=
 
 # Display success message with usage instructions
 echo "----------------------------------------"
