@@ -6,14 +6,14 @@ package ufsc.br.epibuilder.model;
 public enum ActionType {
 
     /**
-     * Action for prediction only.
+     * Action for default only.
      */
-    PREDICT(0, "predict"),
+    DEFAULT(0, "default"),
 
     /**
-     * Action for analysis only.
+     * Action for customized only.
      */
-    ANALYSIS(1, "analysis");
+    CUSTOMIZED(1, "customized"),;
 
     private final String desc;
 

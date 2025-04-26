@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import jakarta.persistence.CascadeType;
@@ -38,6 +39,7 @@ import lombok.ToString;
 @Getter
 @Setter
 @ToString
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class EpitopeTaskData {
 
     /**
@@ -102,23 +104,12 @@ public class EpitopeTaskData {
     @Column
     private int proteomeSize;
 
-    @Column
-    private Double algPredThreshold;
-
-    @Column
-    @Enumerated(EnumType.STRING)
-    private PredictionModelType algPredictionModelType;
-
-    @Column
-    @Enumerated(EnumType.STRING)
-    private DisplayMode algPredDisplayMode;
-
     /**
      * Type of analysis to perform (PREDICT, ANALYZE, or PREDICT_AND_ANALYZE)
      */
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
-    private ActionType action;
+    private ActionType actionType;
 
     @Column
     private Integer blastMinIdentityCutoff;
@@ -129,8 +120,11 @@ public class EpitopeTaskData {
     @Column
     private Integer blastWordSize;
 
-    @Transient
+    @Column
     private boolean doBlast;
+
+    @Transient
+    private String token;
 
     @Transient
     private List<Database> proteomes;

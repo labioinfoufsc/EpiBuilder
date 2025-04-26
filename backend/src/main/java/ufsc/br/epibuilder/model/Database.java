@@ -2,6 +2,8 @@ package ufsc.br.epibuilder.model;
 
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -12,11 +14,12 @@ import lombok.ToString;
 @Getter
 @Setter
 @ToString
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Database {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Transient
+    @Column(nullable = false)
     private String alias;
     @Column(nullable = false)
     private String fileName;
@@ -24,4 +27,6 @@ public class Database {
     private String absolutePath;
     @Column(nullable = false)
     private LocalDateTime date;
+    @Transient
+    private String sourceType;
 }
