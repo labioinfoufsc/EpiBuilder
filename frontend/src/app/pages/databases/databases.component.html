@@ -11,12 +11,18 @@
         </div>
         <form (ngSubmit)="onSubmit()" #databaseForm="ngForm">
           <div class="mb-3">
-            <label for="file" class="form-label">Upload FASTA File</label>
+            <label for="file" class="form-label" style="font-weight: bold;">Upload FASTA File</label>
             <input #fileInput type="file" class="form-control" id="file" (change)="onFileChange($event)" required
               accept=".fasta,.csv,.tsv" name="file">
+            <small class="text-muted d-block mt-1">
+              <i style="color: #ffc107 !important" class="fa-solid fa-circle-info"></i>
+              Allowed Formats: CSV, FASTA
+            </small>
           </div>
-          <button type="submit" class="btn btn-primary" [disabled]="!databaseForm.form.valid">
-            <i class="fa-solid fa-floppy-disk"></i>&nbsp;Save
+          <button type="submit" class="btn btn-primary" [disabled]="!databaseForm.form.valid || isLoading">
+            <i class="fa-solid fa-floppy-disk"></i>&nbsp;
+            <span *ngIf="!isLoading">Save</span>
+            <span *ngIf="isLoading">Saving...</span>
           </button>
         </form>
 
@@ -39,6 +45,8 @@
                 <a *ngIf="!file.fileName.includes('iedb')" (click)="confirmDelete(file)" title="Delete task">
                   <i class="fas fa-trash" style="color: #dc3545 !important; cursor: pointer;"></i>
                 </a>
+                <p *ngIf="file.fileName.includes('iedb')">None<br><span style="font-style: italic;">Default
+                    database</span></p>
               </td>
             </tr>
           </tbody>

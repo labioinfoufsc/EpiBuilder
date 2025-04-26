@@ -46,19 +46,19 @@
                     <div class="mb-3">
                       <label class="form-label fw-bold">Parameters:</label>
                       <div class="form-check">
-                        <input type="radio" class="form-check-input" formControlName="action" value="predict"
-                          id="predict" />
-                        <label class="form-check-label" for="predict">Default</label>
+                        <input type="radio" class="form-check-input" formControlName="actionType" value="default"
+                          id="default" />
+                        <label class="form-check-label" for="default">Default</label>
                       </div>
                       <div class="form-check">
-                        <input type="radio" class="form-check-input" formControlName="action" value="analysis"
-                          id="analysis" />
-                        <label class="form-check-label" for="analysis">Customized</label>
+                        <input type="radio" class="form-check-input" formControlName="actionType" value="customized"
+                          id="customized" />
+                        <label class="form-check-label" for="customized">Customized</label>
                       </div>
                     </div>
 
                     <!-- Conditionally displayed inputs -->
-                    <div *ngIf="myForm.get('action')?.value === 'analysis'">
+                    <div *ngIf="myForm.get('actionType')?.value === 'customized'">
 
                       <!-- Slider BepiPred Threshold -->
                       <div class="mb-3">
@@ -167,17 +167,17 @@
                         Do you want to perform an epitopes search in the given proteome(s)
                       </label>
                       <div class="form-check">
-                        <input type="radio" class="form-check-input" formControlName="epitopeSearch" value="no_search"
+                        <input type="radio" class="form-check-input" formControlName="doBlast" value="no_search"
                           id="noSearch" />
                         <label class="form-check-label" for="noSearch">Don't search</label>
                       </div>
                       <div class="form-check">
-                        <input type="radio" class="form-check-input" formControlName="epitopeSearch"
-                          value="BLAST_search" id="BLASTSearch" />
+                        <input type="radio" class="form-check-input" formControlName="doBlast" value="BLAST_search"
+                          id="BLASTSearch" />
                         <label class="form-check-label" for="BLASTSearch">BLAST search</label>
                       </div>
 
-                      <div *ngIf="myForm.get('epitopeSearch')?.value === 'BLAST_search'" class="mt-3">
+                      <div *ngIf="myForm.get('doBlast')?.value === 'BLAST_search'" class="mt-3">
                         <label class="form-label fw-bold">Minimum identity cutoff</label>
                         <input type="number" class="form-control" formControlName="minIdentityCutoff"
                           placeholder="90" />
@@ -192,42 +192,58 @@
                         <div>
                           <div *ngFor="let proteome of proteomes.controls; let i = index; trackBy: trackByIndex"
                             class="mt-3 proteome-card" [formGroup]="getFormGroup(proteome)">
+
                             <label class="form-label fw-bold">Proteome {{ i + 1 }} file</label>
 
                             <div class="mb-3">
+                              <!-- Opção: Selecionar banco de dados -->
                               <div class="form-check">
-                                <input type="radio" class="form-check-input" formControlName="selectDB"
-                                  [value]="'database'" id="selectDB{{ i }}" />
-                                <label class="form-check-label" for="selectDB{{ i }}">
+                                <input type="radio" class="form-check-input" formControlName="sourceType"
+                                  [value]="'database'" id="selectDBRadio{{ i }}" />
+                                <label class="form-check-label" for="selectDBRadio{{ i }}">
                                   Select a database (Proteome {{ i + 1 }})
                                 </label>
                               </div>
 
-                              <select *ngIf="proteome.get('selectDB')?.value === 'database'"
-                                formControlName="selectDBFile" class="form-control mt-2">
+                              <!-- Select do banco de dados -->
+                              <select *ngIf="proteome.get('sourceType')?.value === 'database'"
+                                formControlName="databaseFile" class="form-control mt-2"
+                                (change)="logSelectedDb(i, proteome.get('databaseFile')?.value)">
                                 <option [value]="''" disabled selected>Select a file</option>
-                                <option *ngFor="let db of databases" [value]="db.absolutePath">{{ db.fileName }}
+                                <option *ngFor="let db of databases" [value]="db.absolutePath">{{ db.alias }}
                                 </option>
                               </select>
 
+                              <!-- Opção: Upload de FASTA -->
                               <div class="form-check mt-3">
-                                <input type="radio" class="form-check-input" formControlName="selectDB"
-                                  [value]="'fasta_blast'" id="fastaDB{{ i }}" />
-                                <label class="form-check-label" for="fastaDB{{ i }}">
+                                <input type="radio" class="form-check-input" formControlName="sourceType"
+                                  [value]="'fasta_blast'" id="fastaUploadRadio{{ i }}" />
+                                <label class="form-check-label" for="fastaUploadRadio{{ i }}">
                                   Upload a FASTA database file (Proteome {{ i + 1 }})
                                 </label>
                               </div>
 
-                              <input *ngIf="proteome.get('selectDB')?.value === 'fasta_blast'" type="file"
-                                class="form-control mt-2" id="fastaDBFile{{ i }}" accept=".fasta,.fa,.faa,.fna"
+                              <!-- Upload de arquivo -->
+                              <input *ngIf="proteome.get('sourceType')?.value === 'fasta_blast'" type="file"
+                                class="form-control mt-2" id="fastaDBFile{{ i }}" accept=".fasta,.csv,.tsv"
                                 (change)="onDBFileChange($event, i)" />
-                            </div>
+                              <small *ngIf="proteome.get('sourceType')?.value === 'fasta_blast'"
+                                class="text-muted d-block mt-1">
+                                <i style="color: #ffc107 !important" class="fa-solid fa-circle-info"></i>
+                                Allowed Formats: CSV, FASTA
+                              </small>
 
-                            <label class="form-label fw-bold mt-2">
-                              Proteome {{ i + 1 }} alias - appears in the report file
-                            </label>
-                            <input placeholder="Type an alias" type="text" class="form-control"
-                              id="proteomeAlias{{ i }}" formControlName="proteomeAlias" />
+                              <!-- Alias só aparece se for upload -->
+                              <label *ngIf="proteome.get('sourceType')?.value === 'fasta_blast'"
+                                class="form-label fw-bold mt-2">
+                                Proteome {{ i + 1 }} alias - appears in the report file
+
+                              </label>
+                              <input *ngIf="proteome.get('sourceType')?.value === 'fasta_blast'"
+                                placeholder="Type an alias" type="text" class="form-control" id="proteomeAlias{{ i }}"
+                                formControlName="proteomeAlias" />
+
+                            </div>
                           </div>
 
                           <br />
@@ -244,6 +260,9 @@
                           </div>
                         </div>
                         <!-- End proteomes -->
+
+
+
                       </div>
                     </div>
                   </div>
@@ -257,8 +276,11 @@
           <!-- Submit Button -->
           <div class="row justify-content-center submitButton">
             <div class="col-4 d-flex justify-content-end">
-              <button type="submit" class="submitButton btn btn-primary btn-lg w-100">
-                <i class="fa-solid fa-rocket" style="color: white !important"></i>&nbsp;Run
+              <button type="submit" class="submitButton btn btn-primary btn-lg w-100" [disabled]="isLoading">
+
+                <span *ngIf="!isLoading"><i class="fa-solid fa-rocket"
+                    style="color: white !important"></i>&nbsp;Run</span>
+                <span *ngIf="isLoading">&nbsp;Loading...</span>
               </button>
             </div>
           </div>

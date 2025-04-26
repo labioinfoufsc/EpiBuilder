@@ -21,6 +21,7 @@ export class DatabasesComponent {
 
   @ViewChild("deleteModal") deleteModal!: ElementRef;
   private deleteModalInstance!: Modal;
+  isLoading: boolean = false;
 
   constructor(private databasesService: DatabasesService) { }
 
@@ -36,8 +37,12 @@ export class DatabasesComponent {
   }
 
   onSubmit(): void {
+
+    this.isLoading = true;
+
     if (!this.selectedFile) {
       this.showAlert("Please select a file", "danger");
+      this.isLoading = false;
       return;
     }
 
@@ -56,12 +61,14 @@ export class DatabasesComponent {
 
     this.databasesService.uploadDatabase(this.selectedFile, databaseToUpload.alias!).subscribe({
       next: (res) => {
+        this.isLoading = false;
         if (res) {
           this.showAlert("Database successfully uploaded!", "success");
           this.loadDatabases();
         }
       },
       error: (err) => {
+        this.isLoading = false;
         if (err.status) {
           this.showAlert(err.status, "danger");
         }
