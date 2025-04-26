@@ -5,7 +5,10 @@ import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,12 +28,23 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import lombok.extern.slf4j.Slf4j;
 import ufsc.br.epibuilder.model.*;
-import ufsc.br.epibuilder.service.EpitopeTaskDataService;
-import ufsc.br.epibuilder.service.PipelineService;
+import ufsc.br.epibuilder.service.*;
 import org.springframework.core.io.UrlResource;
 import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+
+import org.springframework.http.MediaType;
+import java.io.UncheckedIOException;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+import java.io.IOException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @RestController
 @Slf4j
@@ -41,127 +55,245 @@ public class EpitopeController {
 
     private final PipelineService pipelineService;
 
-    public EpitopeController(EpitopeTaskDataService epitopeTaskDataService, PipelineService pipelineService) {
+    private final DatabaseService databaseService;
+
+    public EpitopeController(EpitopeTaskDataService epitopeTaskDataService, PipelineService pipelineService,
+            DatabaseService databaseService) {
+        this.databaseService = databaseService;
         this.epitopeTaskDataService = epitopeTaskDataService;
         this.pipelineService = pipelineService;
     }
 
+    private Path saveFile(Path baseDir, MultipartFile file) throws IOException {
+        Path filePath = baseDir.resolve(file.getOriginalFilename());
+        file.transferTo(filePath.toFile());
+        log.info("File saved: {}", filePath);
+        return filePath;
+    }
+
     @PostMapping(value = "/tasks/new", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> newEpitopeTask(
-            @RequestPart("data") EpitopeTaskData taskData,
-            @RequestPart("file") MultipartFile file) {
+            @RequestPart("data") String taskDataJson,
+            @RequestPart("file") MultipartFile fastaFile,
+            @RequestPart(value = "proteomes", required = false) MultipartFile[] proteomes) {
 
-        if (taskData == null) {
-            log.error("Task data is null");
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Invalid task data provided.");
-            return ResponseEntity.badRequest().body(errorResponse);
-        }
+        ObjectMapper objectMapper = new ObjectMapper()
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
-        if (taskData.getAction().getDesc().equalsIgnoreCase(ActionType.PREDICT.getDesc())) {
-            taskData.setAlgPredDisplayMode(null);
-            taskData.setAlgPredictionModelType(null);
-            taskData.setAlgPredDisplayMode(null);
-            taskData.setBepipredThreshold(null);
-            taskData.setMinEpitopeLength(null);
-            taskData.setMaxEpitopeLength(null);
+        EpitopeTaskData taskData;
+        try {
+            taskData = objectMapper.readValue(taskDataJson, EpitopeTaskData.class);
+        } catch (JsonProcessingException e) {
+            log.error("JSON parsing error", e);
+            return errorResponse("Invalid request format", HttpStatus.BAD_REQUEST);
         }
 
         try {
-            String username = taskData.getUser().getUsername();
-            String runName = taskData.getRunName();
-            String timestamp = String.valueOf(System.currentTimeMillis());
 
-            log.info("Creating directory structure for user: {}", username);
-            String paths = "/www/" + username + "/" + runName + "_" + timestamp;
-            Path baseDir = Paths.get(paths);
-            Files.createDirectories(baseDir);
-            log.info("Directory structure created: {}", baseDir);
+            log.info("Received new task request: {}", taskData);
+            log.info("Fasta file: {}", fastaFile.getOriginalFilename());
+            log.info("Proteomes: {}", proteomes != null ? proteomes.length : 0);
 
-            // Salva o arquivo diretamente no diretório base
-            log.info("Saving file: {}", file.getOriginalFilename());
-            Path filePath = baseDir.resolve(file.getOriginalFilename());
-            file.transferTo(filePath.toFile());
-            log.info("File saved: {}", filePath);
+            if (fastaFile.isEmpty()) {
+                return errorResponse("Fasta file is empty.", HttpStatus.BAD_REQUEST);
+            }
 
-            taskData.setFile(filePath.toFile());
-            taskData.setAbsolutePath(filePath.toString()); // Caminho absoluto:
-                                                           // /www/username/runname_timestamp/arquivo.extensao
-            taskData.setCompleteBasename(baseDir.toString()); // completeBasename: /www/username/runname_timestamp/
+            if (proteomes != null && proteomes.length > 0) {
+                for (MultipartFile proteome : proteomes) {
+                    if (proteome.isEmpty()) {
+                        return errorResponse("One or more proteome files are empty.", HttpStatus.BAD_REQUEST);
+                    }
+                }
+            }
 
-            taskData.setDoBlast(true);
+        } catch (
+
+        IllegalArgumentException e) {
+            log.error("Database error: {}", e.getMessage());
+            return errorResponse("Database configuration error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (Exception e) {
+            log.error("Unexpected error: {}", e.getMessage());
+            return errorResponse("Unexpected error processing request", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        try {
+            Path baseDir = prepareBaseDirectory(taskData);
+
+            Path fastaPath = saveFile(baseDir, fastaFile);
+            taskData.setFile(fastaPath.toFile());
+            taskData.setAbsolutePath(fastaPath.toString());
+
+            if (taskData.isDoBlast() == true) {
+                processProteomes(taskData, baseDir, proteomes);
+            }
+
             Process process = pipelineService.runPipeline(taskData);
+            EpitopeTaskData savedTask = saveTask(taskData, process);
 
-            TaskStatus taskStatus = new TaskStatus();
-            taskStatus.setPid(process.pid());
-            taskStatus.setStatus(Status.RUNNING);
-            taskStatus.setEpitopeTaskData(taskData);
-            taskData.setTaskStatus(taskStatus);
-            taskData.setExecutionDate(LocalDateTime.now());
-
-            log.info("Saving task data to DB: {}", taskData);
-            EpitopeTaskData savedTask = epitopeTaskDataService.save(taskData);
-            log.info("Task persisted with DB ID {}", savedTask.getId());
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("message",
-                    String.format("Task successfully created. Task PID: %d", savedTask.getTaskStatus().getPid()));
-            response.put("taskId", savedTask.getId());
-
-            return ResponseEntity.ok(response);
+            return successResponse(savedTask);
 
         } catch (IOException e) {
-            log.error("Error saving file or creating task: {}", e.getMessage(), e);
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", "An error occurred while saving the file or creating the task.");
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+            log.error("IO Error: {}", e.getMessage(), e);
+            return errorResponse("Error while processing files: " + e.getMessage(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (Exception e) {
-            log.error("Unexpected error: {}", e.getMessage(), e);
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Unexpected server error occurred.");
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+            log.error("Erro inesperado: {}", e.getMessage(), e);
+            return errorResponse("Internal server error: " + e.getMessage(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    private Path prepareBaseDirectory(EpitopeTaskData taskData) throws IOException {
+        String username = taskData.getUser().getUsername();
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+        Path baseDir = Paths.get("/www", username, taskData.getRunName() + "_" + timestamp);
+        Files.createDirectories(baseDir);
+        log.info("Directory created: {}", baseDir);
+        taskData.setCompleteBasename(baseDir.toString());
+        return baseDir;
+    }
+
+    private void processProteomes(EpitopeTaskData taskData, Path baseDir,
+            MultipartFile[] proteomes) throws IOException {
+        if (taskData.getProteomes() == null || taskData.getProteomes().isEmpty()) {
+            return;
+        }
+
+        log.info("Processing proteomes: {}", taskData.getProteomes());
+
+        Path proteomesDir = baseDir.resolve("proteomes");
+        Files.createDirectories(proteomesDir);
+
+        List<Database> processedDatabases = new ArrayList<>();
+        int fileIndex = 0;
+
+        for (Database proteome : taskData.getProteomes()) {
+            log.info("Processing proteome - Type: {}, Alias: {}", proteome.getSourceType(), proteome.getAlias());
+
+            if ("fasta_blast".equals(proteome.getSourceType())) { // Alterado de "fasta_file" para "fasta_blast"
+                // Lógica para novo arquivo enviado pelo usuário
+                if (proteomes == null || fileIndex >= proteomes.length) {
+                    throw new IllegalArgumentException("No proteome file provided for: " + proteome.getAlias());
+                }
+
+                MultipartFile proteomeFile = proteomes[fileIndex++];
+                if (proteomeFile.isEmpty()) {
+                    throw new IllegalArgumentException("Empty proteome file for: " + proteome.getAlias());
+                }
+
+                Database db = new Database();
+                db.setAlias(proteome.getAlias());
+                db.setSourceType("fasta_blast"); // Definindo explicitamente o tipo
+
+                // Sanitiza o nome do arquivo
+                String sanitizedFilename = Paths.get(proteomeFile.getOriginalFilename())
+                        .getFileName().toString();
+                Path proteomePath = proteomesDir.resolve(sanitizedFilename);
+
+                // Salva o arquivo
+                Files.copy(proteomeFile.getInputStream(), proteomePath,
+                        StandardCopyOption.REPLACE_EXISTING);
+
+                // Configura o objeto Database
+                db.setFileName(sanitizedFilename);
+                db.setAbsolutePath(proteomePath.toString());
+                db.setDate(LocalDateTime.now());
+
+                log.info("New proteome file saved: {}", db.toString());
+
+                processedDatabases.add(db);
+
+            } else if ("database".equals(proteome.getSourceType())) {
+                Database existingDb = databaseService.getByAlias(proteome.getAlias());
+                if (existingDb == null) {
+                    throw new IllegalArgumentException("Database not found: " + proteome.getAlias());
+                }
+                processedDatabases.add(existingDb);
+                log.info("Existing database found: {}", existingDb.getAbsolutePath());
+            } else {
+                throw new IllegalArgumentException("Unknown proteome source type: " + proteome.getSourceType());
+            }
+        }
+
+        taskData.setProteomes(processedDatabases);
+        log.info("Final processed proteomes: {}", processedDatabases);
+    }
+
+    private EpitopeTaskData saveTask(EpitopeTaskData taskData, Process process) {
+        TaskStatus taskStatus = new TaskStatus();
+        taskStatus.setPid(process.pid());
+        taskStatus.setStatus(Status.RUNNING);
+        taskStatus.setEpitopeTaskData(taskData);
+
+        taskData.setTaskStatus(taskStatus);
+        taskData.setExecutionDate(LocalDateTime.now());
+
+        return epitopeTaskDataService.save(taskData);
+    }
+
+    private ResponseEntity<Map<String, Object>> successResponse(EpitopeTaskData savedTask) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Task created. PID: " + savedTask.getTaskStatus().getPid());
+        response.put("taskId", savedTask.getId());
+        return ResponseEntity.ok(response);
+    }
+
+    private ResponseEntity<Map<String, Object>> errorResponse(String message, HttpStatus status) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", message);
+        return ResponseEntity.status(status).body(response);
     }
 
     @GetMapping("/tasks/{id}/download")
     public ResponseEntity<Resource> downloadFile(@PathVariable Long id) {
         try {
             EpitopeTaskData task = epitopeTaskDataService.findById(id);
+            Path taskDir = Paths.get(task.getCompleteBasename()).normalize();
 
-            Path taskDir = Paths.get(task.getCompleteBasename()).normalize(); // Caminho do diretório da tarefa
-            if (!Files.exists(taskDir) || !Files.isDirectory(taskDir)) {
-                throw new RuntimeException("Task directory not found or is not a directory");
+            if (!Files.exists(taskDir)) {
+                return ResponseEntity.notFound().build();
+            }
+            if (!Files.isDirectory(taskDir)) {
+                return ResponseEntity.badRequest().body(null);
             }
 
-            Path zipFilePath = Files.createTempFile("task_" + id + "_", ".zip");
+            String originalDirName = taskDir.getFileName().toString();
+            String zipFileName = originalDirName + ".zip";
+
+            Path zipFilePath = Files.createTempFile("download_", ".zip");
+
             try (ZipOutputStream zipOut = new ZipOutputStream(Files.newOutputStream(zipFilePath))) {
                 Files.walk(taskDir)
                         .filter(path -> !Files.isDirectory(path))
                         .forEach(filePath -> {
                             try {
-                                ZipEntry zipEntry = new ZipEntry(taskDir.relativize(filePath).toString());
-                                zipOut.putNextEntry(zipEntry);
+                                String entryName = taskDir.relativize(filePath).toString();
+                                zipOut.putNextEntry(new ZipEntry(entryName));
                                 Files.copy(filePath, zipOut);
                                 zipOut.closeEntry();
                             } catch (IOException e) {
-                                e.printStackTrace();
+                                throw new UncheckedIOException("Error adding file to ZIP: " + filePath, e);
                             }
                         });
-            } catch (IOException e) {
-                throw new RuntimeException("Error creating ZIP file", e);
             }
 
             Resource resource = new UrlResource(zipFilePath.toUri());
 
-            if (resource.exists() && resource.isReadable()) {
-                return ResponseEntity.ok()
-                        .header("Content-Disposition", "attachment; filename=\"" + zipFilePath.getFileName() + "\"")
-                        .body(resource);
-            } else {
-                throw new RuntimeException("File not found or not readable");
-            }
-        } catch (IOException | InvalidPathException ex) {
-            return ResponseEntity.status(500).body(null);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=\"" + zipFileName + "\"")
+                    .header(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS,
+                            HttpHeaders.CONTENT_DISPOSITION)
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .contentLength(Files.size(zipFilePath))
+                    .body(resource);
+
+        } catch (UncheckedIOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(null);
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(null);
         }
     }
 

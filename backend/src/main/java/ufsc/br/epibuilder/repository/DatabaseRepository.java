@@ -9,5 +9,7 @@ import java.util.Optional;
 public interface DatabaseRepository extends JpaRepository<Database, String> {
     void deleteById(Long id);
 
-    Database getById(String id);
+    Database getById(Long id);
+
+    Database getByAlias(String alias);
 }

@@ -45,6 +45,8 @@ import java.nio.file.StandardCopyOption;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
+import java.util.Comparator;
+
 @RestController
 @Slf4j
 @RequestMapping("/dbs")
@@ -86,9 +88,7 @@ public class DatabaseController {
                 Files.createDirectories(databasesDir);
             }
 
-            String sanitizedFilename = Paths.get(file.getOriginalFilename()).getFileName().toString(); // proteção
-                                                                                                       // contra path
-                                                                                                       // traversal
+            String sanitizedFilename = Paths.get(file.getOriginalFilename()).getFileName().toString();
             Path destinationFile = databasesDir.resolve(sanitizedFilename);
 
             Files.copy(file.getInputStream(), destinationFile, StandardCopyOption.REPLACE_EXISTING);
@@ -110,10 +110,39 @@ public class DatabaseController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         try {
-            databaseService.deleteById(id); // Certifique-se de ter esse método no service
+            Database db = databaseService.getById(id);
+
+            if (db == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            String absolutePath = db.getAbsolutePath();
+
+            if (absolutePath != null) {
+                try {
+                    Path path = Path.of(absolutePath);
+                    if (Files.exists(path)) {
+                        Files.walk(path)
+                                .sorted(Comparator.reverseOrder())
+                                .forEach(p -> {
+                                    try {
+                                        Files.delete(p);
+                                    } catch (IOException e) {
+                                        throw new RuntimeException("Error while deleting: " + p, e);
+                                    }
+                                });
+                    }
+                } catch (Exception e) {
+                    log.error("Error while deleting directory: {}", e.getMessage());
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+                }
+            }
+
+            databaseService.deleteById(id);
+
             return ResponseEntity.noContent().build();
         } catch (Exception e) {
-            log.error("Error deleting database: {}", e.getMessage());
+            log.error("Error while deleting database: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

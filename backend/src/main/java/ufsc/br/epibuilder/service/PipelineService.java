@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -21,6 +22,7 @@ import org.springframework.stereotype.Service;
 
 import io.jsonwebtoken.lang.Objects;
 import lombok.extern.slf4j.Slf4j;
+import ufsc.br.epibuilder.model.ActionType;
 import ufsc.br.epibuilder.model.Blast;
 import ufsc.br.epibuilder.model.Database;
 import ufsc.br.epibuilder.model.Epitope;
@@ -38,6 +40,9 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.HashSet;
 
 @Service
 @Slf4j
@@ -58,6 +63,13 @@ public class PipelineService {
         this.epitopeService = epitopeService;
     }
 
+    /**
+     * This method runs the pipeline using the provided EpitopeTaskData.
+     * It constructs a command to run the pipeline using Nextflow and executes it.
+     * 
+     * @param taskData
+     * @return
+     */
     public Process runPipeline(EpitopeTaskData taskData) {
         log.info("Starting pipeline for task: {}", taskData.getId());
 
@@ -73,38 +85,47 @@ public class PipelineService {
                     "--basename " + taskData.getCompleteBasename()));
             command.add(fullCommand);
 
-            addOptionalParameter(command, "--threshold", taskData.getBepipredThreshold());
-            addOptionalParameter(command, "--min-length", taskData.getMinEpitopeLength());
-            addOptionalParameter(command, "--max-length", taskData.getMaxEpitopeLength());
-
-            taskData.setDoBlast(true);
-            if (taskData.isDoBlast()) {
-                addOptionalParameter(command, "--search", "blast");
-
-                /*
-                 * List<Database> proteomes = taskData.getProteomes();
-                 * 
-                 * StringBuilder proteomesFormatted = new StringBuilder();
-                 * 
-                 * for (int i = 0; i < proteomes.size(); i++) {
-                 * Database db = proteomes.get(i);
-                 * if (i > 0) {
-                 * proteomesFormatted.append(":");
-                 * }
-                 * proteomesFormatted.append(db.getAbsolutePath())
-                 * .append("=")
-                 * .append(db.getAlias());
-                 * }
-                 * 
-                 * command.add("--proteomes " + proteomesFormatted.toString());
-                 */
-
-                command.add("--proteomes /pipeline/db/iedb.fasta=iedb");
+            log.info("Adding parameters to command: {}", taskData.getActionType().getDesc());
+            if (ActionType.DEFAULT.toString().equalsIgnoreCase(taskData.getActionType().getDesc())) {
+                taskData.setBepipredThreshold(null);
+                taskData.setMinEpitopeLength(null);
+                taskData.setMaxEpitopeLength(null);
+            } else {
+                addOptionalParameter(command, "--threshold", taskData.getBepipredThreshold());
+                addOptionalParameter(command, "--min-length", taskData.getMinEpitopeLength());
+                addOptionalParameter(command, "--max-length", taskData.getMaxEpitopeLength());
             }
 
-            // String logFilePath = "/" + taskData.getRunName() + ".log";
-            // command.add(">");
-            // command.add(logFilePath);
+            if (taskData.isDoBlast() == true) {
+                addOptionalParameter(command, "--search", "blast");
+
+                List<Database> proteomes = taskData.getProteomes();
+                StringBuilder proteomesFormatted = new StringBuilder();
+                Set<String> addedAliases = new HashSet<>();
+
+                for (int i = 0; i < proteomes.size(); i++) {
+                    Database db = proteomes.get(i);
+                    String alias = db.getAlias();
+
+                    if (!addedAliases.contains(alias)) {
+                        addedAliases.add(alias);
+
+                        if (proteomesFormatted.length() > 0) {
+                            proteomesFormatted.append(":");
+                        }
+                        proteomesFormatted.append(alias)
+                                .append("=")
+                                .append(db.getAbsolutePath());
+                    }
+                }
+
+                command.add("--proteomes " + proteomesFormatted.toString());
+
+                addOptionalParameter(command, "--cover", taskData.getBlastMinCoverCutoff());
+                addOptionalParameter(command, "--ident", taskData.getBlastMinIdentityCutoff());
+                addOptionalParameter(command, "--word-size", taskData.getBlastWordSize());
+
+            }
 
             log.info("Command to run: {}", String.join(" ", command));
 

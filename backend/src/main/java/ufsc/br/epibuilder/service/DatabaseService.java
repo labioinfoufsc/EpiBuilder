@@ -24,8 +24,12 @@ public class DatabaseService {
         return dbRepository.findAll();
     }
 
-    public Database getById(String id) {
+    public Database getById(Long id) {
         return dbRepository.getById(id);
+    }
+
+    public Database getByAlias(String alias) {
+        return dbRepository.getByAlias(alias);
     }
 
     @Transactional
