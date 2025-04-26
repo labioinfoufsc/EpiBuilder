@@ -80,11 +80,6 @@ logs/
 /local/
 /lib/
 
-# Sensitive configuration files
-application-*.yml
-application-*.properties
-application.properties
-
 # Miscellaneous
 HELP.md
 .DS_Store
