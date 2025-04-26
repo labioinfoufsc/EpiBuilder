@@ -121,9 +121,17 @@ public class PipelineService {
 
                 command.add("--proteomes " + proteomesFormatted.toString());
 
-                addOptionalParameter(command, "--cover", taskData.getBlastMinCoverCutoff());
-                addOptionalParameter(command, "--ident", taskData.getBlastMinIdentityCutoff());
-                addOptionalParameter(command, "--word-size", taskData.getBlastWordSize());
+                if (taskData.getBlastMinCoverCutoff() != 90) {
+                    addOptionalParameter(command, "--cover", taskData.getBlastMinCoverCutoff());
+                }
+
+                if (taskData.getBlastMinIdentityCutoff() != 90) {
+                    addOptionalParameter(command, "--identity", taskData.getBlastMinIdentityCutoff());
+                }
+
+                if (taskData.getBlastWordSize() != 4) {
+                    addOptionalParameter(command, "--word-size", taskData.getBlastWordSize());
+                }
 
             }
 
