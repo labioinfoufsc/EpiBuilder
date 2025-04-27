@@ -30,6 +30,7 @@ export class NewComponent {
       runName: 'epibuilder-task',
       file: [null],
       actionType: 'default',
+      databaseFile: [''],
       bepipredThreshold: 0.1512,
       minEpitopeLength: 10,
       maxEpitopeLength: 30,
@@ -37,11 +38,11 @@ export class NewComponent {
       minIdentityCutoff: [90],
       minCoverCutoff: [90],
       wordSize: [4],
-      proteomes: this.fb.array([]), // Inicializa vazio
+      proteomes: this.fb.array([]),
     });
 
     this.loadDatabases();
-    this.addProteome(); // Adiciona o primeiro proteoma
+    this.addProteome();
   }
 
   loadDatabases() {
@@ -70,6 +71,7 @@ export class NewComponent {
       runName: 'epibuilder-task',
       file: [null],
       actionType: 'default',
+      databaseFile: [''],
       bepipredThreshold: 0.1512,
       minEpitopeLength: 10,
       maxEpitopeLength: 30,

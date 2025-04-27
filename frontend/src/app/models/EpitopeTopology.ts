@@ -5,7 +5,7 @@ export class EpitopeTopology {
   threshold?: number;
   avgScore?: number;
   cover?: number | null;
-  epitope?: string;
+  topologyData?: string;
 
   constructor(data: Partial<EpitopeTopology>) {
     this.N = data.N;
@@ -13,7 +13,7 @@ export class EpitopeTopology {
     this.method = data.method;
     this.threshold = data.threshold;
     this.avgScore = data.avgScore;
-    this.cover = data.cover ?? null; 
-    this.epitope = data.epitope;
+    this.cover = data.cover ?? null;
+    this.topologyData = data.topologyData;
   }
 }

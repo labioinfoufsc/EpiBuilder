@@ -13,12 +13,12 @@
           <th>Threshold</th>
           <th>Avg Score</th>
           <th>Cover</th>
-          <th [attr.colspan]="epitopeTopologies != undefined || 1" class="text-center">Epitope</th>
+          <th [attr.colspan]="getMaxTopologyLength()" class="text-center">Epitope</th>
         </tr>
       </thead>
       <tbody>
         <tr *ngIf="epitopeTopologies === undefined || epitopeTopologies.length === 0">
-          <td class="text-center text-muted" [attr.colspan]="columns.length">
+          <td class="text-center text-muted" [attr.colspan]="4 + getMaxTopologyLength()">
             No data available
           </td>
         </tr>
@@ -29,11 +29,12 @@
           <td>{{ row.avgScore === undefined ? '-' : row.avgScore }}</td>
           <td>{{ row.cover === undefined ? '-' : (row.cover | number:'1.2-2') }}</td>
 
-          <td *ngFor="let char of row.epitope?.split('') || []" [class.bg-danger]="char === '.'"
-            [class.text-danger]="char === '.'" [class.bg-primary]="char !== '.'" [class.text-primary]="char !== '.'"
-            class="text-center fw-bold p-2">
-            {{ char }}
-          </td>
+          <ng-container *ngFor="let char of getValidTopologyChars(row.topologyData)">
+            <td *ngIf="char !== ''" [class.bg-danger]="char === '.'" [class.text-danger]="char === '.'"
+              [class.bg-primary]="char !== '.'" [class.text-primary]="char !== '.'" class="text-center fw-bold p-2">
+              {{ char }}
+            </td>
+          </ng-container>
         </tr>
       </tbody>
     </table>

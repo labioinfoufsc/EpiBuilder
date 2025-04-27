@@ -209,7 +209,7 @@
                               <select *ngIf="proteome.get('sourceType')?.value === 'database'"
                                 formControlName="databaseFile" class="form-control mt-2"
                                 (change)="logSelectedDb(i, proteome.get('databaseFile')?.value)">
-                                <option [value]="''" disabled selected>Select a file</option>
+                                <option [value]="null" disabled selected>Select a file</option>
                                 <option *ngFor="let db of databases" [value]="db.absolutePath">{{ db.alias }}
                                 </option>
                               </select>

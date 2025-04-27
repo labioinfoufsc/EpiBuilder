@@ -35,8 +35,32 @@ export class TopologyComponent {
     this.loadTable();
   }
 
+  getMaxTopologyLength(): number {
+    if (!this.epitopeTopologies || this.epitopeTopologies.length === 0) {
+      return 1; // Valor padrão quando não há dados
+    }
+
+    // Encontra o número máximo de caracteres válidos entre todas as linhas
+    const maxLength = Math.max(...this.epitopeTopologies.map(row =>
+      this.getValidTopologyChars(row.topologyData).length
+    ));
+
+    return maxLength > 0 ? maxLength : 1;
+  }
+
+  getValidTopologyChars(topologyData: string | undefined): string[] {
+    if (!topologyData) {
+      return [];
+    }
+
+    // Filtra caracteres vazios ou que são apenas whitespace
+    return topologyData.split('').filter(char => char.trim() !== '');
+  }
+
   loadTable() {
     this.epitopeService.selectedEpitope$.subscribe((epitope) => {
+
+      // Verifica se o epítopo existe      
       if (epitope) {
         this.epitopeId = epitope.n;  // Define o epitopeId
         this.proteinId = epitope.epitopeId;
@@ -47,6 +71,7 @@ export class TopologyComponent {
           ? epitope.epitopeTopologies
           : epitope.epitopeTopologies ? [epitope.epitopeTopologies] : [];
 
+        console.log("epitopeTopologies", this.epitopeTopologies);
         // Carrega os blasts
         this.blasts = Array.isArray(epitope.blasts)
           ? epitope.blasts
