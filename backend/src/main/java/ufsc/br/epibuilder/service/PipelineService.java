@@ -43,6 +43,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.HashSet;
+import java.io.File;
 
 @Service
 @Slf4j
@@ -134,11 +135,23 @@ public class PipelineService {
                 }
 
             }
+            ProcessBuilder processBuilder = new ProcessBuilder(command);
+
+            log.info("Setting environment variables before BLAST add...");
+            Map<String, String> env = processBuilder.environment();
+            String blastPath = "/usr/local/bin";
+            String currentPath = env.getOrDefault("PATH", "");
 
             log.info("Command to run: {}", String.join(" ", command));
 
             Path workDir = Paths.get(taskData.getCompleteBasename());
-            ProcessBuilder processBuilder = new ProcessBuilder(command);
+
+            log.info("Checking if BLAST path is already in PATH...");
+            if (!currentPath.contains(blastPath)) {
+                log.info("Adding BLAST path to environment variables...");
+                env.put("PATH", blastPath + ":" + currentPath);
+            }
+
             processBuilder.directory(workDir.toFile());
 
             File logFile = workDir.resolve("pipeline.log").toFile();
@@ -231,72 +244,59 @@ public class PipelineService {
             }
 
             log.info("Converting epitope file for task...");
-            List<Epitope> epitopes = convertTsvToEpitopes(epitopePath.toString());
+            List<Epitope> epitopes = convertTsvToEpitopes(epitopePath.toString(), task);
             log.info("Epitopes converted: {}", epitopes.size());
 
-            log.info("Saving epitopes to database...");
-            for (Epitope epitope : epitopes) {
-                epitope.setEpitopeTaskData(task);
-                Epitope epitopeSaved = epitopeService.save(epitope);
-                epitope.setId(epitopeSaved.getId());
-                log.info("Epitope saved: {}", epitope.getEpitopeId());
-            }
-            log.info("Epitopes saved to database.");
+            log.info("Converting topology file for task...");
+            List<EpitopeTopology> topologies = parseEpitopeTopology(topologyPath.toString());
+            log.info("Topologies converted: {}", topologies.size());
 
-            log.info("Checking BLAST files...");
+            log.info("Associating topologies with epitopes...");
+            List<Epitope> completeEpitopes = associateTopologies(epitopes, topologies);
+            log.info("Topologies associated with epitopes: {}", completeEpitopes.size());
+
             if (task.isDoBlast()) {
                 log.info("Processing BLAST files in {}", completePath);
                 try {
-                    // Lista todos os arquivos que começam com "blast-" e terminam com ".csv"
                     List<Path> blastFiles = Files.list(completePath)
                             .filter(path -> path.getFileName().toString().startsWith("blast-")
                                     && path.getFileName().toString().endsWith(".csv"))
                             .collect(Collectors.toList());
 
                     log.info("Found {} BLAST files", blastFiles.size());
-                    if (blastFiles.isEmpty()) {
-                        log.warn("No BLAST files found in directory: {}", completePath);
-                    } else {
+
+                    if (!blastFiles.isEmpty()) {
                         for (Path blastPath : blastFiles) {
                             log.info("Processing BLAST file: {}", blastPath.getFileName());
 
-                            // Associa os dados do BLAST aos epítopos
-                            List<Epitope> epitopesWithBlasts = associateBlastsFromCsv(blastPath.toString(), epitopes);
-                            log.info("BLASTs converted from {}: {}", blastPath.getFileName(),
-                                    epitopesWithBlasts.size());
+                            List<Epitope> updatedEpitopes = associateBlastsFromCsv(blastPath.toString(),
+                                    completeEpitopes);
 
-                            // Salva apenas os epítopos que tiveram dados de BLAST associados
-                            for (Epitope epitope : epitopesWithBlasts) {
-                                if (epitope.getBlasts() != null) {
-                                    epitopeService.save(epitope);
-                                    log.debug("Epitope updated with BLAST data from {}: {}",
-                                            blastPath.getFileName(), epitope.getEpitopeId());
-                                }
-                            }
-                            log.info("Epitopes updated with BLAST data from {}", blastPath.getFileName());
+                            log.info("BLASTs converted from {}: {}", blastPath.getFileName(),
+                                    updatedEpitopes.stream()
+                                            .filter(e -> e.getBlasts() != null && !e.getBlasts().isEmpty())
+                                            .count());
                         }
-                        log.info("All BLAST files processed.");
+                    } else {
+                        log.warn("No BLAST files found in directory: {}", completePath);
                     }
                 } catch (IOException e) {
                     log.error("Error while processing BLAST files: {}", e.getMessage(), e);
+                    throw new RuntimeException("Failed to process BLAST files", e);
                 }
             }
 
-            /*
-             * log.info("Converting topology file for task...");
-             * List<EpitopeTopology> topologies =
-             * convertTsvToTopologies(topologyPath.toString(), epitopes);
-             * log.info("Topologies converted: {}", topologies.size());
-             * 
-             * log.info("Saving topologies to database...");
-             * for (EpitopeTopology topology : topologies) {
-             * epitopeTopologyService.save(topology);
-             * log.info("Topology saved: {}", topology.getId());
-             * }
-             */
+            try {
+                log.info("Saving {} epitopes to database with all associations...", completeEpitopes.size());
+                completeEpitopes = epitopeService.saveAll(completeEpitopes);
+                log.info("Epitopes successfully saved to database.");
+            } catch (Exception e) {
+                log.error("Failed to save epitopes to database: {}", e.getMessage(), e);
+                throw new RuntimeException("Database save operation failed", e);
+            }
 
             // Save the task with the epitopes
-            task.setEpitopes(epitopes);
+            task.setEpitopes(completeEpitopes);
 
             // Count proteome size
             int proteomeSize = countProteins(proteinSummary.toString());
@@ -375,7 +375,7 @@ public class PipelineService {
         }
     }
 
-    public static List<Epitope> convertTsvToEpitopes(String filePath) throws IOException {
+    public static List<Epitope> convertTsvToEpitopes(String filePath, EpitopeTaskData task) throws IOException {
         List<Epitope> epitopes = new ArrayList<>();
         BufferedReader reader = new BufferedReader(new FileReader(filePath));
 
@@ -406,11 +406,125 @@ public class PipelineService {
             epitope.setChouFosman(Double.parseDouble(columns[17]));
             epitope.setKarplusSchulz(Double.parseDouble(columns[18]));
             epitope.setParker(Double.parseDouble(columns[19]));
+            epitope.setEpitopeTaskData(task);
 
             epitopes.add(epitope);
         }
 
         reader.close();
+        return epitopes;
+    }
+
+    public static List<EpitopeTopology> parseEpitopeTopology(String filePath) throws IOException {
+        List<EpitopeTopology> topologies = new ArrayList<>();
+        List<String> lines = Files.readAllLines(Paths.get(filePath));
+
+        Long currentN = null;
+
+        for (int i = 1; i < lines.size(); i++) {
+
+            String line = lines.get(i);
+
+            log.info("Processing line: {}", line);
+
+            if (line.trim().isEmpty()) {
+                continue;
+            }
+
+            String[] parts = line.split("\t");
+
+            log.info("Parts length: {}", parts.length);
+
+            if (!parts[0].trim().isEmpty()) {
+                currentN = Long.parseLong(parts[0]);
+                String methodName = parts[2].trim();
+                EpitopeTopology topology = createTopology(currentN, parts, methodName);
+                topologies.add(topology);
+            } else {
+                String methodName = parts[2].trim();
+                EpitopeTopology topology = createTopology(currentN, parts, methodName);
+                topologies.add(topology);
+            }
+        }
+
+        return topologies;
+    }
+
+    private static EpitopeTopology createTopology(Long n, String[] parts, String methodName) {
+        EpitopeTopology topology = new EpitopeTopology();
+        topology.setN(n);
+
+        log.info("Creating topology for N: {}", n);
+        log.info("Parts: {}", (Object) parts);
+        log.info("Method name: {}", methodName);
+
+        try {
+            // Clean up method name from input
+            String cleanedMethodName = methodName.trim();
+
+            // Handle special cases
+            if (cleanedMethodName.equals("BepiPred-3.0")) {
+                cleanedMethodName = "BepiPred";
+            }
+
+            log.info("Method name: {}", cleanedMethodName);
+
+            // Use the enum's fromDescription method
+            Method method = Method.fromDescription(cleanedMethodName);
+            log.info(method.getDescription());
+            topology.setMethod(method);
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid method name: '{}', using ALL_MATCHES as fallback. Error: {}", methodName,
+                    e.getMessage());
+            topology.setMethod(Method.ALL_MATCHES);
+        }
+
+        try {
+            // Add array bounds checking
+            if (parts == null || parts.length < 3) {
+                log.warn("Insufficient data for topology. Parts length: {}", parts == null ? "null" : parts.length);
+                return topology;
+            }
+
+            topology.setThreshold(parseDoubleSafe(parts[3]));
+            topology.setAvgScore(parseDoubleSafe(parts[4]));
+            topology.setCover(parts[5].equals("-") ? 0.0 : parseDoubleSafe(parts[5]));
+            topology.setTopologyData(parts[6]);
+
+        } catch (Exception e) {
+            log.error("Error parsing topology data for method {}: {}", methodName, e.getMessage());
+        }
+
+        return topology;
+    }
+
+    private static Double parseDoubleSafe(String value) {
+        if (value == null || value.trim().isEmpty() || value.equals("-")) {
+            return 0.0;
+        }
+        try {
+            return Double.parseDouble(value.replaceAll("[^0-9.-]", ""));
+        } catch (NumberFormatException e) {
+            log.warn("Invalid number format: {}, using 0.0", value);
+            return 0.0;
+        }
+    }
+
+    public static List<Epitope> associateTopologies(List<Epitope> epitopes, List<EpitopeTopology> topologies) {
+        Map<Long, Epitope> epitopeMap = epitopes.stream()
+                .collect(Collectors.toMap(Epitope::getN, e -> e));
+
+        for (EpitopeTopology topology : topologies) {
+            Epitope epitope = epitopeMap.get(topology.getN());
+            if (epitope != null) {
+                if (epitope.getEpitopeTopologies() == null) {
+                    epitope.setEpitopeTopologies(new ArrayList<>());
+                }
+                topology.setEpitope(epitope);
+                epitope.getEpitopeTopologies().add(topology);
+            }
+        }
+
         return epitopes;
     }
 

@@ -41,6 +41,9 @@ public class EpitopeTopology {
     @Column(name = "topology_data")
     private String topologyData;
 
+    @Column
+    private Long N;
+
     /**
      * Associated epitope to which this topology belongs.
      * Uses LAZY loading to optimize performance.

@@ -11,7 +11,7 @@ import java.util.Optional;
  */
 @Service
 public class EpitopeService {
-    
+
     private final EpitopeRepository epitopeRepository;
 
     public EpitopeService(EpitopeRepository epitopeRepository) {
@@ -32,14 +32,14 @@ public class EpitopeService {
         return epitopeRepository.save(epitope);
     }
 
-    /** 
+    /**
      * Retrieves an epitope by its ID.
      *
      * @param id the ID of the epitope to retrieve
      * @return an Optional containing the found epitope, or empty if not found
      */
     public Optional<Epitope> findById(String id) {
-        return epitopeRepository.findById(id);  
+        return epitopeRepository.findById(id);
     }
 
     /**
@@ -49,5 +49,9 @@ public class EpitopeService {
      */
     public List<Epitope> findAll() {
         return epitopeRepository.findAll();
+    }
+
+    public List<Epitope> saveAll(List<Epitope> epitopes) {
+        return epitopeRepository.saveAll(epitopes);
     }
 }
