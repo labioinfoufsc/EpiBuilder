@@ -14,6 +14,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import java.time.LocalDateTime;
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 @Component
 @Order(1)
@@ -60,6 +63,8 @@ public class DataLoader implements CommandLineRunner {
     private void loadInitialData() {
         User admin = createUser("Admin", "admin", "admin123", Role.ADMIN);
         User regularUser = createUser("User", "user", "user123", Role.USER);
+        String filePath = "/pipeline/db/iedb.fasta";
+        loadDatabaseFile(filePath);
     }
 
     private User createUser(String name, String username, String password, Role role) {
@@ -70,5 +75,24 @@ public class DataLoader implements CommandLineRunner {
         user.setRole(role);
         entityManager.persist(user);
         return user;
+    }
+
+    private void loadDatabaseFile(String filePath) {
+        File file = new File(filePath);
+
+        if (file.exists() && file.isFile()) {
+            // Criar o objeto Database
+            Database database = new Database();
+            database.setAlias("iedb");
+            database.setFileName(file.getName());
+            database.setAbsolutePath(file.getAbsolutePath());
+            database.setDate(LocalDateTime.now());
+
+            // Persistir no banco de dados
+            entityManager.persist(database);
+            System.out.println("DataLoader: File loaded and persisted: " + file.getName());
+        } else {
+            System.out.println("DataLoader: File does not exist: " + filePath);
+        }
     }
 }
