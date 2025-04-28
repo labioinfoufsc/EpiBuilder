@@ -48,7 +48,7 @@ public class Epitope {
      * The associated task data that produced this epitope.
      * Uses lazy fetching to improve performance.
      */
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne
     @JoinColumn(name = "task_data_id", nullable = false)
     @JsonBackReference
     private EpitopeTaskData epitopeTaskData;
@@ -57,7 +57,7 @@ public class Epitope {
      * The topological information associated with this epitope.
      * Cascades all operations and removes orphaned topology.
      */
-    @OneToMany(mappedBy = "epitope", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "epitope", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private List<EpitopeTopology> epitopeTopologies;
 
