@@ -19,6 +19,7 @@ import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.config.Task;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -45,6 +46,8 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import java.io.IOException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Optional;
+import java.util.Comparator;
 
 @RestController
 @Slf4j
@@ -86,6 +89,10 @@ public class EpitopeController {
         } catch (JsonProcessingException e) {
             log.error("JSON parsing error", e);
             return errorResponse("Invalid request format", HttpStatus.BAD_REQUEST);
+        }
+
+        if (taskData.getUser() == null || taskData.getUser().getId() == null) {
+            return errorResponse("Login expired. Please log in again.", HttpStatus.BAD_REQUEST);
         }
 
         try {
@@ -338,13 +345,52 @@ public class EpitopeController {
 
     @DeleteMapping("/tasks/{id}")
     public ResponseEntity<Map<String, String>> deleteTask(@PathVariable Long id) {
-        Long deleted = epitopeTaskDataService.deleteById(id);
-        if (deleted == 0) {
-            return ResponseEntity.notFound().build();
+        try {
+            EpitopeTaskData taskFound = epitopeTaskDataService.findById(id);
+            if (taskFound == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            epitopeTaskDataService.deleteEpitopeTaskDataWithAssociations(id);
+
+            this.deleteTaskFiles(taskFound.getCompleteBasename());
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "Task and all associated data deleted successfully"));
+        } catch (Exception e) {
+            log.error("Error deleting task {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("error", "Failed to delete task: " + e.getMessage()));
         }
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "Task deleted successfully");
-        return ResponseEntity.ok(response);
+    }
+
+    private void deleteTaskFiles(String completeBasename) throws IOException {
+        if (completeBasename == null || completeBasename.isEmpty()) {
+            return;
+        }
+
+        Path directoryPath = Paths.get(completeBasename).normalize();
+        if (!Files.exists(directoryPath)) {
+            log.warn("Directory does not exist: {}", directoryPath);
+            return;
+        }
+
+        try {
+            Files.walk(directoryPath)
+                    .sorted(Comparator.reverseOrder())
+                    .forEach(path -> {
+                        try {
+                            Files.deleteIfExists(path);
+                            log.debug("Deleted file: {}", path);
+                        } catch (IOException e) {
+                            log.error("Failed to delete {}: {}", path, e.getMessage());
+                            throw new UncheckedIOException(e);
+                        }
+                    });
+            log.info("Successfully deleted directory: {}", directoryPath);
+        } catch (UncheckedIOException e) {
+            throw new IOException("Failed to delete task files", e.getCause());
+        }
     }
 
     @GetMapping("/tasks/user/{userId}/status")

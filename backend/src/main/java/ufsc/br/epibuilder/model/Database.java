@@ -29,4 +29,9 @@ public class Database {
     private LocalDateTime date;
     @Transient
     private String sourceType;
+
+    @Override
+    public String toString() {
+        return this.alias + "=" + this.absolutePath;
+    }
 }

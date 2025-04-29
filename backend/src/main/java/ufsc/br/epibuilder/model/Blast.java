@@ -29,11 +29,13 @@ public class Blast {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    private Long N;
     private String sacc;
     private Double pident;
     private Double qcovs;
     private String qseq;
     private String sseq;
+    private String database;
 
     @ManyToOne
     @JoinColumn(name = "epitope_id")

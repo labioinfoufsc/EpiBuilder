@@ -3,7 +3,7 @@ package ufsc.br.epibuilder.model;
 public enum Method {
     BEPIPRED("BepiPred"),
     EMINI("Emini"),
-    CHOU_FASMAN("Chou Fasman"),
+    CHOU_FASMAN("Chou Fosman"),
     KOLASKAR("Kolaskar"),
     KARPLUS_SCHULZ("Karplus Schulz"),
     PARKER("Parker"),
@@ -23,7 +23,7 @@ public enum Method {
 
     public static Method fromDescription(String description) {
         for (Method method : values()) {
-            if (method.description.equalsIgnoreCase(description)) {
+            if (method.getDescription().equalsIgnoreCase(description)) {
                 return method;
             }
         }
