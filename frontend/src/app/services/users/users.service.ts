@@ -1,7 +1,7 @@
+import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, catchError, Observable, tap, throwError } from 'rxjs';
 import { User } from '../../models/User';
-import { HttpClient } from '@angular/common/http';
 
 @Injectable({ providedIn: 'root' })
 export class UserService {
@@ -9,7 +9,7 @@ export class UserService {
   users$ = this.users.asObservable();
   private apiUrl = 'http://localhost:8080/users';
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   /**
    * Retrieves all users and updates the BehaviorSubject.
@@ -42,7 +42,7 @@ export class UserService {
     return this.http.post<User>(this.apiUrl, user).pipe(
       tap((newUser: any) => {
         const updatedUsers = [...this.users.getValue(), newUser];
-        this.users.next(updatedUsers); // Update local state
+        this.users.next(updatedUsers);
       }),
       catchError((error) =>
         throwError(() => new Error('API Error: ' + error.message))
@@ -61,7 +61,7 @@ export class UserService {
         const updatedUsers = this.users
           .getValue()
           .filter((user) => user.id !== id);
-        this.users.next(updatedUsers); // Update local state after deletion
+        this.loadUsers();
       }),
       catchError((error) =>
         throwError(() => new Error('Delete failed: ' + error.message))

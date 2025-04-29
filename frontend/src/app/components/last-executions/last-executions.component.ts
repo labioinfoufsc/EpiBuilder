@@ -1,11 +1,13 @@
-import { Component, ElementRef, ViewChild } from "@angular/core";
-import { EpitopesService } from "../../services/epitopes/epitopes.service";
-import { EpitopeTaskData } from "../../models/EpitopeTaskData";
 import { DatePipe } from "@angular/common";
-import { SuccessMessages } from "../../models/SuccessMessages";
-import { APIResponse } from "../../models/APIResponse";
-import { LoginService } from "../../services/login/login.service";
+import { HttpResponse } from "@angular/common/http";
+import { Component, ElementRef, OnDestroy, ViewChild } from "@angular/core";
 import { Modal } from "bootstrap";
+import { saveAs } from 'file-saver';
+import { APIResponse } from "../../models/APIResponse";
+import { EpitopeTaskData } from "../../models/EpitopeTaskData";
+import { SuccessMessages } from "../../models/SuccessMessages";
+import { EpitopesService } from "../../services/epitopes/epitopes.service";
+import { LoginService } from "../../services/login/login.service";
 
 @Component({
   selector: "app-last-executions",
@@ -14,7 +16,7 @@ import { Modal } from "bootstrap";
   styleUrls: ["./last-executions.component.scss"],
   providers: [DatePipe],
 })
-export class LastExecutionsComponent {
+export class LastExecutionsComponent implements OnDestroy {
   executedTasks: EpitopeTaskData[] = [];
   selectedTask: EpitopeTaskData | null = null;
   taskToDelete: EpitopeTaskData | null = null;
@@ -22,52 +24,92 @@ export class LastExecutionsComponent {
   private deleteModalInstance!: Modal;
   alertMessage: string | null = null;
   alertType: "success" | "danger" | null = null;
+  private refreshInterval: any;
   columns: string[] = [
     'Task',
     'Started At',
     'Completed At',
+    'Duration',
+    'Proteome size',
+    'Status',
     'Actions'
   ];
 
   constructor(
     private epitopeService: EpitopesService,
-    loginService: LoginService,
+    private loginService: LoginService,
     private datePipe: DatePipe
   ) {
     const userId = loginService.getUser()?.id;
     if (userId !== undefined) {
-      epitopeService.getExecutedTasksByUserId(userId).subscribe((tasks) => {
-        this.executedTasks = tasks;
-      });
-    } else {
-      console.error("User ID is undefined");
+      this.loadTasks(userId); // Carrega as tarefas imediatamente
+      this.setupAutoRefresh(userId); // Configura o refresh automático
     }
   }
 
+  refresh(): void {
+    const userId = this.loginService.getUser()?.id;
+    if (userId !== undefined) {
+      this.loadTasks(userId);
+    }
+
+    this.selectedTask = null;
+    this.epitopeService.selectTask(null);
+  }
+
+  ngOnDestroy(): void {
+    // Limpa o intervalo quando o componente é destruído
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
+    }
+  }
+
+  private setupAutoRefresh(userId: number): void {
+    // Configura o intervalo para atualizar a cada 1 minuto (60000 ms)
+    this.refreshInterval = setInterval(() => {
+      this.loadTasks(userId);
+    }, 60000);
+  }
+
+  private loadTasks(userId: number): void {
+    this.epitopeService.getExecutedTasksByUserId(userId).subscribe((tasks) => {
+      const filteredTasks = tasks.filter(task =>
+        task.taskStatus?.status === 'COMPLETED' || task.taskStatus?.status === 'FINISHED'
+      );
+      this.executedTasks = filteredTasks;
+    });
+  }
+
   downloadTask(task: EpitopeTaskData): void {
-    if (!task?.fasta) {
-      console.error("Error: No file URL available");
-      alert("Error: No file URL available");
+    if (!task || task.id === undefined) {
+      console.error('ID da tarefa inválido');
       return;
     }
 
-    if (task.fasta) {
-      this.epitopeService.downloadFasta(task.fasta).subscribe({
-        next: (response: APIResponse<Blob>) => {
-          if (response.success && response.message) {
-            saveAs(response.message, "file.fasta");
-            console.log("File downloaded successfully");
-          } else {
-            console.error("Error: " + response.message);
-            alert("Error: " + response.message);
-          }
-        },
-        error: (error) => {
-          console.error("Download failed:", error);
-          alert("Error: Download failed. Please try again later.");
-        },
-      });
+    this.epitopeService.downloadFile(task.id).subscribe({
+      next: (response: any) => {
+        if (response && response.blob) {
+          const filename = response.filename || `task_${task.id}.zip`;
+          const blob = new Blob([response.blob], { type: 'application/zip' });
+          saveAs(blob, filename);
+        } else {
+          console.error('Erro ao baixar o arquivo');
+        }
+      }
+    });
+  }
+
+  calculateExecutionTime(date: any, date2: any): string {
+    if (!date || !date2) {
+      return "N/A";
     }
+    const startDate = new Date(date);
+    const endDate = new Date(date2);
+    const diff = endDate.getTime() - startDate.getTime();
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+    return `${hours}h ${minutes}m ${seconds}s`;
   }
 
   deleteTask(): void {
@@ -100,6 +142,8 @@ export class LastExecutionsComponent {
   private cleanupAfterDelete(): void {
     this.taskToDelete = null;
     this.hideDeleteModal();
+    this.selectedTask = null;
+    this.epitopeService.selectTask(null);
   }
 
   showAlert(message: string, type: "success" | "danger" | null) {
@@ -129,7 +173,4 @@ export class LastExecutionsComponent {
     this.selectedTask = task;
     this.epitopeService.selectTask(task);
   }
-}
-function saveAs(message: string | Blob, arg1: string) {
-  throw new Error("Function not implemented.");
 }

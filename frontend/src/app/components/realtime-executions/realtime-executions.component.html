@@ -1,41 +1,70 @@
 <div class="container mt-3">
-    <div class="row justify-content-center">
-      <div class="col-8">
-        <div class="card">
-          <div class="card-header custom-header">
-            <b>Real-time executions</b>
-          </div>
-          <div class="card-body card-scrollable">
-            <table class="table table-striped table-bordered">
-              <thead class="header">
-                <tr>
-                  <th>PID</th>
-                  <th>Task name</th>
-                  <th>Processing time</th>
-                  <th>Progress</th>
-                  <th>Command</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let process of processes">
-                  <td>{{ process.pid }}</td>
-                  <td>{{ process.taskName }}</td>
-                  <td>{{ process.processingTime }}</td>
-                  <td>
-                    <div class="progress">
-                      <div class="progress-bar" style="background-color:#29cc54" role="progressbar" [style.width.%]="process.progress" 
-                        [attr.aria-valuenow]="process.progress" aria-valuemin="0" aria-valuemax="100">
-                        {{ process.progress }}%
-                      </div>
-                    </div>
-                  </td>
-                  <td>{{ process.command }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+  <div class="row justify-content-center">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header custom-header">
+          <b>Real-time executions</b>
+        </div>
+        <div class="card-body card-scrollable">
+          <table class="table table-striped table-bordered" style="text-align: center;">
+            <thead class="header">
+              <tr>
+                <th *ngFor="let column of columns">{{ column }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngIf="processes.length === 0">
+                <td class="text-center text-muted" [attr.colspan]="columns.length">
+                  No data available
+                </td>
+              </tr>
+              <tr *ngFor="let process of processes">
+                <td>{{ process.taskStatus?.pid }}</td>
+                <td>{{ process.runName }}</td>
+                <td>{{ process.executionDate | date : "yyyy-MM-dd 'at' HH'h'mm'min'ss'sec'" }}</td>
+                <td>{{ process.elapsedTime }}</td>
+                <td>
+                  <span *ngIf="process.taskStatus?.status === 'RUNNING'"
+                    class="badge bg-warning d-inline-flex align-items-center">
+                    <span class="spinner-border spinner-border-sm text-light" role="status" aria-hidden="true"></span>
+                    &nbsp; Running
+                  </span>
+                  <span class="badge bg-danger" *ngIf="process.taskStatus?.status === 'FAILED'">
+                    Failed
+                  </span>
+                  <span class="badge bg-success" *ngIf="process.taskStatus?.status === 'COMPLETED'">
+                    Finished
+                  </span>
+                </td>
+                <td>
+                  <a (click)="viewLog(process)" title="View task">
+                    <i class="fas fa-eye" style="color: #0f72b9; cursor: pointer;"></i>
+                  </a>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
   </div>
-  
+</div>
+
+<div class="modal-overlay" *ngIf="modalVisible">
+  <div class="modal-terminal-container">
+    <div class="modal-header d-flex justify-content-between align-items-center">
+
+      <h5 *ngIf="currentProcess" class="modal-title mb-0">
+        Log: {{ currentProcess.runName }} (PID: {{ currentProcess.taskStatus != undefined ?
+        currentProcess.taskStatus.pid : 'N/A' }})
+      </h5>
+      <button type="button" class="btn-close" aria-label="Close" (click)="closeModal()"></button>
+    </div>
+    <div #logContent class="modal-terminal">
+      <pre [class.loading]="!logText">{{ logText || 'Loading log...' }}</pre>
+    </div>
+    <div class="modal-footer">
+      <small class="text-muted">Auto-updating every 10 seconds</small>
+    </div>
+  </div>
+</div>

@@ -4,18 +4,21 @@ import { TaskStatus } from "./TaskStatus"; // Ensure TaskStatus is defined in th
 export class EpitopeTaskData {
   id?: number;
   taskStatus?: TaskStatus;
+  elapsedTime?: any;
   runName!: string;
-  fasta!: File;
-  action!: string;
+  file!: File;
+  absolutePath?: string;
+  actionType?: string;
   bepipredThreshold!: number;
   minEpitopeLength!: number;
   maxEpitopeLength!: number;
-  subcell!: string;
-  interpro!: string;
+  proteomeSize?: number;
   epitopeSearch!: string;
-  optional!: string;
   executionDate!: Date;
   finishedDate?: Date;
-  /*results_folder!: File;*/
   epitopes?: Epitope[];
+  minIdentityCutoff?: number;
+  maxIdentityCutoff?: number;
+  wordSize?: number;
 }
+

@@ -18,3 +18,38 @@ button:active {
   background-color: #0f72b9 !important;
   color: white !important;
 }
+
+
+.force-bootstrap-danger {
+  background-color: #dc3545 !important;
+  border-color: #dc3545 !important;
+  color: #fff !important;
+}
+
+/* Força o estilo do botão secundário */
+button.btn.btn-secondary {
+  background-color: #6c757d !important;
+  border-color: #6c757d !important;
+  color: #fff !important;
+}
+
+/* Estilo ao passar o mouse (hover) */
+button.btn.btn-secondary:hover {
+  background-color: #5c636a !important;
+  border-color: #565e64 !important;
+}
+
+/* Força o estilo do botão light */
+button.btn.btn-light {
+  background-color: #f8f9fa !important;
+  border-color: #f8f9fa !important;
+  color: #000 !important;
+  border-color: #0f72b9!important;
+}
+
+/* Hover para btn-light */
+button.btn.btn-light:hover {
+  background-color: #e2e6ea !important;
+  border-color: #dae0e5 !important;
+  border-color: #0f72b9!important;
+}

@@ -8,7 +8,7 @@ import { UserService } from '../../services/users/users.service';
   selector: 'app-profile',
   standalone: false,
   templateUrl: './profile.component.html',
-  styleUrls: ['./profile.component.css'],
+  styleUrls: ['./profile.component.scss'],
 })
 export class ProfileComponent implements OnInit {
   profileForm: FormGroup;
@@ -44,7 +44,6 @@ export class ProfileComponent implements OnInit {
    * Loads user data from localStorage and populates the form.
    */
   private loadUser(): void {
-    console.log(this.loginService.getUser());
     this.user = this.loginService.getUser();
 
     this.profileForm.patchValue({
@@ -53,75 +52,74 @@ export class ProfileComponent implements OnInit {
     });
   }
 
-    /**
-   * Validates that passwords match before submitting.
-   * @returns - Returns true if passwords match, false otherwise.
+  /**
+ * Validates that passwords match before submitting.
+ * @returns - Returns true if passwords match, false otherwise.
+ */
+  validatePasswords(): boolean {
+    const password = this.profileForm.get('password')?.value;
+    const confirmPassword = this.profileForm.get('confirmPassword')?.value;
+
+    if (password && confirmPassword && password !== confirmPassword) {
+      this.alertMessage = 'Passwords do not match.';
+      this.alertType = 'danger';
+      return false;
+    }
+
+    this.alertMessage = '';
+    return true;
+  }
+
+  /**
+   * Handles profile update submission.
    */
-    validatePasswords(): boolean {
-      const password = this.profileForm.get('password')?.value;
-      const confirmPassword = this.profileForm.get('confirmPassword')?.value;
-  
-      if (password && confirmPassword && password !== confirmPassword) {
-        this.alertMessage = 'Passwords do not match.';
-        this.alertType = 'danger';
-        return false;
-      }
-  
-      this.alertMessage = '';
-      return true;
+  onSubmit(): void {
+    if (!this.user) {
+      this.alertMessage = 'User data is unavailable.';
+      this.alertType = 'danger';
+      return;
     }
-  
-    /**
-     * Handles profile update submission.
-     */
-    onSubmit(): void {
-      if (!this.user) {
-        this.alertMessage = 'User data is unavailable.';
-        this.alertType = 'danger';
-        return;
-      }
-  
-      if (!this.profileForm.valid) {
-        this.alertMessage = 'Please fill in all required fields.';
-        this.alertType = 'danger';
-        return;
-      }
-  
-      // Validate passwords before submitting
-      if (!this.validatePasswords()) {
-        return;
-      }
-  
-      const updatedUser: Partial<User> = {
-        id: Number(this.user.id),
-        username: this.user.username,
-        name: this.profileForm.value.name,
-        role: this.user.role,
-      };
-  
-      // Only add password to the update if it's not empty
-      if (this.profileForm.value.password) {
-        console.log('entrou aqui')
-        updatedUser.password = this.profileForm.value.password;
-      }
-  
-      this.userService.updateUser(updatedUser).subscribe({
-        next: () => {
-          // Update localStorage with new values
-          localStorage.setItem('name', this.profileForm.value.name);
-          localStorage.setItem('role', this.user?.role || '');
-  
-          this.alertMessage = 'Profile updated successfully!';
-          this.alertType = 'success';
-          setTimeout(() => (this.alertMessage = ''), 5000);
-        },
-        error: (error) => {
-          this.alertMessage = 'Failed to update profile: ' + error.message;
-          this.alertType = 'danger';
-        },
-      });
+
+    if (!this.profileForm.valid) {
+      this.alertMessage = 'Please fill in all required fields.';
+      this.alertType = 'danger';
+      return;
     }
-  
+
+    // Validate passwords before submitting
+    if (!this.validatePasswords()) {
+      return;
+    }
+
+    const updatedUser: Partial<User> = {
+      id: Number(this.user.id),
+      username: this.user.username,
+      name: this.profileForm.value.name,
+      role: this.user.role,
+    };
+
+    // Only add password to the update if it's not empty
+    if (this.profileForm.value.password) {
+      updatedUser.password = this.profileForm.value.password;
+    }
+
+    this.userService.updateUser(updatedUser).subscribe({
+      next: () => {
+        // Update localStorage with new values
+        localStorage.setItem('name', this.profileForm.value.name);
+        localStorage.setItem('role', this.user?.role || '');
+
+        this.alertMessage = 'Profile updated successfully!';
+        this.alertType = 'success';
+        setTimeout(() => (this.alertMessage = ''), 5000);
+      },
+      error: (error) => {
+        this.alertMessage = 'Failed to update profile: ' + error.message;
+        this.alertType = 'danger';
+      },
+    });
+  }
+
 
   /**
    * Displays an alert message for 5 seconds.
@@ -131,7 +129,7 @@ export class ProfileComponent implements OnInit {
   showAlert(message: string, type: 'success' | 'danger' | null) {
     this.alertMessage = message;
     this.alertType = type;
-  
+
     setTimeout(() => {
       this.alertMessage = null;
     }, 5000);

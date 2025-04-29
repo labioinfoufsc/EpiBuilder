@@ -1,7 +1,9 @@
-import { Component } from "@angular/core";
+import { Component, OnInit } from "@angular/core";
+import { FormGroup } from "@angular/forms";
+import { Database } from "../../models/Database";
 import { Epitope } from "../../models/Epitope";
-import { EpitopesService } from "../../services/epitopes/epitopes.service";
 import { EpitopeTaskData } from "../../models/EpitopeTaskData";
+import { EpitopesService } from "../../services/epitopes/epitopes.service";
 import { LoginService } from "../../services/login/login.service";
 
 @Component({
@@ -10,7 +12,7 @@ import { LoginService } from "../../services/login/login.service";
   templateUrl: "./results.component.html",
   styleUrls: ["./results.component.scss"],
 })
-export class ResultsComponent {
+export class ResultsComponent implements OnInit {
   epitopes: Epitope[] = [];
   expandedEpitopeIndex: number | null = null;
   epitopeTaskData: EpitopeTaskData[] = [];
@@ -22,12 +24,15 @@ export class ResultsComponent {
   selectedTask: Partial<EpitopeTaskData> = {};
 
   columns = [
-    { key: "id", label: "ID" },
-    { key: "epitope", label: "Epitope" },
+    { key: "n", label: "N" },
+    { key: "id", label: "Protein ID" },
+    { key: "epitopeId", label: "Epitope" },
     { key: "start", label: "Start" },
     { key: "end", label: "End" },
     { key: "length", label: "Length" },
     { key: "mwKDa", label: "MW (kDa)" },
+    { key: "nGlyc", label: "nGlyc" },
+    { key: "nGlycCount", label: "nGlyc Count" },
     { key: "iP", label: "I.P" },
     { key: "hydropathy", label: "Hydropathy" },
     { key: "bepiPred3", label: "BepiPred3" },
@@ -42,12 +47,14 @@ export class ResultsComponent {
     private epitopeService: EpitopesService,
     private loginService: LoginService
   ) {
-    const userId = loginService.getUser()?.id;
-    console.log("User ID:", userId);
+    this.getData();
+  }
+
+  getData() {
+    const userId = this.loginService.getUser()?.id;
 
     if (userId !== undefined) {
-      epitopeService.getExecutedTasksByUserId(userId).subscribe((tasks) => {
-        console.log("Tasks:", tasks);
+      this.epitopeService.getExecutedTasksByUserId(userId).subscribe((tasks) => {
         this.epitopeTaskData = tasks;
       });
     } else {
@@ -57,10 +64,31 @@ export class ResultsComponent {
     this.loadTable();
   }
 
+  ngOnInit(): void {
+    this.resetState();
+    this.getData();
+  }
+
+  resetState(): void {
+    this.epitopes = [];
+    this.expandedEpitopeIndex = null;
+    this.epitopeTaskData = [];
+    this.filterText = "";
+    this.filters = {};
+    this.sortColumn = "";
+    this.sortDirection = "asc";
+    this.selectedEpitope = null;
+    this.selectedTask = {};
+  }
+
   applyFilters() {
     const search = this.filterText.toLowerCase().trim();
 
-    if (!search && !Array.isArray(this.selectedTask) && this.selectedTask?.epitopes) {
+    if (
+      !search &&
+      !Array.isArray(this.selectedTask) &&
+      this.selectedTask?.epitopes
+    ) {
       this.epitopes = this.selectedTask.epitopes;
       return;
     }
@@ -94,10 +122,10 @@ export class ResultsComponent {
           ? -1
           : 1
         : aVal > bVal
-        ? this.sortDirection === "asc"
-          ? 1
-          : -1
-        : 0;
+          ? this.sortDirection === "asc"
+            ? 1
+            : -1
+          : 0;
     });
   }
 

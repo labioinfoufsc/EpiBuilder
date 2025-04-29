@@ -1,61 +1,140 @@
-import { Component } from '@angular/core';
-
-declare var bootstrap: any;
-
-interface DatabaseFile {
-  name: string;
-  date: string;
-  size_mb: number;
-  ext: string;
-}
+import { Component, ElementRef, ViewChild } from '@angular/core';
+import { Modal } from 'bootstrap';
+import { Database } from '../../models/Database';
+import { DatabasesService } from '../../services/databases/databases.service';
 
 @Component({
   selector: 'app-databases',
   standalone: false,
   templateUrl: './databases.component.html',
-  styleUrls: ['./databases.component.css']
+  styleUrls: ['./databases.component.scss']
 })
 export class DatabasesComponent {
-  files: DatabaseFile[] = [];
-  newDatabase = {
-    file: null as File | null,
-    name: ''
-  };
+  newDatabase?: Database;
+  selectedFile!: File;
+  files: Database[] = [];
+  columns: string[] = ['Database', 'Creation Date', 'Action'];
+  alertMessage: string | null = null;
+  alertType: "success" | "danger" | null = null;
+  fileToDelete: Database | null = null;
+  @ViewChild('fileInput') fileInput?: ElementRef;
 
-  /**
-   * Handles form submission to add a new database file.
-   */
-  onSubmit() {
-    if (!this.newDatabase.file || !this.newDatabase.name) return;
+  @ViewChild("deleteModal") deleteModal!: ElementRef;
+  private deleteModalInstance!: Modal;
+  isLoading: boolean = false;
 
-    const newFile: DatabaseFile = {
-      name: this.newDatabase.name,
-      date: new Date().toISOString(),
-      size_mb: parseFloat((this.newDatabase.file.size / (1024 * 1024)).toFixed(2)), 
-      ext: this.newDatabase.file.name.split('.').pop() || ''
-    };
+  constructor(private databasesService: DatabasesService) { }
 
-    this.files.push(newFile);
-    this.newDatabase = { file: null, name: '' };
+  ngOnInit(): void {
+    this.loadDatabases();
   }
 
-  /**
-   * Handles file input change event.
-   * @param event - The file input change event.
-   */
-  onFileChange(event: any) {
-    this.newDatabase.file = event.target.files[0];
-  }
-
-  /**
-   * Opens the modal for database conversion.
-   * @param actionUrl - The URL where the conversion action will be performed.
-   */
-  openConversionModal(actionUrl: string) {
-    const modalElement = document.getElementById('confirmModal');
-    if (modalElement) {
-      const modal = new bootstrap.Modal(modalElement);
-      modal.show();
+  onFileChange(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    if (target.files && target.files.length > 0) {
+      this.selectedFile = target.files[0];
     }
   }
+
+  onSubmit(): void {
+
+    this.isLoading = true;
+
+    if (!this.selectedFile) {
+      this.showAlert("Please select a file", "danger");
+      this.isLoading = false;
+      return;
+    }
+
+    const originalName = this.selectedFile.name;
+    const fileNameWithoutExtension = originalName.replace(/\.[^/.]+$/, "");
+    const formattedAlias = fileNameWithoutExtension
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9_-]/g, '_')
+      .toLowerCase();
+
+    const databaseToUpload: Partial<Database> = {
+      alias: formattedAlias,
+      fileName: this.selectedFile.name,
+    };
+
+    this.databasesService.uploadDatabase(this.selectedFile, databaseToUpload.alias!).subscribe({
+      next: (res) => {
+        this.isLoading = false;
+        if (res) {
+          this.showAlert("Database successfully uploaded!", "success");
+          this.loadDatabases();
+        }
+      },
+      error: (err) => {
+        this.isLoading = false;
+        if (err.status) {
+          this.showAlert(err.status, "danger");
+        }
+      }
+    });
+  }
+
+  resetForm() {
+    this.newDatabase = new Database();
+    this.selectedFile = undefined!;
+    this.alertMessage = null;
+    if (this.fileInput) {
+      this.fileInput.nativeElement.value = '';
+    }
+  }
+
+  deleteDatabase(): void {
+    if (!this.fileToDelete) return;
+    this.hideDeleteModal();
+    const id = this.fileToDelete.id;
+    this.databasesService.deleteDatabase(id).subscribe({
+      next: () => {
+        this.files = this.files.filter((file) => file.id !== id);
+        this.showAlert("Database deleted successfully", "success");
+      },
+      error: (err: any) => {
+        this.showAlert(err, "danger");
+      },
+    });
+  }
+
+  confirmDelete(file: Database): void {
+    this.fileToDelete = file;
+    this.showDeleteModal();
+  }
+
+  showDeleteModal() {
+    if (this.deleteModal) {
+      this.deleteModalInstance = new Modal(this.deleteModal.nativeElement);
+      this.deleteModalInstance.show();
+    }
+  }
+
+  hideDeleteModal() {
+    if (this.deleteModalInstance) {
+      this.deleteModalInstance.hide();
+    }
+  }
+
+  showAlert(message: string, type: "success" | "danger" | null) {
+    this.alertMessage = message;
+    this.alertType = type;
+
+    setTimeout(() => {
+      this.alertMessage = null;
+    }, 5000);
+  }
+
+
+
+  loadDatabases(): void {
+    this.databasesService.getDatabases().subscribe({
+      next: (data: Database[]) => this.files = data,
+      error: (err: any) => this.showAlert(err, "danger")
+    });
+  }
+
+
 }
