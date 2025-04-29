@@ -55,12 +55,13 @@
     <div class="modal-header d-flex justify-content-between align-items-center">
 
       <h5 *ngIf="currentProcess" class="modal-title mb-0">
-        Log: {{ currentProcess.runName }} (PID: {{ currentProcess.id }})
+        Log: {{ currentProcess.runName }} (PID: {{ currentProcess.taskStatus != undefined ?
+        currentProcess.taskStatus.pid : 'N/A' }})
       </h5>
       <button type="button" class="btn-close" aria-label="Close" (click)="closeModal()"></button>
     </div>
-    <div class="modal-terminal">
-      <pre #logContent [class.loading]="!logText">{{ logText || 'Loading log...' }}</pre>
+    <div #logContent class="modal-terminal">
+      <pre [class.loading]="!logText">{{ logText || 'Loading log...' }}</pre>
     </div>
     <div class="modal-footer">
       <small class="text-muted">Auto-updating every 10 seconds</small>

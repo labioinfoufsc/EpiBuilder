@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { EpitopeTaskData } from '../../models/EpitopeTaskData';
 import { EpitopesService } from '../../services/epitopes/epitopes.service';
@@ -24,6 +24,8 @@ export class RealtimeExecutionsComponent implements OnInit, OnDestroy {
   private tableUpdateTimer: any;
   private logUpdateTimer: any;
   private elapsedTimeUpdateTimer: any;
+
+  @ViewChild('logContent') private logContentRef!: ElementRef;
 
   constructor(
     private epitopesService: EpitopesService,
@@ -51,6 +53,13 @@ export class RealtimeExecutionsComponent implements OnInit, OnDestroy {
     this.cleanUpIntervals();
     if (this.taskListChangedSubscription) {
       this.taskListChangedSubscription.unsubscribe();
+    }
+  }
+
+  private scrollToBottom(): void {
+    if (this.logContentRef?.nativeElement) {
+      const element = this.logContentRef.nativeElement;
+      element.scrollTop = element.scrollHeight;
     }
   }
 
@@ -82,6 +91,7 @@ export class RealtimeExecutionsComponent implements OnInit, OnDestroy {
     this.logUpdateTimer = setInterval(() => {
       this.updateLogContent();
     }, this.logUpdateInterval);
+
   }
 
   private cleanUpTableInterval(): void {
@@ -132,6 +142,7 @@ export class RealtimeExecutionsComponent implements OnInit, OnDestroy {
         const reader = new FileReader();
         reader.onload = () => {
           this.logText = reader.result as string;
+          setTimeout(() => this.scrollToBottom(), 0);
         };
         reader.onerror = (error) => {
           this.logText = 'Error loading log: ' + error;
@@ -143,6 +154,7 @@ export class RealtimeExecutionsComponent implements OnInit, OnDestroy {
       }
     });
   }
+
 
   loadTasks(): void {
     if (this.userId === undefined) {

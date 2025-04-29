@@ -113,7 +113,7 @@ export class EpitopesService {
     this.selectedEpitopeSource.next(epitope);
   }
 
-  selectTask(task: EpitopeTaskData) {
+  selectTask(task: EpitopeTaskData | null) {
     this.selectedTaskSource.next(task);
   }
 

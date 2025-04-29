@@ -1,5 +1,6 @@
-import { Component, OnInit } from "@angular/core";
+import { ChangeDetectorRef, Component, OnInit } from "@angular/core";
 import { AbstractControl, FormArray, FormBuilder, FormControl, FormGroup, Validators } from "@angular/forms";
+import { Router } from "@angular/router";
 import { Database } from "../../models/Database";
 import { DatabasesService } from "../../services/databases/databases.service";
 import { EpitopesService } from "../../services/epitopes/epitopes.service";
@@ -24,6 +25,8 @@ export class NewComponent {
     private fb: FormBuilder,
     private epitopesService: EpitopesService,
     private loginService: LoginService,
+    private router: Router,
+    private cdr: ChangeDetectorRef,
     private databasesService: DatabasesService
   ) {
     this.myForm = this.fb.group({
@@ -41,8 +44,7 @@ export class NewComponent {
       proteomes: this.fb.array([]),
     });
 
-    this.loadDatabases();
-    this.addProteome();
+    this.resetForm();
   }
 
   loadDatabases() {
@@ -67,7 +69,7 @@ export class NewComponent {
   }
 
   resetForm(): void {
-    this.myForm.reset({
+    this.myForm = this.fb.group({
       runName: 'epibuilder-task',
       file: [null],
       actionType: 'default',
@@ -82,15 +84,19 @@ export class NewComponent {
       proteomes: this.fb.array([]),
     });
 
-
-
     const fileInput = document.getElementById('fileToProcess') as HTMLInputElement;
     if (fileInput) {
       fileInput.value = '';
     }
 
+    this.isLoading = false;
     this.uploadedDBFiles = [];
-
+    this.selectedFile = null;
+    this.epitopesService.notifyTaskListChanged();
+    this.proteomes.clear();
+    this.databasesLoaded = false;
+    this.messages = [];
+    this.loadDatabases();
 
 
     const proteomes = this.myForm.get('proteomes') as FormArray;
@@ -99,6 +105,8 @@ export class NewComponent {
         proteomes.removeAt(0);
       }
     }
+
+    this.addProteome();
   }
 
   onDBFileChange(event: any, index: number) {
@@ -146,7 +154,6 @@ export class NewComponent {
 
 
   onSubmit() {
-    // Validação básica dos campos obrigatórios
 
     this.isLoading = true;
 
@@ -230,14 +237,18 @@ export class NewComponent {
           text: 'Task submitted successfully!',
           category: 'success'
         });
-        this.isLoading = false;
-        this.epitopesService.notifyTaskListChanged();
+
         this.resetForm();
-        this.addProteome();
 
       },
       error: (error) => {
         console.error('Submission failed:', error);
+
+        if (error.toLowerCase().includes('Login expired')) {
+          this.loginService.logout();
+          this.router.navigate(["/"]);
+        }
+
         this.isLoading = false;
         const errorMessage = error?.message || 'An unexpected error occurred.';
         this.showMessage({

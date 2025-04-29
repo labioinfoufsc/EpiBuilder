@@ -1,6 +1,6 @@
 import { DatePipe } from "@angular/common";
 import { HttpResponse } from "@angular/common/http";
-import { Component, ElementRef, ViewChild } from "@angular/core";
+import { Component, ElementRef, OnDestroy, ViewChild } from "@angular/core";
 import { Modal } from "bootstrap";
 import { saveAs } from 'file-saver';
 import { APIResponse } from "../../models/APIResponse";
@@ -16,7 +16,7 @@ import { LoginService } from "../../services/login/login.service";
   styleUrls: ["./last-executions.component.scss"],
   providers: [DatePipe],
 })
-export class LastExecutionsComponent {
+export class LastExecutionsComponent implements OnDestroy {
   executedTasks: EpitopeTaskData[] = [];
   selectedTask: EpitopeTaskData | null = null;
   taskToDelete: EpitopeTaskData | null = null;
@@ -24,6 +24,7 @@ export class LastExecutionsComponent {
   private deleteModalInstance!: Modal;
   alertMessage: string | null = null;
   alertType: "success" | "danger" | null = null;
+  private refreshInterval: any;
   columns: string[] = [
     'Task',
     'Started At',
@@ -32,7 +33,6 @@ export class LastExecutionsComponent {
     'Proteome size',
     'Status',
     'Actions'
-
   ];
 
   constructor(
@@ -42,17 +42,42 @@ export class LastExecutionsComponent {
   ) {
     const userId = loginService.getUser()?.id;
     if (userId !== undefined) {
-      epitopeService.getExecutedTasksByUserId(userId).subscribe((tasks) => {
-        const filteredTasks = tasks.filter(task =>
-          task.taskStatus?.status === 'COMPLETED' || task.taskStatus?.status === 'FINISHED'
-        );
+      this.loadTasks(userId); // Carrega as tarefas imediatamente
+      this.setupAutoRefresh(userId); // Configura o refresh automático
+    }
+  }
 
-        this.executedTasks = filteredTasks;
-
-      });
-
+  refresh(): void {
+    const userId = this.loginService.getUser()?.id;
+    if (userId !== undefined) {
+      this.loadTasks(userId);
     }
 
+    this.selectedTask = null;
+    this.epitopeService.selectTask(null);
+  }
+
+  ngOnDestroy(): void {
+    // Limpa o intervalo quando o componente é destruído
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
+    }
+  }
+
+  private setupAutoRefresh(userId: number): void {
+    // Configura o intervalo para atualizar a cada 1 minuto (60000 ms)
+    this.refreshInterval = setInterval(() => {
+      this.loadTasks(userId);
+    }, 60000);
+  }
+
+  private loadTasks(userId: number): void {
+    this.epitopeService.getExecutedTasksByUserId(userId).subscribe((tasks) => {
+      const filteredTasks = tasks.filter(task =>
+        task.taskStatus?.status === 'COMPLETED' || task.taskStatus?.status === 'FINISHED'
+      );
+      this.executedTasks = filteredTasks;
+    });
   }
 
   downloadTask(task: EpitopeTaskData): void {
@@ -117,6 +142,8 @@ export class LastExecutionsComponent {
   private cleanupAfterDelete(): void {
     this.taskToDelete = null;
     this.hideDeleteModal();
+    this.selectedTask = null;
+    this.epitopeService.selectTask(null);
   }
 
   showAlert(message: string, type: "success" | "danger" | null) {

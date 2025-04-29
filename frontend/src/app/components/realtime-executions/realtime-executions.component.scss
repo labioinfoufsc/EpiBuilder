@@ -30,10 +30,12 @@
 }
 
 .modal-terminal {
+  height: 50%;
   padding: 15px;
   overflow-y: auto;
   flex-grow: 1;
   font-family: monospace;
+  overflow-y: scroll;
 }
 
 .modal-terminal pre {
@@ -45,6 +47,7 @@
 .modal-terminal pre.loading {
   color: #888;
 }
+
 
 .modal-footer {
   padding: 5px 15px;
