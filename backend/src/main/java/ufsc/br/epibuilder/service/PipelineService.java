@@ -79,72 +79,64 @@ public class PipelineService {
             command.add("bash");
             command.add("-c");
 
-            String fullCommand = String.join(" ", List.of(
-                    "source /venv/bin/activate",
-                    "&& nextflow run /pipeline/main.nf",
-                    "--input_file " + taskData.getFile().getAbsolutePath(),
-                    "--basename " + taskData.getCompleteBasename()));
-            command.add(fullCommand);
+            StringBuilder fullCommand = new StringBuilder();
+            fullCommand.append("source /venv/bin/activate && ");
+            fullCommand.append("nextflow run /pipeline/main.nf ");
+            fullCommand.append("--input_file ").append(taskData.getFile().getAbsolutePath()).append(" ");
+            fullCommand.append("--basename ").append(taskData.getCompleteBasename()).append(" ");
 
             log.info("Adding parameters to command: {}", taskData.getActionType().getDesc());
+
             if (ActionType.DEFAULT.toString().equalsIgnoreCase(taskData.getActionType().getDesc())) {
                 taskData.setBepipredThreshold(null);
                 taskData.setMinEpitopeLength(null);
                 taskData.setMaxEpitopeLength(null);
-            } else {
-                addOptionalParameter(command, "--threshold", taskData.getBepipredThreshold());
-                addOptionalParameter(command, "--min-length", taskData.getMinEpitopeLength());
-                addOptionalParameter(command, "--max-length", taskData.getMaxEpitopeLength());
             }
 
-            if (taskData.isDoBlast() == true) {
-                addOptionalParameter(command, "--search", "blast");
+            // Adiciona parâmetros opcionais se não forem nulos
+            if (taskData.getBepipredThreshold() != null) {
+                fullCommand.append("--threshold ").append(taskData.getBepipredThreshold()).append(" ");
+            }
+            if (taskData.getMinEpitopeLength() != null) {
+                fullCommand.append("--min-length ").append(taskData.getMinEpitopeLength()).append(" ");
+            }
+            if (taskData.getMaxEpitopeLength() != null) {
+                fullCommand.append("--max-length ").append(taskData.getMaxEpitopeLength()).append(" ");
+            }
 
-                List<Database> proteomes = taskData.getProteomes();
-                StringBuilder proteomesFormatted = new StringBuilder();
-                Set<String> addedAliases = new HashSet<>();
+            // Adiciona parâmetros relacionados ao BLAST se necessário
+            if (taskData.isDoBlast()) {
+                fullCommand.append("--search blast ");
 
-                for (int i = 0; i < proteomes.size(); i++) {
-                    Database db = proteomes.get(i);
-                    String alias = db.getAlias();
+                List<String> proteomes = taskData.getProteomes().stream()
+                        .map(Database::toString)
+                        .collect(Collectors.toList());
 
-                    if (!addedAliases.contains(alias)) {
-                        addedAliases.add(alias);
-
-                        if (proteomesFormatted.length() > 0) {
-                            proteomesFormatted.append(":");
-                        }
-                        proteomesFormatted.append(alias)
-                                .append("=")
-                                .append(db.getAbsolutePath());
-                    }
-                }
-
-                command.add("--proteomes " + proteomesFormatted.toString());
+                fullCommand.append("--proteomes ").append(String.join(":", proteomes)).append(" ");
 
                 if (taskData.getBlastMinCoverCutoff() != 90) {
-                    addOptionalParameter(command, "--cover", taskData.getBlastMinCoverCutoff());
+                    fullCommand.append("--cover ").append(taskData.getBlastMinCoverCutoff()).append(" ");
                 }
 
                 if (taskData.getBlastMinIdentityCutoff() != 90) {
-                    addOptionalParameter(command, "--identity", taskData.getBlastMinIdentityCutoff());
+                    fullCommand.append("--identity ").append(taskData.getBlastMinIdentityCutoff()).append(" ");
                 }
 
                 if (taskData.getBlastWordSize() != 4) {
-                    addOptionalParameter(command, "--word-size", taskData.getBlastWordSize());
+                    fullCommand.append("--word-size ").append(taskData.getBlastWordSize()).append(" ");
                 }
-
             }
+
+            command.add(fullCommand.toString().trim());
+
+            log.info("Command to run: {}", fullCommand.toString().trim());
+
             ProcessBuilder processBuilder = new ProcessBuilder(command);
 
-            log.info("Setting environment variables before BLAST add...");
+            // Configura variáveis de ambiente
             Map<String, String> env = processBuilder.environment();
             String blastPath = "/usr/local/bin";
             String currentPath = env.getOrDefault("PATH", "");
-
-            log.info("Command to run: {}", String.join(" ", command));
-
-            Path workDir = Paths.get(taskData.getCompleteBasename());
 
             log.info("Checking if BLAST path is already in PATH...");
             if (!currentPath.contains(blastPath)) {
@@ -152,6 +144,7 @@ public class PipelineService {
                 env.put("PATH", blastPath + ":" + currentPath);
             }
 
+            Path workDir = Paths.get(taskData.getCompleteBasename());
             processBuilder.directory(workDir.toFile());
 
             File logFile = workDir.resolve("pipeline.log").toFile();
@@ -269,13 +262,13 @@ public class PipelineService {
                         for (Path blastPath : blastFiles) {
                             log.info("Processing BLAST file: {}", blastPath.getFileName());
 
-                            List<Epitope> updatedEpitopes = associateBlastsFromCsv(blastPath.toString(),
-                                    completeEpitopes);
+                            List<Blast> convertedBlasts = parseBlastCsv(blastPath.toString());
+                            log.info("BLASTs converted: {}", convertedBlasts.size());
 
-                            log.info("BLASTs converted from {}: {}", blastPath.getFileName(),
-                                    updatedEpitopes.stream()
-                                            .filter(e -> e.getBlasts() != null && !e.getBlasts().isEmpty())
-                                            .count());
+                            List<Epitope> updatedEpitopes = associateBlasts(completeEpitopes, convertedBlasts);
+                            completeEpitopes.addAll(updatedEpitopes);
+
+                            log.info("BLAST completed for file {}", blastPath.getFileName());
                         }
                     } else {
                         log.warn("No BLAST files found in directory: {}", completePath);
@@ -316,51 +309,69 @@ public class PipelineService {
         }
     }
 
-    public static List<Epitope> associateBlastsFromCsv(String pathFile, List<Epitope> epitopes) {
-        try (BufferedReader br = new BufferedReader(new FileReader(pathFile))) {
+    public List<Blast> parseBlastCsv(String filePath) throws IOException {
+        List<Blast> blastList = new ArrayList<>();
+
+        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             String line;
-            boolean firstLine = true;
+            boolean isFirstLine = true;
 
             while ((line = br.readLine()) != null) {
-                if (firstLine) {
-                    firstLine = false;
+                if (isFirstLine) {
+                    isFirstLine = false;
                     continue;
                 }
 
-                String[] values = line.split(",");
-                if (values.length >= 6) {
-                    String qacc = values[0].trim();
-                    String[] qaccParts = qacc.split("-");
-                    if (qaccParts.length > 0) {
-                        try {
-                            Long blastN = Long.parseLong(qaccParts[0]);
+                if (line.trim().isEmpty())
+                    continue;
 
-                            Blast blast = new Blast();
-                            blast.setSacc(values[1].trim());
-                            blast.setPident(Double.parseDouble(values[2].trim()));
-                            blast.setQcovs(Double.parseDouble(values[3].trim()));
-                            blast.setQseq(values[4].trim());
-                            blast.setSseq(values[5].trim());
+                String[] columns = line.split("\\t");
+                log.info("Columns length: {}", columns.length);
+                for (int i = 0; i < columns.length; i++) {
+                    columns[i] = columns[i].trim();
+                }
 
-                            for (Epitope epitope : epitopes) {
-                                if (epitope.getN() != null && epitope.getN().equals(blastN)) {
-                                    blast.setEpitope(epitope);
-                                    epitope.getBlasts().add(blast);
-                                    break;
-                                }
-                            }
-                        } catch (NumberFormatException e) {
-                            log.info("Error while parsing qacc: {}", qacc);
-                        }
+                Blast blast = new Blast();
+
+                String qacc = columns[0];
+                String[] qaccParts = qacc.split("-");
+                if (qaccParts.length > 0) {
+                    try {
+                        blast.setN(Long.parseLong(qaccParts[0]));
+                    } catch (NumberFormatException e) {
+                        log.warn("Value of N invalid for line: {}", line);
+                        blast.setN(null);
                     }
                 }
+
+                blast.setSacc(columns[1]);
+
+                try {
+                    blast.setPident(Double.parseDouble(columns[2]));
+                } catch (NumberFormatException e) {
+                    log.warn("Invalid pindent: {}", line);
+                    blast.setPident(null);
+                }
+
+                try {
+                    blast.setQcovs(Double.parseDouble(columns[3]));
+                } catch (NumberFormatException e) {
+                    log.warn("Line Qcovs: {}", line);
+                    blast.setQcovs(null);
+                }
+
+                blast.setQseq(columns[4]);
+                blast.setSseq(columns[5]);
+
+                Path path = Paths.get(filePath);
+                String fileName = path.getFileName().toString();
+                blast.setDatabase(fileName);
+
+                blastList.add(blast);
             }
-        } catch (IOException e) {
-            log.info("Error while reading CSV file: {}", e.getMessage());
-            e.printStackTrace();
         }
 
-        return epitopes;
+        return blastList;
     }
 
     public static int countProteins(String pathFile) throws IOException {
@@ -508,6 +519,25 @@ public class PipelineService {
             log.warn("Invalid number format: {}, using 0.0", value);
             return 0.0;
         }
+    }
+
+    public static List<Epitope> associateBlasts(List<Epitope> epitopes, List<Blast> blasts) {
+        Map<Long, Epitope> epitopeMap = epitopes.stream()
+                .collect(Collectors.toMap(Epitope::getN, e -> e));
+
+        for (Blast blast : blasts) {
+            Epitope epitope = epitopeMap.get(blast.getN());
+            if (epitope != null) {
+                blast.setEpitope(epitope);
+
+                if (epitope.getBlasts() == null) {
+                    epitope.setBlasts(new ArrayList<>());
+                }
+                epitope.getBlasts().add(blast);
+            }
+        }
+
+        return epitopes;
     }
 
     public static List<Epitope> associateTopologies(List<Epitope> epitopes, List<EpitopeTopology> topologies) {
