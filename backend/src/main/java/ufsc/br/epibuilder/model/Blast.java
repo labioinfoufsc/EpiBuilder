@@ -35,6 +35,8 @@ public class Blast {
     private Double qcovs;
     private String qseq;
     private String sseq;
+
+    @Column(name = "db_name")
     private String database;
 
     @ManyToOne
