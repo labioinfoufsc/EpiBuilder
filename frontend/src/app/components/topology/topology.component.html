@@ -43,7 +43,8 @@
   <div class="card-header custom-header">
     <b>BLAST of Protein ID <span style="color: #ffff00;">#{{ proteinId || 'N/A' }}</span> - Epitope N <span
         style="color: #ffff00;">#{{ epitopeId || 'N/A' }}</span> - using <span style="color: #ffff00;">{{
-        database || 'N/A' }}</span> database</b>
+        database?.includes('iedb') ? 'iedb' : 'custom' }}
+      </span>database</b>
   </div>
 
   <div class="table-responsive">
