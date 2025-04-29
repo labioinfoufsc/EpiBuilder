@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 
-nextflow.enable.dsl=2
+nextflow.enable.dsl = 2
 
 params.input_file = params.input_file ?: null
 
@@ -33,18 +33,18 @@ workflow {
         if (result.valid_proteins) println "Valid proteins saved at: ${result.valid_proteins}"
         if (result.invalid_proteins) println "Invalid proteins saved at: ${result.invalid_proteins}"
 
-        if(result.status){
+        if (result.status) {
             run_bepipred(result.valid_proteins)
             def epibuilder = run_epibuilder(run_bepipred.out, jar_path)
             copy_results(epibuilder.out).view()
-        }else{
+        }else {
             error "Review the fasta file, ${result.invalid_proteins} invalid proteins "
         }
     } else if (params.input_file.endsWith('.csv')) {
         def epibuilder = run_epibuilder(input_file_path, jar_path)
         copy_results(epibuilder.out).view()
     } else {
-        error "Unsupported file type. Use .fasta or .csv"
+        error 'Unsupported file type. Use .fasta or .csv'
     }
 }
 
@@ -54,10 +54,10 @@ workflow {
  *   Copies the results from the generated output directory to a new directory
  *   named after the `params.basename` parameter. It ensures a clean copy of results
  *   into a clearly labeled and user-defined location.
- * 
+ *
  * Inputs:
  *   - output_dir: The directory containing the results to be copied.
- * 
+ *
  * Outputs:
  *   - stdout: A message confirming the location of the copied results.
  */
@@ -123,10 +123,10 @@ process copy_results {
  * Process: run_bepipred
  * Description:
  *   Executes the BepiPred3 CLI tool to predict B-cell epitopes from a FASTA input file.
- * 
+ *
  * Inputs:
  *   - input_file: A FASTA file with protein sequences.
- * 
+ *
  * Outputs:
  *   - A CSV file with raw BepiPred output located at bepipred_output/raw_output.csv.
  */
@@ -137,7 +137,7 @@ process run_bepipred {
     path input_file
 
     output:
-    path "bepipred_output/raw_output.csv", emit: output
+    path 'bepipred_output/raw_output.csv', emit: output
 
     script:
     """
@@ -151,11 +151,11 @@ process run_bepipred {
  *   Runs the EpiBuilder Java application to process epitope prediction results.
  *   Accepts additional parameters for fine-tuning such as minimum/maximum epitope lengths,
  *   prediction threshold, and optional search settings using UniProt proteomes.
- * 
+ *
  * Inputs:
  *   - input_file: A CSV file (either from BepiPred or provided directly).
  *   - epibuilder_jar: The EpiBuilder JAR file (epibuilder-core.jar).
- * 
+ *
  * Outputs:
  *   - A directory named epibuilder-results containing the processed output and the original input file.
  */
@@ -169,23 +169,31 @@ process run_epibuilder {
     path epibuilder_jar
 
     output:
-    path "epibuilder-results", emit: out
+    path 'epibuilder-results', emit: out
 
     script:
     def args = []
-    if (params.minLength)   args << "--min-length ${params.minLength}"
-    if (params.maxLength)   args << "--max-length ${params.maxLength}"
-    if (params.threshold)   args << "--threshold ${params.threshold}"
+    if (params.minLength) {
+        args << "--min-length ${params.minLength}"
+    }
+    if (params.maxLength) {
+        args << "--max-length ${params.maxLength}"
+    }
+    if (params.threshold) {
+        args << "--threshold ${params.threshold}"
+    }
     if (params.search && params.search != 'none') {
         args << "--search ${params.search}"
-        if (params.proteomes && params.proteomes != null) {
-            args << "--proteomes '${params.proteomes}'"
-        }
     }
-    
+    if (params.proteomes) {
+        args << "--proteomes '${params.proteomes}'"
+    }
+
+    def cmd = "java -jar ${epibuilder_jar} --input ${input_file} --format csv ${args.join(' ')} --output epibuilder-results"
 
     """
-    java -jar ${epibuilder_jar} --input ${input_file} --format csv ${args.join(' ')} --output epibuilder-results
+    echo "Running command: ${cmd}"
+    ${cmd} > /pipeline/epibuilder.log
     cp ${input_file} epibuilder-results/
     """
 }
@@ -194,15 +202,15 @@ process run_epibuilder {
  * Function: isValidSequence
  * Description:
  *   Validates if a given sequence contains only valid amino acids.
- * 
+ *
  * Inputs:
  *   - seq: A string representing the amino acid sequence to be validated.
- * 
+ *
  * Outputs:
  *   - Boolean: true if the sequence is valid, false otherwise.
  */
 def isValidSequence(String seq) {
-    def validAminoAcids = "ACDEFGHIKLMNPQRSTVWY".toSet()
+    def validAminoAcids = 'ACDEFGHIKLMNPQRSTVWY'.toSet()
     return seq.every { it in validAminoAcids }
 }
 
@@ -211,10 +219,10 @@ def isValidSequence(String seq) {
  * Description:
  *   Validates a FASTA file by checking if each sequence contains only valid amino acids.
  *   Writes valid sequences to proteins_valid.fasta and invalid sequences to proteins_invalid.fasta.
- * 
+ *
  * Inputs:
  *   - fastaPath: The path to the FASTA file to be validated.
- * 
+ *
  * Outputs:
  *   - Two files: proteins_valid.fasta and proteins_invalid.fasta containing valid and invalid sequences respectively.
  */
@@ -228,9 +236,9 @@ def validate_fasta(String fastaPath) {
     def currentSeq = new StringBuilder()
 
     new File(fastaPath).eachLine { line ->
-        if (line.startsWith(">")) {
+        if (line.startsWith('>')) {
             if (currentHeader != null) {
-                def seq = currentSeq.toString().replaceAll("\\s", "").toUpperCase()
+                def seq = currentSeq.toString().replaceAll('\\s', '').toUpperCase()
                 if (isValidSequence(seq)) {
                     valid << [header: currentHeader, seq: seq]
                 } else {
@@ -246,7 +254,7 @@ def validate_fasta(String fastaPath) {
 
     // process last sequence
     if (currentHeader != null) {
-        def seq = currentSeq.toString().replaceAll("\\s", "").toUpperCase()
+        def seq = currentSeq.toString().replaceAll('\\s', '').toUpperCase()
         if (isValidSequence(seq)) {
             valid << [header: currentHeader, seq: seq]
         } else {
@@ -261,9 +269,9 @@ def validate_fasta(String fastaPath) {
     def outputDir = new File(params.basename).absoluteFile
 
     def result = [:]
-    
+
     if (valid) {
-        def validFile = new File(outputDir, "proteins_valid.fasta")
+        def validFile = new File(outputDir, 'proteins_valid.fasta')
         validFile.withWriter { w ->
             valid.each {
                 def cleanHeader = it.header.split(' ')[0]
@@ -276,7 +284,7 @@ def validate_fasta(String fastaPath) {
     }
 
     if (invalid) {
-        def invalidFile = new File(outputDir, "proteins_invalid.fasta")
+        def invalidFile = new File(outputDir, 'proteins_invalid.fasta')
         invalidFile.withWriter { w ->
             invalid.each {
                 def cleanHeader = it.header.split(' ')[0]
