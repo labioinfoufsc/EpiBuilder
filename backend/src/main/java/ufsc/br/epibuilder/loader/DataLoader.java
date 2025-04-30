@@ -61,8 +61,8 @@ public class DataLoader implements CommandLineRunner {
     }
 
     private void loadInitialData() {
-        User admin = createUser("Admin", "admin", "admin123", Role.ADMIN);
-        User regularUser = createUser("User", "user", "user123", Role.USER);
+        User admin = createUser("Admin", "admin", "admin", Role.ADMIN);
+        User regularUser = createUser("User", "user", "user", Role.USER);
         String filePath = "/pipeline/db/iedb.fasta";
         loadDatabaseFile(filePath);
     }
