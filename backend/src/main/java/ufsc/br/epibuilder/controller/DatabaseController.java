@@ -12,6 +12,8 @@ import ufsc.br.epibuilder.model.TaskStatus;
 
 import lombok.extern.slf4j.Slf4j;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.UUID;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -46,6 +48,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.Comparator;
+import java.time.ZonedDateTime;
 
 @RestController
 @Slf4j
@@ -95,7 +98,8 @@ public class DatabaseController {
             log.info("File saved to: {}", destinationFile.toAbsolutePath());
 
             database.setAbsolutePath(destinationFile.toString());
-            database.setDate(LocalDateTime.now());
+            LocalDateTime now = ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).toLocalDateTime();
+            database.setDate(now);
             database.setFileName(sanitizedFilename);
 
             Database createdDatabase = databaseService.save(database);

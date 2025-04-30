@@ -8,6 +8,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -44,6 +46,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.HashSet;
 import java.io.File;
+import java.time.ZonedDateTime;
 
 @Service
 @Slf4j
@@ -297,7 +300,8 @@ public class PipelineService {
 
             // Update task status
             task.getTaskStatus().setStatus(Status.COMPLETED);
-            task.setFinishedDate(LocalDateTime.now());
+            LocalDateTime now = ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).toLocalDateTime();
+            task.setFinishedDate(now);
             epitopeTaskDataService.save(task);
 
             log.info("Successfully processed results for task {}", task.getId());

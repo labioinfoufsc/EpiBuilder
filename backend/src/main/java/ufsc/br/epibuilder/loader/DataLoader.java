@@ -14,6 +14,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -86,7 +88,8 @@ public class DataLoader implements CommandLineRunner {
             database.setAlias("iedb");
             database.setFileName(file.getName());
             database.setAbsolutePath(file.getAbsolutePath());
-            database.setDate(LocalDateTime.now());
+            LocalDateTime now = ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).toLocalDateTime();
+            database.setDate(now);
 
             // Persistir no banco de dados
             entityManager.persist(database);

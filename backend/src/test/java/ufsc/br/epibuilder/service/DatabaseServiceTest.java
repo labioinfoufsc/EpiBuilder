@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,6 +20,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import ufsc.br.epibuilder.model.Database;
 import ufsc.br.epibuilder.repository.DatabaseRepository;
+import java.time.ZonedDateTime;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -39,7 +42,8 @@ public class DatabaseServiceTest {
         testDatabase.setAlias("test-db");
         testDatabase.setFileName("test-file.sql");
         testDatabase.setAbsolutePath("/path/to/test-file.sql");
-        testDatabase.setDate(LocalDateTime.now());
+        LocalDateTime now = ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).toLocalDateTime();
+        testDatabase.setDate(now);
     }
 
     @AfterEach
@@ -69,7 +73,8 @@ public class DatabaseServiceTest {
         anotherDatabase.setAlias("another-db");
         anotherDatabase.setFileName("another-file.sql");
         anotherDatabase.setAbsolutePath("/path/to/another-file.sql");
-        anotherDatabase.setDate(LocalDateTime.now());
+        LocalDateTime now = ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).toLocalDateTime();
+        anotherDatabase.setDate(now);
         databaseService.save(anotherDatabase);
 
         List<Database> databases = databaseService.getAll();

@@ -7,6 +7,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -48,6 +50,7 @@ import java.io.IOException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Optional;
 import java.util.Comparator;
+import java.time.ZonedDateTime;
 
 @RestController
 @Slf4j
@@ -152,8 +155,10 @@ public class EpitopeController {
 
     private Path prepareBaseDirectory(EpitopeTaskData taskData) throws IOException {
         String username = taskData.getUser().getUsername();
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+        String timestamp = ZonedDateTime.now(ZoneId.of("America/Sao_Paulo"))
+                .format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
         Path baseDir = Paths.get("/www", username, taskData.getRunName() + "_" + timestamp);
+
         Files.createDirectories(baseDir);
         log.info("Directory created: {}", baseDir);
         taskData.setCompleteBasename(baseDir.toString());
@@ -204,7 +209,8 @@ public class EpitopeController {
                 // Configura o objeto Database
                 db.setFileName(sanitizedFilename);
                 db.setAbsolutePath(proteomePath.toString());
-                db.setDate(LocalDateTime.now());
+                LocalDateTime now = ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).toLocalDateTime();
+                db.setDate(now);
 
                 log.info("New proteome file saved: {}", db.toString());
 
@@ -233,7 +239,8 @@ public class EpitopeController {
         taskStatus.setEpitopeTaskData(taskData);
 
         taskData.setTaskStatus(taskStatus);
-        taskData.setExecutionDate(LocalDateTime.now());
+        LocalDateTime now = ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).toLocalDateTime();
+        taskData.setExecutionDate(now);
 
         return epitopeTaskDataService.save(taskData);
     }
