@@ -558,5 +558,43 @@ export class NewComponent {
     this.myForm.get("minEpitopeLength")?.setValue(value);
   }
 
+  loadExampleFile(event: Event) {
+    console.log('Loading example FASTA file')
+    event.preventDefault(); // evita recarregar a página
+
+    fetch('assets/example.fasta')
+      .then(response => response.blob())
+      .then(blob => {
+        const file = new File([blob], 'example.fasta', { type: blob.type });
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+
+        const fileInput = document.getElementById('fileToProcess') as HTMLInputElement;
+        if (fileInput) {
+          fileInput.files = dataTransfer.files;
+
+          // Dispara o evento (change) manualmente
+          fileInput.dispatchEvent(new Event('change'));
+        }
+
+                
+        const reader = new FileReader();
+
+            //Show the content file
+        reader.onload = () => {
+          const content = reader.result as string;
+          console.log('Fasta file content:\n', content);
+        };
+
+        reader.onerror = () => {
+          console.error('Erro ao ler o arquivo:', reader.error);
+        };
+
+        reader.readAsText(file);
+      })
+      .catch(error => {
+        console.error('Erro ao carregar arquivo de exemplo:', error);
+      });
+  }
 
 }

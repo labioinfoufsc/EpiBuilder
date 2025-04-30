@@ -38,10 +38,9 @@
                         (change)="onFileChange($event)" required />
                       <small class="text-muted d-block mt-1">
                         <i style="color: #ffc107 !important" class="fa-solid fa-circle-info"></i>
-                        Allowed Formats: CSV, FASTA
+                        Allowed Formats: CSV, FASTA, <a href="#" (click)="loadExampleFile($event)">Load FASTA example</a>
                       </small>
                     </div>
-
                     <!-- Action to Perform -->
                     <div class="mb-3">
                       <label class="form-label fw-bold">Parameters:</label>
