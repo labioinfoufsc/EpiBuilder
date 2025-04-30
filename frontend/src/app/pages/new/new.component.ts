@@ -175,11 +175,23 @@ export class NewComponent {
       return;
     }
 
-    if (!this.selectedFile) {
-      this.showMessage({ text: 'Input file is missing.', category: 'danger' });
-      this.isLoading = false;
-      return;
+    const inputType = this.myForm.get('inputType')?.value;
+    if (inputType === 'file') {
+      if (!this.selectedFile) {
+        this.showMessage({ text: 'Input file is missing.', category: 'danger' });
+        this.isLoading = false;
+        return;
+      }
+
+    } else if (inputType === 'manual') {
+      const seq = this.myForm.get('manualSequence')?.value;
+      if (!seq || !seq.startsWith('>')) {
+        console.error('Invalid sequence format.');
+        return;
+      }
     }
+
+
 
     // Criação do objeto `EpitopeTaskData` que será enviado como 'data'
     const taskData: any = {
@@ -232,8 +244,14 @@ export class NewComponent {
     // Adiciona o objeto 'taskData' como um JSON Blob
     formData.append('data', new Blob([JSON.stringify(taskData)], { type: 'application/json' }));
 
-    // Adiciona o arquivo FASTA
-    formData.append('file', this.selectedFile, this.selectedFile.name);
+    if (this.selectedFile) {
+      formData.append('file', this.selectedFile, this.selectedFile.name);
+    } else if (this.myForm.get('manualSequence')?.value) {
+      const manualSequence = this.myForm.get('manualSequence')?.value;
+      const fileFromManual = new File([manualSequence], 'manual_sequence.fasta', { type: 'text/plain' });
+      formData.append('file', fileFromManual, fileFromManual.name);
+    }
+
 
     // Envia a requisição
     this.epitopesService.submitForm(formData).subscribe({
@@ -459,46 +477,46 @@ export class NewComponent {
 
         const extension = file.name.split('.').pop()?.toLowerCase();
 
-    const reader = new FileReader();
+        const reader = new FileReader();
 
-    reader.onload = () => {
-      const content = reader.result as string;
+        reader.onload = () => {
+          const content = reader.result as string;
 
-      if (['fasta', 'fa', 'faa', 'fna'].includes(extension || '')) {
-        this.fileType = 'fasta';
-        const lines = content.split('\n');
-        const count = lines.filter(line => line.trim().startsWith('>')).length;
-        this.sequenceCount = count;
-        console.log('Number of sequences (lines starting with ">"):', count);
+          if (['fasta', 'fa', 'faa', 'fna'].includes(extension || '')) {
+            this.fileType = 'fasta';
+            const lines = content.split('\n');
+            const count = lines.filter(line => line.trim().startsWith('>')).length;
+            this.sequenceCount = count;
+            console.log('Number of sequences (lines starting with ">"):', count);
 
-      } else if (extension === 'csv') {
-        this.fileType = 'csv';
-        const lines = content.trim().split('\n');
-        const uniqueFirstColumn = new Set<string>();
+          } else if (extension === 'csv') {
+            this.fileType = 'csv';
+            const lines = content.trim().split('\n');
+            const uniqueFirstColumn = new Set<string>();
 
-        for (const line of lines) {
-          const columns = line.split(',');
-          if (columns.length > 0) {
-            uniqueFirstColumn.add(columns[0].trim());
+            for (const line of lines) {
+              const columns = line.split(',');
+              if (columns.length > 0) {
+                uniqueFirstColumn.add(columns[0].trim());
+              }
+            }
+
+            this.sequenceCount = uniqueFirstColumn.size;
+            console.log('Unique values in the 1st column:', uniqueFirstColumn);
+          } else {
+            this.fileType = null;
+            this.sequenceCount = null;
+            console.warn('Unsupported file extension.');
           }
-        }
+        };
 
-        this.sequenceCount = uniqueFirstColumn.size;
-        console.log('Unique values in the 1st column:', uniqueFirstColumn);
-      } else {
-        this.fileType = null;
-        this.sequenceCount = null;
-        console.warn('Unsupported file extension.');
-      }
-    };
+        reader.onerror = () => {
+          console.error('Error reading the file:', reader.error);
+          this.sequenceCount = null;
+          this.fileType = null;
+        };
 
-    reader.onerror = () => {
-      console.error('Error reading the file:', reader.error);
-      this.sequenceCount = null;
-      this.fileType = null;
-    };
-
-    reader.readAsText(file);
+        reader.readAsText(file);
 
       } else {
         this.showMessage({
@@ -627,25 +645,44 @@ export class NewComponent {
           fileInput.dispatchEvent(new Event('change'));
         }
 
-                
+
         const reader = new FileReader();
 
-            //Show the content file
+        //Show the content file
         reader.onload = () => {
           const content = reader.result as string;
           console.log('Fasta file content:\n', content);
         };
 
         reader.onerror = () => {
-          console.error('Erro ao ler o arquivo:', reader.error);
+          console.error('Error while reading file:', reader.error);
         };
 
         reader.readAsText(file);
       })
       .catch(error => {
-        console.error('Erro ao carregar arquivo de exemplo:', error);
+        console.error('Error while loading example file:', error);
       });
   }
+
+  loadExampleManual(event: Event): void {
+    console.log('Loading example FASTA content into manual input');
+    event.preventDefault(); // evita recarregar a página
+
+    fetch('assets/example.fasta')
+      .then(response => response.text())
+      .then(text => {
+        const manualControl = this.myForm.get('manualSequence');
+        if (manualControl) {
+          manualControl.setValue(text);
+        }
+      })
+      .catch(error => {
+        console.error('Error while loading example file:', error);
+      });
+  }
+
+
 
   createFastaFile() {
     const content = this.myForm.get('manualSequence')?.value;
@@ -653,19 +690,19 @@ export class NewComponent {
       console.error('Empty sequence');
       return;
     }
-  
+
     const blob = new Blob([content], { type: 'text/plain' });
     const file = new File([blob], 'manual.fasta', { type: 'text/plain' });
-  
+
     const dataTransfer = new DataTransfer();
     dataTransfer.items.add(file);
-  
+
     const fileInput = document.getElementById('fileToProcess') as HTMLInputElement;
     if (fileInput) {
       fileInput.files = dataTransfer.files;
       fileInput.dispatchEvent(new Event('change'));
     }
-  
+
     const reader = new FileReader();
     reader.onload = () => {
       const fasta = reader.result as string;
@@ -675,13 +712,13 @@ export class NewComponent {
       this.sequenceCount = count;
       this.fileType = 'fasta';
     };
-  
+
     reader.onerror = () => {
       console.error('Error reading generated FASTA file:', reader.error);
     };
-  
+
     reader.readAsText(file);
     this.selectedFile = file;
   }
-  
+
 }
