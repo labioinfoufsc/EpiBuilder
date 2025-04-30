@@ -51,7 +51,7 @@ npm install -g @angular/cli@12
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/username/epibuilder-frontend.git
+git clone https://github.com/bioinformatics-ufsc/epibuilder-frontend.git
 ```
 
 2. Navigate to the project directory:
