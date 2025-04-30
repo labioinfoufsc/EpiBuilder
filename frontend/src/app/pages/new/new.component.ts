@@ -20,6 +20,8 @@ export class NewComponent {
   selectedFile: File | null = null;
   databasesLoaded: boolean = false;
   isLoading: boolean = false;
+  sequenceCount: number | null = null;
+  fileType: 'fasta' | 'csv' | null = null;
 
   constructor(
     private fb: FormBuilder,
@@ -32,7 +34,9 @@ export class NewComponent {
     this.myForm = this.fb.group({
       runName: 'epibuilder-task',
       file: [null],
+      inputType: 'file',
       actionType: 'default',
+      manualSequence: '',
       databaseFile: [''],
       bepipredThreshold: 0.1512,
       minEpitopeLength: 10,
@@ -72,6 +76,8 @@ export class NewComponent {
     this.myForm = this.fb.group({
       runName: 'epibuilder-task',
       file: [null],
+      inputType: 'file',
+      manualSequence: '',
       actionType: 'default',
       databaseFile: [''],
       bepipredThreshold: 0.1512,
@@ -450,6 +456,50 @@ export class NewComponent {
       if (fileExtension && validExtensions.includes(fileExtension)) {
         this.selectedFile = file;
         this.myForm.patchValue({ fileToProcess: file });
+
+        const extension = file.name.split('.').pop()?.toLowerCase();
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const content = reader.result as string;
+
+      if (['fasta', 'fa', 'faa', 'fna'].includes(extension || '')) {
+        this.fileType = 'fasta';
+        const lines = content.split('\n');
+        const count = lines.filter(line => line.trim().startsWith('>')).length;
+        this.sequenceCount = count;
+        console.log('Number of sequences (lines starting with ">"):', count);
+
+      } else if (extension === 'csv') {
+        this.fileType = 'csv';
+        const lines = content.trim().split('\n');
+        const uniqueFirstColumn = new Set<string>();
+
+        for (const line of lines) {
+          const columns = line.split(',');
+          if (columns.length > 0) {
+            uniqueFirstColumn.add(columns[0].trim());
+          }
+        }
+
+        this.sequenceCount = uniqueFirstColumn.size;
+        console.log('Unique values in the 1st column:', uniqueFirstColumn);
+      } else {
+        this.fileType = null;
+        this.sequenceCount = null;
+        console.warn('Unsupported file extension.');
+      }
+    };
+
+    reader.onerror = () => {
+      console.error('Error reading the file:', reader.error);
+      this.sequenceCount = null;
+      this.fileType = null;
+    };
+
+    reader.readAsText(file);
+
       } else {
         this.showMessage({
           category: 'danger',
@@ -597,4 +647,41 @@ export class NewComponent {
       });
   }
 
+  createFastaFile() {
+    const content = this.myForm.get('manualSequence')?.value;
+    if (!content) {
+      console.error('Empty sequence');
+      return;
+    }
+  
+    const blob = new Blob([content], { type: 'text/plain' });
+    const file = new File([blob], 'manual.fasta', { type: 'text/plain' });
+  
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(file);
+  
+    const fileInput = document.getElementById('fileToProcess') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.files = dataTransfer.files;
+      fileInput.dispatchEvent(new Event('change'));
+    }
+  
+    const reader = new FileReader();
+    reader.onload = () => {
+      const fasta = reader.result as string;
+      console.log('Fasta file content:\n', fasta);
+      const lines = fasta.split('\n');
+      const count = lines.filter(line => line.startsWith('>')).length;
+      this.sequenceCount = count;
+      this.fileType = 'fasta';
+    };
+  
+    reader.onerror = () => {
+      console.error('Error reading generated FASTA file:', reader.error);
+    };
+  
+    reader.readAsText(file);
+    this.selectedFile = file;
+  }
+  
 }

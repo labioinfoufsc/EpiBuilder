@@ -19,7 +19,6 @@
                 <button type="button" class="btn-close" (click)="closeMessage(message)"></button>
               </div>
             </div>
-
             <div class="row justify-content-center mb-3">
               <!-- Basic Task Information card -->
               <div class="col-6">
@@ -33,14 +32,51 @@
                       <input type="text" formControlName="runName" class="form-control" id="run-name" required />
                     </div>
                     <div class="mb-3">
-                      <label for="fileToProcess" class="form-label fw-bold">File to Process:</label>
-                      <input type="file" class="form-control" id="fileToProcess" accept=".csv,.fasta,.fa,.faa,.fna"
-                        (change)="onFileChange($event)" required />
-                      <small class="text-muted d-block mt-1">
-                        <i style="color: #ffc107 !important" class="fa-solid fa-circle-info"></i>
-                        Allowed Formats: CSV, FASTA, <a href="#" (click)="loadExampleFile($event)">Load FASTA example</a>
-                      </small>
+                      <!-- Radiobuttons para escolher entre upload ou escrever sequência -->
+                      <div class="mb-3">
+                        <label class="form-label fw-bold">Input type:</label>
+                        <div class="form-check">
+                          <input type="radio" class="form-check-input" formControlName="inputType" value="file"
+                            id="file" />
+                          <label class="form-check-label" for="file">Default</label>
+                        </div>
+                        <div class="form-check">
+                          <input type="radio" class="form-check-input" formControlName="inputType" value="manual"
+                            id="manual" />
+                          <label class="form-check-label" for="manual">Sequence</label>
+                        </div>
+                      </div>
+                      <!-- Se "Upload File" for escolhido -->
+                      <div *ngIf="myForm.get('inputType')?.value === 'file'">
+                        <label for="fileToProcess" class="form-label fw-bold">File to Process:</label>
+                        <input type="file" class="form-control" id="fileToProcess" accept=".csv,.fasta,.fa,.faa,.fna" (change)="onFileChange($event)" required />
+                        <small class="text-muted d-block mt-1">
+                          <i style="color: #ffc107 !important" class="fa-solid fa-circle-info"></i>
+                          Allowed Formats: CSV, FASTA, <a href="#" (click)="loadExampleFile($event)">Load FASTA example</a>
+                        </small>
+                      </div>
+                      <!-- Se "Write Sequence" for escolhido -->
+                      <div *ngIf="myForm.get('inputType')?.value === 'manual'">
+                        <label for="manualSequence" class="form-label fw-bold">Write Sequence:</label>
+                        <textarea class="form-control" id="manualSequence" rows="5" formControlName="manualSequence" id="manualSequence" (blur)="createFastaFile()"></textarea>
+                        <small class="text-muted d-block mt-1">
+                          <i style="color: #ffc107 !important" class="fa-solid fa-circle-info"></i>
+                          Write your sequence in FASTA format.
+                        </small>
+                      </div>
+                      <div class="mt-3" *ngIf="sequenceCount !== null">
+                        <strong *ngIf="fileType === 'fasta'">FASTA Info:</strong>
+                        <strong *ngIf="fileType === 'csv'">CSV Info:</strong>
+                        This file contains {{ sequenceCount }} sequence(s).<br>
+                        <ng-container *ngIf="fileType === 'fasta'">
+                          Estimated processing time: {{ (sequenceCount * 10 / 60) | number:'1.2-2' }} minute(s).
+                        </ng-container>
+                        <ng-container *ngIf="fileType === 'csv'">
+                          Estimated processing time: {{ (sequenceCount * 0.2 / 60) | number:'1.2-2' }} minute(s).
+                        </ng-container>
+                      </div>
                     </div>
+
                     <!-- Action to Perform -->
                     <div class="mb-3">
                       <label class="form-label fw-bold">Parameters:</label>
