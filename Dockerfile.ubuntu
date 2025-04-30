@@ -5,19 +5,9 @@ LABEL version="2.0"
 LABEL description="Bioinformatic tools environment for epitope prediction"
 
 # Install system dependencies
-RUN apt-get update
-RUN apt-get install -y --no-install-recommends \
-    python3-venv \
-    python3 \
-    python3-pip \
-    libgomp1 \
-    git \
-    unzip \
-    nano \
-    wget \
-    nginx \
-    curl \
-    mariadb-server
+RUN apt-get update && \
+    apt-get install --no-install-recommends -y \
+    python3-venv python3 python3-pip libgomp1 git unzip nano wget nginx curl mariadb-server mariadb-client
 RUN apt-get clean
 RUN rm -rf /var/lib/apt/lists/*
 
@@ -25,12 +15,12 @@ RUN rm -rf /var/lib/apt/lists/*
 RUN ln -sf /usr/bin/python3 /usr/bin/python
 
 # Install BLAST+
-RUN wget -P /tmp https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.16.0+-x64-linux.tar.gz
-RUN tar -xzf /tmp/ncbi-blast-2.16.0+-x64-linux.tar.gz -C /tmp
-RUN mv /tmp/ncbi-blast-2.16.0+/bin/blastp /usr/local/bin
-RUN mv /tmp/ncbi-blast-2.16.0+/bin/makeblastdb /usr/local/bin
-RUN rm -rf /tmp/ncbi-blast-2.16.0+
-RUN rm /tmp/ncbi-blast-2.16.0+-x64-linux.tar.gz
+COPY ncbi-blast-2.16.0+-x64-linux.tar.gz /tmp/
+
+RUN tar -xzf /tmp/ncbi-blast-2.16.0+-x64-linux.tar.gz -C /tmp && \
+    mv /tmp/ncbi-blast-2.16.0+/bin/blastp /usr/local/bin/ && \
+    mv /tmp/ncbi-blast-2.16.0+/bin/makeblastdb /usr/local/bin/ && \
+    rm -rf /tmp/ncbi-blast-2.16.0+ /tmp/ncbi-blast-2.16.0+-x64-linux.tar.gz
 
 # Install OpenJDK 21
 RUN wget -P /tmp https://download.oracle.com/java/21/latest/jdk-21_linux-x64_bin.tar.gz
@@ -72,14 +62,14 @@ COPY requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 RUN rm -f /tmp/requirements.txt
 
-# CUDA environment - Removida instalação redundante pois a imagem base já inclui CUDA 12.3
+# CUDA environment 
 ENV PATH=/usr/local/cuda/bin:$PATH
 ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
 
 # Download ESM models
 RUN mkdir -p /models
-RUN curl -L https://dl.fbaipublicfiles.com/fair-esm/regression/esm2_t33_650M_UR50D-contact-regression.pt -o /models/esm2_t33_650M_UR50D-contact-regression.pt
-RUN curl -L https://dl.fbaipublicfiles.com/fair-esm/models/esm2_t33_650M_UR50D.pt -o /models/esm2_t33_650M_UR50D.pt
+COPY esm2_t33_650M_UR50D-contact-regression.pt /models/
+COPY esm2_t33_650M_UR50D.pt /models/
 
 # Entrypoint setup
 COPY entrypoint.sh /entrypoint.sh
@@ -89,6 +79,8 @@ RUN chmod +x /entrypoint.sh /epibuilder.sh
 # Ports
 EXPOSE 80
 EXPOSE 8080
+EXPOSE 5432
+EXPOSE 3366
 
 WORKDIR /
 CMD ["/entrypoint.sh"]
