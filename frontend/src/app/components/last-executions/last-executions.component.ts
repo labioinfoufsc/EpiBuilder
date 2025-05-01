@@ -74,7 +74,7 @@ export class LastExecutionsComponent implements OnDestroy {
   private loadTasks(userId: number): void {
     this.epitopeService.getExecutedTasksByUserId(userId).subscribe((tasks) => {
       const filteredTasks = tasks.filter(task =>
-        task.taskStatus?.status === 'COMPLETED' || task.taskStatus?.status === 'FINISHED'
+        task.taskStatus?.status === 'COMPLETED' || task.taskStatus?.status === 'FAILED'
       );
       this.executedTasks = filteredTasks;
     });

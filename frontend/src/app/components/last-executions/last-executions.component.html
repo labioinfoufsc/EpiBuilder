@@ -39,11 +39,13 @@
           </td>
           <td>
             {{ task.finishedDate | date : "yyyy-MM-dd 'at' HH'h'mm'min'ss'sec'" }}
+            <span *ngIf="task.taskStatus?.status === 'FAILED'">Not completed</span>
           </td>
           <td>
             {{ calculateExecutionTime(task.executionDate, task.finishedDate) }}
           </td>
-          <td>{{ task.proteomeSize === undefined ? 0 : task.proteomeSize }} proteins</td>
+          <td>{{ task.proteomeSize === undefined || task.proteomeSize === 0? 'N/A' : task.proteomeSize + ' proteins'}}
+          </td>
           <td>
             <span class="badge bg-warning" *ngIf="task.taskStatus?.status === 'RUNNING'">
               Running
@@ -56,14 +58,18 @@
             </span>
           </td>
           <td>
-            <div aria-label="Actions">
-              <a (click)="downloadTask(task); $event.stopPropagation()" title="Download task file">
+            <div aria-label="Actions" style="text-align: center;">
+              <a *ngIf="task.taskStatus?.status != 'FAILED'" (click)="downloadTask(task); $event.stopPropagation()"
+                title="Download task file">
                 <i class="fas fa-download" style="color: #1dd357 !important; cursor: pointer;"></i>
               </a>
-              <a (click)="showDeleteModal(task); $event.stopPropagation()" title="Delete task">
-                <i class="fas fa-trash" style="color: #dc3545 !important; cursor: pointer;"></i>
+              <a style="text-align: center;" (click)="showDeleteModal(task); $event.stopPropagation()"
+                title="Delete task">
+                <i style="text-align: center;" class="fas fa-trash"
+                  style="color: #dc3545 !important; cursor: pointer;"></i>
               </a>
-              <a (click)="selectTask(task); $event.stopPropagation()" title="View task">
+              <a *ngIf="task.taskStatus?.status != 'FAILED'" (click)="selectTask(task); $event.stopPropagation()"
+                title="View task">
                 <i class="fas fa-eye" style="color: #0f72b9; cursor: pointer;"></i>
               </a>
             </div>

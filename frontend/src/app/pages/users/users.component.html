@@ -62,12 +62,15 @@
               <td>{{ user.username }}</td>
               <td>{{ user.role }}</td>
               <td>
-                <button class="btn btn-secondary btn-sm" (click)="selectUser(user)" style="margin-right: 0.5rem;">
+                <button *ngIf="user.username != 'admin'" class="btn btn-secondary btn-sm" (click)="selectUser(user)"
+                  style="margin-right: 0.5rem;">
                   <i class="fa-solid fa-pen-to-square"></i>&nbsp;Edit
                 </button>
-                <button class="btn force-bootstrap-danger btn-sm" (click)="confirmDelete(user)">
+                <button *ngIf="user.username != 'admin'" class="btn force-bootstrap-danger btn-sm"
+                  (click)="confirmDelete(user)">
                   <i class="fa-solid fa-trash"></i>&nbsp;Delete
                 </button>
+                <span *ngIf="user.username === 'admin'">Default user</span>
               </td>
             </tr>
           </tbody>

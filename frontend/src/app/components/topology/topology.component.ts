@@ -37,10 +37,10 @@ export class TopologyComponent {
 
   getMaxTopologyLength(): number {
     if (!this.epitopeTopologies || this.epitopeTopologies.length === 0) {
-      return 1; // Valor padrão quando não há dados
+      return 1;
     }
 
-    // Encontra o número máximo de caracteres válidos entre todas as linhas
+
     const maxLength = Math.max(...this.epitopeTopologies.map(row =>
       this.getValidTopologyChars(row.topologyData).length
     ));
@@ -53,7 +53,6 @@ export class TopologyComponent {
       return [];
     }
 
-    // Filtra caracteres vazios ou que são apenas whitespace
     return topologyData.split('').filter(char => char.trim() !== '');
   }
 
@@ -64,7 +63,7 @@ export class TopologyComponent {
       if (epitope) {
         this.epitopeId = epitope.n;  // Define o epitopeId
         this.proteinId = epitope.epitopeId;
-        this.database = epitope.blasts?.[0]?.database;
+        this.database = epitope.blasts?.[0]?.database?.includes("iedb") ? "iedb" : undefined;
 
         // Carrega os epitopeTopologies
         this.epitopeTopologies = Array.isArray(epitope.epitopeTopologies)

@@ -63,7 +63,7 @@
 
         <tr *ngFor="let row of blasts; let i = index">
           <td style="width: 15%;">
-            <ng-container *ngIf="database === 'IEDB'; else plainText">
+            <ng-container *ngIf="database === 'iedb'; else plainText">
               <div class="d-flex align-items-center">
                 <span class="me-2">{{ row.sacc }}</span>
                 <a href="https://www.iedb.org/epitope/{{ row.sacc.split('-').pop() }}" target="_blank"
