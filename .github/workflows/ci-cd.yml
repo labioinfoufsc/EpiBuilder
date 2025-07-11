@@ -52,7 +52,6 @@ jobs:
           cd frontend
           npm install
           npm run build
-          ls -la dist/
           mkdir -p ../frontend-build/dist/epibuilder-frontend
           cp -r dist/epibuilder-frontend/* ../frontend-build/dist/epibuilder-frontend/
 
@@ -69,6 +68,8 @@ jobs:
           cp entrypoint.sh build/
           cp epibuilder.sh build/
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Log in to DockerHub
         uses: docker/login-action@v3
@@ -79,18 +80,25 @@ jobs:
       - name: Build Docker image (Debian - CPU)
         run: |
           cd build
-          docker build --no-cache -f ../Dockerfile.debian -t ${{ secrets.DOCKER_USERNAME }}/epibuilder:debian-cpu .
+          docker build --pull --no-cache -f ../Dockerfile.debian \
+            -t ${{ secrets.DOCKER_USERNAME }}/epibuilder:debian-cpu-${{ github.sha }} .
+          docker tag ${{ secrets.DOCKER_USERNAME }}/epibuilder:debian-cpu-${{ github.sha }} \
+            ${{ secrets.DOCKER_USERNAME }}/epibuilder:debian-cpu
 
       - name: Build Docker image (Ubuntu - GPU)
         run: |
           cd build
-          docker build --no-cache -f ../Dockerfile.ubuntu -t ${{ secrets.DOCKER_USERNAME }}/epibuilder:ubuntu-gpu .
-
+          docker build --pull --no-cache -f ../Dockerfile.ubuntu \
+            -t ${{ secrets.DOCKER_USERNAME }}/epibuilder:ubuntu-gpu-${{ github.sha }} .
+          docker tag ${{ secrets.DOCKER_USERNAME }}/epibuilder:ubuntu-gpu-${{ github.sha }} \
+            ${{ secrets.DOCKER_USERNAME }}/epibuilder:ubuntu-gpu
 
       - name: Push Debian image
         run: |
+          docker push ${{ secrets.DOCKER_USERNAME }}/epibuilder:debian-cpu-${{ github.sha }}
           docker push ${{ secrets.DOCKER_USERNAME }}/epibuilder:debian-cpu
 
       - name: Push Ubuntu image
         run: |
+          docker push ${{ secrets.DOCKER_USERNAME }}/epibuilder:ubuntu-gpu-${{ github.sha }}
           docker push ${{ secrets.DOCKER_USERNAME }}/epibuilder:ubuntu-gpu
