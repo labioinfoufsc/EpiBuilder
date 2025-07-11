@@ -79,12 +79,13 @@ jobs:
       - name: Build Docker image (Debian - CPU)
         run: |
           cd build
-          docker build -f ../Dockerfile.debian -t ${{ secrets.DOCKER_USERNAME }}/epibuilder:debian-cpu .
+          docker build --no-cache -f ../Dockerfile.debian -t ${{ secrets.DOCKER_USERNAME }}/epibuilder:debian-cpu .
 
       - name: Build Docker image (Ubuntu - GPU)
         run: |
           cd build
-          docker build -f ../Dockerfile.ubuntu -t ${{ secrets.DOCKER_USERNAME }}/epibuilder:ubuntu-gpu .
+          docker build --no-cache -f ../Dockerfile.ubuntu -t ${{ secrets.DOCKER_USERNAME }}/epibuilder:ubuntu-gpu .
+
 
       - name: Push Debian image
         run: |
