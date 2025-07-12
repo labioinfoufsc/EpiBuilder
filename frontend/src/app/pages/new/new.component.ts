@@ -261,7 +261,7 @@ export class NewComponent {
           text: 'Task submitted successfully!',
           category: 'success'
         });
-
+        this.sequenceCount = null;
         this.resetForm();
 
       },
