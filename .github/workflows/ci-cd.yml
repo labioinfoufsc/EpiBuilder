@@ -105,7 +105,7 @@ jobs:
           echo "Inspecting build output..."
           ls -R dist || echo "'dist' folder not found."
           mkdir -p ../frontend-build
-          cp -r dist/epibuilder/browser/* ../frontend-build/
+          cp -r dist/frontend/browser/* ../frontend-build/
       - name: Upload frontend artifact
         uses: actions/upload-artifact@v4
         with:
