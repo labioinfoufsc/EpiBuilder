@@ -181,6 +181,52 @@ jobs:
             -t ${{ secrets.DOCKER_USERNAME }}/epibuilder:ubuntu-gpu-${{ github.sha }} \
             -t ${{ secrets.DOCKER_USERNAME }}/epibuilder:ubuntu-gpu .
 
+      - name: Build Docker image (frontend only)
+        run: |
+          mkdir docker-frontend
+          cp -r frontend-build/* docker-frontend/
+          cat <<EOF > docker-frontend/Dockerfile
+          FROM nginx:alpine
+          COPY . /usr/share/nginx/html/
+          EOF
+          docker build -t epibuilder-frontend:latest docker-frontend
+          docker save epibuilder-frontend:latest -o frontend-image.tar
+
+      - name: Upload frontend Docker image
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-docker-image
+          path: frontend-image.tar
+
+      - name: Build Docker image (backend + core + pipeline)
+        run: |
+          mkdir docker-backend-core
+          cp -r backend-build docker-backend-core/backend
+          cp -r core-build docker-backend-core/core
+          cp -r pipeline docker-backend-core/pipeline
+          cp bepipred3.zip docker-backend-core/
+          cp requirements.txt docker-backend-core/
+          cp entrypoint.sh docker-backend-core/
+          cp epibuilder.sh docker-backend-core/
+          cat <<EOF > docker-backend-core/Dockerfile
+          FROM eclipse-temurin:21
+          WORKDIR /app
+          COPY backend/epibuilder-backend.jar epibuilder-backend.jar
+          COPY core/epibuilder-core.jar epibuilder-core.jar
+          COPY pipeline/ pipeline/
+          COPY bepipred3.zip requirements.txt entrypoint.sh epibuilder.sh ./
+          RUN apt-get update && apt-get install -y python3 python3-pip && pip3 install -r requirements.txt
+          ENTRYPOINT ["bash", "entrypoint.sh"]
+          EOF
+          docker build -t epibuilder-backend-core:latest docker-backend-core
+          docker save epibuilder-backend-core:latest -o backend-core-image.tar
+
+      - name: Upload backend+core Docker image
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-core-docker-image
+          path: backend-core-image.tar
+
       - name: Clean up temporary build folders
         run: |
-          rm -rf core-build backend-build frontend-build build
+          rm -rf core-build backend-build frontend-build build docker-frontend docker-backend-core frontend-image.tar backend-core-image.tar
