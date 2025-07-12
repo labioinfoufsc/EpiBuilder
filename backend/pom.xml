@@ -10,9 +10,9 @@
 		<relativePath /> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>ufsc.br</groupId>
-	<artifactId>epibuilder-backend</artifactId>
+	<artifactId>backend</artifactId>
 
-	<name>epibuilder-backend</name>
+	<name>backend</name>
 	<description>EpiBuilder backend</description>
 	<url />
 	<licenses>

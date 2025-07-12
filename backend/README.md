@@ -1,6 +1,6 @@
-# epibuilder-backend
+# backend
 
-The `epibuilder-backend` is a Spring Boot application that serves as the backend for the `epibuilder-frontend` project. It provides an API, and also integrates with **Nextflow** for running bioinformatics workflow.
+The `backend` is a Spring Boot application that serves as the backend for the `epibuilder-frontend` project. It provides an API, and also integrates with **Nextflow** for running bioinformatics workflow.
 
 ## Requirements
 
@@ -73,13 +73,13 @@ nextflow -v
 1. **Clone the repository**:
 
 ```bash
-git clone https://github.com/bioinformatics-ufsc/epibuilder-backend.git
+git clone https://github.com/bioinformatics-ufsc/backend.git
 ```
 
 2. **Navigate to the project directory**:
 
 ```bash
-cd epibuilder-backend
+cd backend
 ```
 
 3. **Build the project using Maven**:
@@ -105,7 +105,7 @@ The backend interacts with Nextflow for running workflows. Ensure that you have 
 The basic structure of the project is as follows:
 
 ```
-epibuilder-backend/
+backend/
 ├── src/                                       # Application source code
 │   ├── main/
 │   │   ├── java/                              # Java source code
