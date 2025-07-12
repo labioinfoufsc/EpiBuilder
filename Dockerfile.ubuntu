@@ -44,7 +44,7 @@ ENV PATH="/usr/local/bin/nextflow:${PATH}"
 COPY pipeline/ /pipeline/
 COPY backend/epibuilder-backend.jar /epibuilder/epibuilder-backend.jar
 COPY core/epibuilder-core.jar /epibuilder/epibuilder-core.jar
-COPY frontend/dist/epibuilder-frontend/browser/ /var/www/html/
+COPY frontend/dist/frontend/browser/ /var/www/html/
 
 # NGINX configuration
 RUN rm -f /etc/nginx/sites-enabled/default
