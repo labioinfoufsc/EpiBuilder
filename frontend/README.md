@@ -1,6 +1,6 @@
-# epibuilder-frontend
+# frontend
 
-The `epibuilder-frontend` is the graphical user interface for the `epibuilder-core` project, developed using Angular 12. This repository contains the source code for the frontend part of the application.
+The `frontend` is the graphical user interface for the `epibuilder-core` project, developed using Angular 12. This repository contains the source code for the frontend part of the application.
 
 ## Requirements
 
@@ -51,13 +51,13 @@ npm install -g @angular/cli@12
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/bioinformatics-ufsc/epibuilder-frontend.git
+git clone https://github.com/bioinformatics-ufsc/frontend.git
 ```
 
 2. Navigate to the project directory:
 
 ```bash
-cd epibuilder-frontend
+cd frontend
 ```
 
 3. Install the project dependencies:
