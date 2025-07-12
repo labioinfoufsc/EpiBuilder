@@ -1,0 +1,85 @@
+# Maven directory
+/target/
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# Maven settings
+.mvn/
+!**/.mvn/wrapper/maven-wrapper.jar
+
+# Compilation and IDE files
+*.class
+*.log
+*.war
+*.ear
+
+# IntelliJ IDEA settings and files
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Eclipse/STS settings
+.project
+.classpath
+.settings/
+.apt_generated/
+.factorypath
+.springBeans
+.sts4-cache
+
+# NetBeans settings
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# OS temporary files
+.DS_Store
+Thumbs.db
+
+# VS Code settings
+.vscode/
+
+# Environment files
+.env
+
+# Cache files and local dependencies
+.mvn/
+node_modules/
+
+# Log files
+logs/
+*.log
+
+# Spring Boot generated files
+*.jar
+*.war
+
+# Embedded database files
+*.h2.db
+*.mv.db
+*.sqlite
+
+# User profile files
+*.swp
+*.swo
+
+# Test coverage files
+/coverage/
+/.nyc_output/
+
+# Build reports
+/build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+/test-output/
+
+# Local dependencies
+/local/
+/lib/
+
+# Miscellaneous
+HELP.md
+.DS_Store
