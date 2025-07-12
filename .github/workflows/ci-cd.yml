@@ -17,20 +17,25 @@ jobs:
     steps:
       - name: Checkout monorepo
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Detect changes
         id: changes
         run: |
-          echo "frontend=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^frontend/' || echo '')" >> $GITHUB_OUTPUT
-          echo "backend=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^backend/' || echo '')" >> $GITHUB_OUTPUT
-          echo "core=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^core/' || echo '')" >> $GITHUB_OUTPUT
+          git fetch origin main
+          CHANGED=$(git diff --name-only origin/main ${{ github.sha }})
+
+          echo "frontend=$(echo \"$CHANGED\" | grep '^frontend/' || echo '')" >> $GITHUB_OUTPUT
+          echo "backend=$(echo \"$CHANGED\" | grep '^backend/' || echo '')" >> $GITHUB_OUTPUT
+          echo "core=$(echo \"$CHANGED\" | grep '^core/' || echo '')" >> $GITHUB_OUTPUT
 
       - name: Show changed modules
         run: |
           echo "Core changed:     [${{ steps.changes.outputs.core != '' }}]"
           echo "Backend changed:  [${{ steps.changes.outputs.backend != '' }}]"
           echo "Frontend changed: [${{ steps.changes.outputs.frontend != '' }}]"
-
+          
   build-core:
     needs: detect-changes
     if: needs.detect-changes.outputs.core != ''
