@@ -20,22 +20,28 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: List changed files
+        run: |
+          git fetch origin main
+          echo "Changed files:"
+          git diff --name-only origin/main ${{ github.sha }}
+
       - name: Detect changes
         id: changes
         run: |
           git fetch origin main
           CHANGED=$(git diff --name-only origin/main ${{ github.sha }})
 
-          echo "frontend=$(echo \"$CHANGED\" | grep '^frontend/' || echo '')" >> $GITHUB_OUTPUT
-          echo "backend=$(echo \"$CHANGED\" | grep '^backend/' || echo '')" >> $GITHUB_OUTPUT
-          echo "core=$(echo \"$CHANGED\" | grep '^core/' || echo '')" >> $GITHUB_OUTPUT
+          echo "frontend=$(echo \"$CHANGED\" | grep '^frontend/' | wc -l)" >> $GITHUB_OUTPUT
+          echo "backend=$(echo \"$CHANGED\" | grep '^backend/' | wc -l)" >> $GITHUB_OUTPUT
+          echo "core=$(echo \"$CHANGED\" | grep '^core/' | wc -l)" >> $GITHUB_OUTPUT
 
       - name: Show changed modules
         run: |
-          echo "Core changed:     [${{ steps.changes.outputs.core != '' }}]"
-          echo "Backend changed:  [${{ steps.changes.outputs.backend != '' }}]"
-          echo "Frontend changed: [${{ steps.changes.outputs.frontend != '' }}]"
-          
+          echo "Core changed:     [${{ steps.changes.outputs.core != '0' }}]"
+          echo "Backend changed:  [${{ steps.changes.outputs.backend != '0' }}]"
+          echo "Frontend changed: [${{ steps.changes.outputs.frontend != '0' }}]"
+
   build-core:
     needs: detect-changes
     if: needs.detect-changes.outputs.core != ''
@@ -46,13 +52,18 @@ jobs:
         with:
           distribution: "temurin"
           java-version: 21
-          cache: 'maven'
+          cache: "maven"
       - name: Build core
         run: |
           cd core
           mvn clean package
           mkdir -p ../core-build
           cp target/epibuilder-core-jar-with-dependencies.jar ../core-build/epibuilder-core.jar
+      - name: Upload core artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-build
+          path: core-build
 
   build-backend:
     needs: detect-changes
@@ -64,13 +75,18 @@ jobs:
         with:
           distribution: "temurin"
           java-version: 21
-          cache: 'maven'
+          cache: "maven"
       - name: Build backend
         run: |
           cd backend
           mvn package -DskipTests
           mkdir -p ../backend-build
           cp target/*.jar ../backend-build/epibuilder-backend.jar
+      - name: Upload backend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-build
+          path: backend-build
 
   build-frontend:
     needs: detect-changes
@@ -84,11 +100,17 @@ jobs:
       - name: Build frontend
         run: |
           cd frontend
-          npm install
+          npm ci
           npm run build
-          mkdir -p ../frontend-build/dist/frontend
-          cp -r dist/frontend/* ../frontend-build/dist/frontend/
-
+          echo "Inspecting build output..."
+          ls -R dist || echo "'dist' folder not found."
+          mkdir -p ../frontend-build
+          cp -r dist/* ../frontend-build/
+      - name: Upload frontend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend-build
   docker-build:
     needs: [detect-changes, build-core, build-backend, build-frontend]
     if: needs.detect-changes.outputs.core != '' || needs.detect-changes.outputs.backend != '' || needs.detect-changes.outputs.frontend != ''
@@ -96,13 +118,23 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Cache Docker layers
-        uses: actions/cache@v4
+      - name: Download core artifact
+        uses: actions/download-artifact@v4
         with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
+          name: core-build
+          path: core-build
+
+      - name: Download backend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-build
+          path: backend-build
+
+      - name: Download frontend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend-build
 
       - uses: docker/setup-buildx-action@v3
 
@@ -114,9 +146,9 @@ jobs:
       - name: Prepare build context
         run: |
           mkdir build
-          [ -d backend-build ] && cp -r backend-build build/backend
-          [ -d core-build ] && cp -r core-build build/core
-          [ -d frontend-build ] && cp -r frontend-build build/frontend
+          cp -r backend-build build/backend
+          cp -r core-build build/core
+          cp -r frontend-build build/frontend
           cp -r pipeline build/pipeline
           cp bepipred3.zip build/
           cp requirements.txt build/
@@ -124,22 +156,31 @@ jobs:
           cp entrypoint.sh build/
           cp epibuilder.sh build/
 
-      - name: Build & push Docker images (debian-cpu)
+      - name: Cleanup Docker before build
+        run: |
+          docker builder prune --all --force || true
+          docker system prune --all --force || true
+          sudo rm -rf /opt/hostedtoolcache || true
+          sudo apt-get clean || true
+
+      - name: Build & push Docker image (debian-cpu)
         run: |
           cd build
           docker buildx build --push \
-            --cache-from=type=local,src=/tmp/.buildx-cache \
-            --cache-to=type=local,dest=/tmp/.buildx-cache,mode=max \
+            --rm --force-rm \
             -f ../Dockerfile.debian \
             -t ${{ secrets.DOCKER_USERNAME }}/epibuilder:debian-cpu-${{ github.sha }} \
             -t ${{ secrets.DOCKER_USERNAME }}/epibuilder:debian-cpu .
 
-      - name: Build & push Docker images (ubuntu-gpu)
+      - name: Build & push Docker image (ubuntu-gpu)
         run: |
           cd build
           docker buildx build --push \
-            --cache-from=type=local,src=/tmp/.buildx-cache \
-            --cache-to=type=local,dest=/tmp/.buildx-cache,mode=max \
+            --rm --force-rm \
             -f ../Dockerfile.ubuntu \
             -t ${{ secrets.DOCKER_USERNAME }}/epibuilder:ubuntu-gpu-${{ github.sha }} \
             -t ${{ secrets.DOCKER_USERNAME }}/epibuilder:ubuntu-gpu .
+
+      - name: Clean up temporary build folders
+        run: |
+          rm -rf core-build backend-build frontend-build build
