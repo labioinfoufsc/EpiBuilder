@@ -12,14 +12,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repositories
+      - name: Checkout monorepo
         uses: actions/checkout@v3
-
-      - name: Clone epibuilder sources
-        run: |
-          git clone https://github.com/bioinformatics-ufsc/epibuilder-core.git core
-          git clone https://github.com/bioinformatics-ufsc/epibuilder-backend.git backend
-          git clone https://github.com/bioinformatics-ufsc/epibuilder-frontend.git frontend
 
       - name: Set up Java 21 and Maven
         uses: actions/setup-java@v3
@@ -61,7 +55,7 @@ jobs:
           cp -r backend-build build/backend
           cp -r core-build build/core
           cp -r frontend-build build/frontend
-          cp -r pipeline build/pipeline  
+          cp -r pipeline build/pipeline
           cp bepipred3.zip build/
           cp requirements.txt build/
           cp nginx.conf build/
