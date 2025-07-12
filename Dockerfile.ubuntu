@@ -15,12 +15,12 @@ RUN rm -rf /var/lib/apt/lists/*
 RUN ln -sf /usr/bin/python3 /usr/bin/python
 
 # Install BLAST+
-COPY ncbi-blast-2.16.0+-x64-linux.tar.gz /tmp/
-
-RUN tar -xzf /tmp/ncbi-blast-2.16.0+-x64-linux.tar.gz -C /tmp && \
-    mv /tmp/ncbi-blast-2.16.0+/bin/blastp /usr/local/bin/ && \
-    mv /tmp/ncbi-blast-2.16.0+/bin/makeblastdb /usr/local/bin/ && \
-    rm -rf /tmp/ncbi-blast-2.16.0+ /tmp/ncbi-blast-2.16.0+-x64-linux.tar.gz
+RUN wget -P /tmp https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.16.0+-x64-linux.tar.gz
+RUN tar -xzf /tmp/ncbi-blast-2.16.0+-x64-linux.tar.gz -C /tmp
+RUN mv /tmp/ncbi-blast-2.16.0+/bin/blastp /usr/local/bin
+RUN mv /tmp/ncbi-blast-2.16.0+/bin/makeblastdb /usr/local/bin
+RUN rm -rf /tmp/ncbi-blast-2.16.0+
+RUN rm /tmp/ncbi-blast-2.16.0+-x64-linux.tar.gz
 
 # Install OpenJDK 21
 RUN wget -P /tmp https://download.oracle.com/java/21/latest/jdk-21_linux-x64_bin.tar.gz
@@ -68,8 +68,8 @@ ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
 
 # Download ESM models
 RUN mkdir -p /models
-COPY esm2_t33_650M_UR50D-contact-regression.pt /models/
-COPY esm2_t33_650M_UR50D.pt /models/
+RUN curl https://dl.fbaipublicfiles.com/fair-esm/regression/esm2_t33_650M_UR50D-contact-regression.pt -o /models/esm2_t33_650M_UR50D-contact-regression.pt
+RUN curl https://dl.fbaipublicfiles.com/fair-esm/models/esm2_t33_650M_UR50D.pt -o /models/esm2_t33_650M_UR50D.pt
 
 # Entrypoint setup
 COPY entrypoint.sh /entrypoint.sh
