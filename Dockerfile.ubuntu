@@ -1,0 +1,86 @@
+FROM nvidia/cuda:12.3.2-runtime-ubuntu22.04
+
+LABEL app="EpiBuilder"
+LABEL version="2.0"
+LABEL description="Bioinformatic tools environment for epitope prediction"
+
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install --no-install-recommends -y \
+    python3-venv python3 python3-pip libgomp1 git unzip nano wget nginx curl mariadb-server mariadb-client
+RUN apt-get clean
+RUN rm -rf /var/lib/apt/lists/*
+
+# Set Python alias
+RUN ln -sf /usr/bin/python3 /usr/bin/python
+
+# Install BLAST+
+COPY ncbi-blast-2.16.0+-x64-linux.tar.gz /tmp/
+
+RUN tar -xzf /tmp/ncbi-blast-2.16.0+-x64-linux.tar.gz -C /tmp && \
+    mv /tmp/ncbi-blast-2.16.0+/bin/blastp /usr/local/bin/ && \
+    mv /tmp/ncbi-blast-2.16.0+/bin/makeblastdb /usr/local/bin/ && \
+    rm -rf /tmp/ncbi-blast-2.16.0+ /tmp/ncbi-blast-2.16.0+-x64-linux.tar.gz
+
+# Install OpenJDK 21
+RUN wget -P /tmp https://download.oracle.com/java/21/latest/jdk-21_linux-x64_bin.tar.gz
+RUN mkdir -p /usr/local/java
+RUN tar -xzf /tmp/jdk-21_linux-x64_bin.tar.gz -C /usr/local/java
+RUN rm /tmp/jdk-21_linux-x64_bin.tar.gz
+RUN ln -sf /usr/local/java/jdk-21* /usr/local/java/default-java
+ENV JAVA_HOME=/usr/local/java/default-java
+ENV PATH=$JAVA_HOME/bin:$PATH
+
+# Set working directory
+WORKDIR /opt/tools
+
+# Install Nextflow
+RUN curl -s -o nextflow https://get.nextflow.io
+RUN chmod +x nextflow
+RUN mv nextflow /usr/local/bin/nextflow
+ENV PATH="/usr/local/bin/nextflow:${PATH}"
+
+# Copy application files
+COPY pipeline/ /pipeline/
+COPY backend/epibuilder-backend.jar /epibuilder/epibuilder-backend.jar
+COPY core/epibuilder-core.jar /epibuilder/epibuilder-core.jar
+COPY frontend/dist/epibuilder-frontend/browser/ /var/www/html/
+
+# NGINX configuration
+RUN rm -f /etc/nginx/sites-enabled/default
+COPY nginx.conf /etc/nginx/sites-enabled/default
+
+# Install BePiPred3
+COPY bepipred3.zip /tmp/bepipred3.zip
+RUN unzip /tmp/bepipred3.zip -d /
+RUN rm -f /tmp/bepipred3.zip
+
+# Python environment setup
+RUN python3 -m venv /venv
+ENV PATH="/venv/bin:$PATH"
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
+RUN rm -f /tmp/requirements.txt
+
+# CUDA environment 
+ENV PATH=/usr/local/cuda/bin:$PATH
+ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+
+# Download ESM models
+RUN mkdir -p /models
+COPY esm2_t33_650M_UR50D-contact-regression.pt /models/
+COPY esm2_t33_650M_UR50D.pt /models/
+
+# Entrypoint setup
+COPY entrypoint.sh /entrypoint.sh
+COPY epibuilder.sh /epibuilder.sh
+RUN chmod +x /entrypoint.sh /epibuilder.sh
+
+# Ports
+EXPOSE 80
+EXPOSE 8080
+EXPOSE 5432
+EXPOSE 3366
+
+WORKDIR /
+CMD ["/entrypoint.sh"]
