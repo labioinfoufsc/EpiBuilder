@@ -46,8 +46,8 @@ jobs:
           cd frontend
           npm install
           npm run build
-          mkdir -p ../frontend-build/dist/epibuilder-frontend
-          cp -r dist/epibuilder-frontend/* ../frontend-build/dist/epibuilder-frontend/
+          mkdir -p ../frontend-build/dist/frontend
+          cp -r dist/frontend/* ../frontend-build/dist/frontend/
 
       - name: Prepare build context
         run: |
