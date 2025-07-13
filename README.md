@@ -1,11 +1,25 @@
 ## Overview
 
-EPIBuilder is a tool for assembling, searching, and classifying linear B-cell epitopes. It is designed to assist in bioinformatics workflows for the analysis and management of biological data, focusing on epitope prediction and classification.
+EpiBuilder is a tool for assembling, searching, and classifying linear B-cell epitopes. It is designed to assist in bioinformatics workflows for the analysis and management of biological data, focusing on linear B-cell epitope prediction and classification.
 
 ## Requirements
 
 - [Docker](https://www.docker.com/) installed on your system.
+  
+## Docker Images
 
+To pull the Docker image for the appropriate environment, use the following commands:
+
+- For the **Ubuntu GPU** version:
+
+```bash
+docker pull bioinfoufsc/epibuilder:ubuntu-gpu
+```
+- For the **Debian CPU** version:
+
+```bash
+docker pull bioinfoufsc/epibuilder:debian-cpu
+```
 ## Running the Docker Containers
 
 ### Debian-based Docker Container
@@ -16,9 +30,7 @@ To run the EPIBuilder Docker container with a Debian base, use the following com
 docker run -it \
   -p 80:80 \
   -p 8080:8080 \
-  -v /home/bioinfo/github/epibuilder-deploy/pipeline:/pipeline \
-  bioinfoufsc/epibuilder:debian-cpu \
-  /bin/bash
+  bioinfoufsc/epibuilder:debian-cpu
 ```
 
 ### Ubuntu-based Docker Container
@@ -29,9 +41,7 @@ To run the EPIBuilder Docker container with an Ubuntu base, use the following co
 docker run -it \
   -p 80:80 \
   -p 8080:8080 \
-  -v /home/bioinfo/github/epibuilder-deploy/pipeline:/pipeline \
-  bioinfoufsc/epibuilder:ubuntu-gpu \
-  /bin/bash
+  bioinfoufsc/epibuilder:ubuntu-gpu
 ```
 
 ### Accessing the Web Interface
@@ -47,19 +57,4 @@ http://localhost
 - **Admin User**:  
   Username: `admin`  
   Password: `admin`
-
-## Docker Images
-
-To pull the Docker image for the appropriate environment, use the following commands:
-
-- For the **Ubuntu GPU** version:
-
-```bash
-docker pull bioinfoufsc/epibuilder:ubuntu-gpu
-```
-
-- For the **Debian CPU** version:
-
-```bash
-docker pull bioinfoufsc/epibuilder:debian-cpu
-```
+  
