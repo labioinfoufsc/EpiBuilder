@@ -111,30 +111,17 @@ jobs:
         with:
           name: frontend-build
           path: frontend-build
-  docker-build:
+  docker-build-push:
     needs: [detect-changes, build-core, build-backend, build-frontend]
     if: needs.detect-changes.outputs.core != '' || needs.detect-changes.outputs.backend != '' || needs.detect-changes.outputs.frontend != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-
-      - name: Download core artifact
+      - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          name: core-build
-          path: core-build
-
-      - name: Download backend artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: backend-build
-          path: backend-build
-
-      - name: Download frontend artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-build
-          path: frontend-build
+          pattern: "*-build"
+          path: build-artifacts
 
       - uses: docker/setup-buildx-action@v3
 
@@ -146,28 +133,21 @@ jobs:
       - name: Prepare build context
         run: |
           mkdir build
-          cp -r backend-build build/backend
-          cp -r core-build build/core
-          cp -r frontend-build build/frontend
+          cp -r build-artifacts/backend-build build/backend
+          cp -r build-artifacts/core-build build/core
+          cp -r build-artifacts/frontend-build build/frontend
           cp -r pipeline build/pipeline
-          cp bepipred3.zip build/
-          cp requirements.txt build/
-          cp nginx.conf build/
-          cp entrypoint.sh build/
-          cp epibuilder.sh build/
+          cp bepipred3.zip requirements.txt nginx.conf entrypoint.sh epibuilder.sh build/
 
-      - name: Cleanup Docker before build
+      - name: Cleanup Docker
         run: |
           docker builder prune --all --force || true
           docker system prune --all --force || true
-          sudo rm -rf /opt/hostedtoolcache || true
-          sudo apt-get clean || true
 
       - name: Build & push Docker image (debian-cpu)
         run: |
           cd build
           docker buildx build --push \
-            --rm --force-rm \
             -f ../Dockerfile.debian \
             -t ${{ secrets.DOCKER_USERNAME }}/epibuilder:debian-cpu-${{ github.sha }} \
             -t ${{ secrets.DOCKER_USERNAME }}/epibuilder:debian-cpu .
@@ -176,15 +156,25 @@ jobs:
         run: |
           cd build
           docker buildx build --push \
-            --rm --force-rm \
             -f ../Dockerfile.ubuntu \
             -t ${{ secrets.DOCKER_USERNAME }}/epibuilder:ubuntu-gpu-${{ github.sha }} \
             -t ${{ secrets.DOCKER_USERNAME }}/epibuilder:ubuntu-gpu .
+  docker-build-artifacts:
+    needs: [detect-changes, build-core, build-backend, build-frontend]
+    if: needs.detect-changes.outputs.core != '' || needs.detect-changes.outputs.backend != '' || needs.detect-changes.outputs.frontend != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "*-build"
+          path: build-artifacts
 
-      - name: Build Docker image (frontend only)
+      - name: Build frontend Docker image
         run: |
           mkdir docker-frontend
-          cp -r frontend-build/* docker-frontend/
+          cp -r build-artifacts/frontend-build/* docker-frontend/
           cat <<EOF > docker-frontend/Dockerfile
           FROM nginx:alpine
           COPY . /usr/share/nginx/html/
@@ -198,24 +188,25 @@ jobs:
           name: frontend-docker-image
           path: frontend-image.tar
 
-      - name: Build Docker image (backend + core + pipeline)
+      - name: Build backend+core Docker image
         run: |
           mkdir docker-backend-core
-          cp -r backend-build docker-backend-core/backend
-          cp -r core-build docker-backend-core/core
+          cp -r build-artifacts/backend-build docker-backend-core/backend
+          cp -r build-artifacts/core-build docker-backend-core/core
           cp -r pipeline docker-backend-core/pipeline
-          cp bepipred3.zip docker-backend-core/
-          cp requirements.txt docker-backend-core/
-          cp entrypoint.sh docker-backend-core/
-          cp epibuilder.sh docker-backend-core/
+          cp bepipred3.zip requirements.txt entrypoint.sh epibuilder.sh docker-backend-core/
           cat <<EOF > docker-backend-core/Dockerfile
-          FROM eclipse-temurin:21
+          FROM ubuntu:22.04
+          ENV DEBIAN_FRONTEND=noninteractive
+          RUN apt-get update && \
+              apt-get install -y openjdk-21-jdk python3 python3-pip && \
+              apt-get clean && rm -rf /var/lib/apt/lists/*
           WORKDIR /app
           COPY backend/epibuilder-backend.jar epibuilder-backend.jar
           COPY core/epibuilder-core.jar epibuilder-core.jar
           COPY pipeline/ pipeline/
           COPY bepipred3.zip requirements.txt entrypoint.sh epibuilder.sh ./
-          RUN apt-get update && apt-get install -y python3 python3-pip && pip3 install -r requirements.txt
+          RUN pip3 install --upgrade pip && pip3 install -r requirements.txt
           ENTRYPOINT ["bash", "entrypoint.sh"]
           EOF
           docker build -t epibuilder-backend-core:latest docker-backend-core
@@ -227,6 +218,6 @@ jobs:
           name: backend-core-docker-image
           path: backend-core-image.tar
 
-      - name: Clean up temporary build folders
+      - name: Clean up temporary files
         run: |
-          rm -rf core-build backend-build frontend-build build docker-frontend docker-backend-core frontend-image.tar backend-core-image.tar
+          rm -rf docker-frontend docker-backend-core frontend-image.tar backend-core-image.tar
