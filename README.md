@@ -24,7 +24,7 @@ docker pull bioinfoufsc/epibuilder:debian-cpu
 
 ### Debian-based Docker Container
 
-To run the EPIBuilder Docker container with a Debian base, use the following command:
+To run the EpiBuilder Docker container with a Debian base, use the following command:
 
 ```bash
 docker run -it \
@@ -35,10 +35,11 @@ docker run -it \
 
 ### Ubuntu-based Docker Container
 
-To run the EPIBuilder Docker container with an Ubuntu base, use the following command:
+To run the EpiBuilder Docker container with an Ubuntu base, use the following command:
 
 ```bash
 docker run -it \
+  --gpus all \
   -p 80:80 \
   -p 8080:8080 \
   bioinfoufsc/epibuilder:ubuntu-gpu
