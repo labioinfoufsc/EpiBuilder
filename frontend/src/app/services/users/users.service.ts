@@ -1,13 +1,13 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, catchError, Observable, tap, throwError } from 'rxjs';
+import { environment } from '../../../environments/environment';
 import { User } from '../../models/User';
-
 @Injectable({ providedIn: 'root' })
 export class UserService {
   private users = new BehaviorSubject<User[]>([]);
   users$ = this.users.asObservable();
-  private apiUrl = 'http://localhost:8080/users';
+  private apiUrl = environment.apiUrl + '/users';
 
   constructor(private http: HttpClient) { }
 

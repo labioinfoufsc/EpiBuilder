@@ -1,13 +1,15 @@
-import { Injectable } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
-import { Observable, BehaviorSubject, tap } from "rxjs";
+import { Injectable } from "@angular/core";
+import { BehaviorSubject, Observable, tap } from "rxjs";
+import { environment } from '../../../environments/environment';
 import { User } from "../../models/User";
 
 @Injectable({
   providedIn: "root",
 })
 export class LoginService {
-  private apiUrl = "http://localhost:8080/auth/login";
+  private apiUrl = environment.apiUrl + '/auth/login';
+
   private userSubject: BehaviorSubject<User | null> =
     new BehaviorSubject<User | null>(null);
 

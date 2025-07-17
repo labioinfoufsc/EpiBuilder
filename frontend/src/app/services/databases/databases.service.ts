@@ -1,13 +1,14 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
 import { Database } from '../../models/Database';
 
 @Injectable({
   providedIn: 'root',
 })
 export class DatabasesService {
-  private apiUrl = 'http://localhost:8080/dbs';
+  private apiUrl = environment.apiUrl + '/dbs';
 
   constructor(private http: HttpClient) { }
 

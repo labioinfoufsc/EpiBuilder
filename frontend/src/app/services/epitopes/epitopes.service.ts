@@ -11,6 +11,7 @@ import { Epitope } from "../../models/Epitope";
 import { EpitopeTaskData } from "../../models/EpitopeTaskData";
 
 import { Subject } from 'rxjs';
+import { environment } from '../../../environments/environment';
 import { APIResponse } from "../../models/APIResponse";
 import { ErrorMessages } from "../../models/ErrorMessages";
 
@@ -36,8 +37,7 @@ export class EpitopesService {
     this.taskListChanged.next();
   }
 
-  private environment: string = "http://localhost:8080";
-  private apiUrl = `${this.environment}/epitopes`;
+  private apiUrl = environment.apiUrl + '/epitopes';
 
   constructor(private http: HttpClient) { }
 

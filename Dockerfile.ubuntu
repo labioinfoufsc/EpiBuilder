@@ -79,8 +79,7 @@ RUN chmod +x /entrypoint.sh /epibuilder.sh
 # Ports
 EXPOSE 80
 EXPOSE 8080
-EXPOSE 5432
-EXPOSE 3366
+EXPOSE 3306
 
 WORKDIR /
 CMD ["/entrypoint.sh"]
