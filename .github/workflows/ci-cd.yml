@@ -32,15 +32,15 @@ jobs:
           git fetch origin main
           CHANGED=$(git diff --name-only origin/main ${{ github.sha }})
 
-          echo "frontend=$(echo \"$CHANGED\" | grep '^frontend/' | wc -l)" >> $GITHUB_OUTPUT
-          echo "backend=$(echo \"$CHANGED\" | grep '^backend/' | wc -l)" >> $GITHUB_OUTPUT
-          echo "core=$(echo \"$CHANGED\" | grep '^core/' | wc -l)" >> $GITHUB_OUTPUT
+          if echo "$CHANGED" | grep -q '^frontend/'; then echo "frontend=true" >> $GITHUB_OUTPUT; else echo "frontend=false" >> $GITHUB_OUTPUT; fi
+          if echo "$CHANGED" | grep -q '^backend/'; then echo "backend=true" >> $GITHUB_OUTPUT; else echo "backend=false" >> $GITHUB_OUTPUT; fi
+          if echo "$CHANGED" | grep -q '^core/'; then echo "core=true" >> $GITHUB_OUTPUT; else echo "core=false" >> $GITHUB_OUTPUT; fi
 
       - name: Show changed modules
         run: |
-          echo "Core changed:     [${{ steps.changes.outputs.core != '0' }}]"
-          echo "Backend changed:  [${{ steps.changes.outputs.backend != '0' }}]"
-          echo "Frontend changed: [${{ steps.changes.outputs.frontend != '0' }}]"
+          echo "Core changed:     [${{ steps.changes.outputs.core }}]"
+          echo "Backend changed:  [${{ steps.changes.outputs.backend }}]"
+          echo "Frontend changed: [${{ steps.changes.outputs.frontend }}]"
 
   build-core:
     needs: detect-changes
