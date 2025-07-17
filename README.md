@@ -1,61 +1,78 @@
-## Overview
+# EpiBuilder
 
-EpiBuilder is a tool for assembling, searching, and classifying linear B-cell epitopes. It is designed to assist in bioinformatics workflows for the analysis and management of biological data, focusing on linear B-cell epitope prediction and classification.
+## What is EpiBuilder?
+
+**EpiBuilder** is scientific software for assembling, searching, and classifying linear B-cell epitopes, especially for vaccine research using proteome-wide approaches.
+
+It runs as a self-contained web application inside a single Docker container (monolith), which includes:
+
+- A graphical user interface (frontend)
+- Analysis and processing logic (backend)
+- Workflow with NextFlow to use BepiPred 3.0 and BLAST
+- A database (MySQL/MariaDB) to persist users and task data
 
 ## Requirements
 
-- [Docker](https://www.docker.com/) installed on your system.
-  
-## Docker Images
+- [Docker](https://www.docker.com/) must be installed on your computer.
+  - No need to install programming languages, databases, or libraries separately.
+  - Suitable for use on personal machines, lab computers, or servers.
 
-To pull the Docker image for the appropriate environment, use the following commands:
+## Downloading the Docker Image
 
-- For the **Ubuntu GPU** version:
+Choose the appropriate version based on your system:
+
+- **For systems with a compatible NVIDIA GPU (Ubuntu-based):**
 
 ```bash
 docker pull bioinfoufsc/epibuilder:ubuntu-gpu
-```
-- For the **Debian CPU** version:
+````
+
+* **For standard systems without a GPU (Debian-based):**
 
 ```bash
 docker pull bioinfoufsc/epibuilder:debian-cpu
 ```
-## Running the Docker Containers
 
-### Debian-based Docker Container
+## Running the Docker Container
 
-To run the EpiBuilder Docker container with a Debian base, use the following command:
+### 1. Running the CPU version (Debian-based)
 
 ```bash
-docker run -it \
-  -p 80:80 \
-  -p 8080:8080 \
+docker run -p 80:80 \
+  -e FRONTEND_PORT=80 \
+  -e BACKEND_PORT=8080 \
+  -e DB_PORT=3306 \
   bioinfoufsc/epibuilder:debian-cpu
 ```
 
-### Ubuntu-based Docker Container
-
-To run the EpiBuilder Docker container with an Ubuntu base, use the following command:
+### 2. Running the GPU version (Ubuntu-based, requires NVIDIA drivers)
 
 ```bash
-docker run -it \
-  --gpus all \
-  -p 80:80 \
-  -p 8080:8080 \
+docker run -it --gpus all -p 80:80 \
+  -e FRONTEND_PORT=80 \
+  -e BACKEND_PORT=8080 \
+  -e DB_PORT=3306 \
   bioinfoufsc/epibuilder:ubuntu-gpu
 ```
 
-### Accessing the Web Interface
+> **Note:** The GPU version should only be used if your system has a compatible NVIDIA GPU and the necessary drivers installed.
 
-Once the container is running, you can access the web interface by opening your browser and navigating to:
+## Accessing the Web Interface
+
+Once the container is running, open your web browser and go to:
 
 ```
 http://localhost
 ```
 
-### Login Credentials
+The EpiBuilder web interface should load automatically.
 
-- **Admin User**:  
-  Username: `admin`  
-  Password: `admin`
-  
+## Login Credentials
+
+* **Admin User**
+
+Username: `admin`
+
+Password: `admin`
+
+> **Note:** An admin user has permission to create other users.
