@@ -44,7 +44,7 @@ jobs:
 
   build-core:
     needs: detect-changes
-    if: needs.detect-changes.outputs.core != ''
+    if: needs.detect-changes.outputs.core == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -113,7 +113,7 @@ jobs:
           path: frontend-build
   docker-build-push:
     needs: [detect-changes, build-core, build-backend, build-frontend]
-    if: needs.detect-changes.outputs.core != '' || needs.detect-changes.outputs.backend != '' || needs.detect-changes.outputs.frontend != ''
+    if: needs.detect-changes.outputs.core == 'true' || needs.detect-changes.outputs.backend != '' || needs.detect-changes.outputs.frontend != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -161,7 +161,7 @@ jobs:
             -t ${{ secrets.DOCKER_USERNAME }}/epibuilder:ubuntu-gpu .
   docker-build-artifacts:
     needs: [detect-changes, build-core, build-backend, build-frontend]
-    if: needs.detect-changes.outputs.core != '' || needs.detect-changes.outputs.backend != '' || needs.detect-changes.outputs.frontend != ''
+    if: needs.detect-changes.outputs.core == 'true' || needs.detect-changes.outputs.backend != '' || needs.detect-changes.outputs.frontend != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
