@@ -51,7 +51,7 @@ npm install -g @angular/cli@12
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/bioinformatics-ufsc/frontend.git
+git clone https://github.com/labioinfoufsc/EpiBuilder.git
 ```
 
 2. Navigate to the project directory:
@@ -72,7 +72,7 @@ npm i
 ng serve
 ```
 
-5. Open your browser and visit [http://localhost:4200](http://localhost:4200) to view the project.
+5. Open your browser and visit [http://localhost](http://localhost) to view the project.
 
 ## Explanation of the Folder Structure:
 
