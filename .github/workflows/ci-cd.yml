@@ -31,6 +31,7 @@ jobs:
         run: |
           git fetch origin main
           CHANGED=$(git diff --name-only origin/main ${{ github.sha }})
+          echo "Changed files: $CHANGED"
 
           if echo "$CHANGED" | grep -q '^frontend/'; then echo "frontend=true" >> $GITHUB_OUTPUT; else echo "frontend=false" >> $GITHUB_OUTPUT; fi
           if echo "$CHANGED" | grep -q '^backend/'; then echo "backend=true" >> $GITHUB_OUTPUT; else echo "backend=false" >> $GITHUB_OUTPUT; fi
@@ -67,7 +68,7 @@ jobs:
 
   build-backend:
     needs: detect-changes
-    if: needs.detect-changes.outputs.backend != ''
+    if: needs.detect-changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -90,7 +91,7 @@ jobs:
 
   build-frontend:
     needs: detect-changes
-    if: needs.detect-changes.outputs.frontend != ''
+    if: needs.detect-changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -111,9 +112,10 @@ jobs:
         with:
           name: frontend-build
           path: frontend-build
+
   docker-build-push:
     needs: [detect-changes, build-core, build-backend, build-frontend]
-    if: needs.detect-changes.outputs.core == 'true' || needs.detect-changes.outputs.backend != '' || needs.detect-changes.outputs.frontend != ''
+    if: needs.detect-changes.outputs.core == 'true' || needs.detect-changes.outputs.backend == 'true' || needs.detect-changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -159,9 +161,10 @@ jobs:
             -f ../Dockerfile.ubuntu \
             -t ${{ secrets.DOCKER_USERNAME }}/epibuilder:ubuntu-gpu-${{ github.sha }} \
             -t ${{ secrets.DOCKER_USERNAME }}/epibuilder:ubuntu-gpu .
+
   docker-build-artifacts:
     needs: [detect-changes, build-core, build-backend, build-frontend]
-    if: needs.detect-changes.outputs.core == 'true' || needs.detect-changes.outputs.backend != '' || needs.detect-changes.outputs.frontend != ''
+    if: needs.detect-changes.outputs.core == 'true' || needs.detect-changes.outputs.backend == 'true' || needs.detect-changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
