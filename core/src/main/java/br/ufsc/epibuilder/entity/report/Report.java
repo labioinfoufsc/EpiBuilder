@@ -140,14 +140,14 @@ public class Report {
     /**
      * @return the end
      */
-    public int getEnd() {
+    public int getEndEpitope() {
         return end;
     }
 
     /**
      * @param end the end to set
      */
-    public void setEnd(int end) {
+    public void setEndEpitope(int end) {
         this.end = end;
     }
 

@@ -408,7 +408,7 @@ public class PipelineService {
             epitope.setEpitopeId(columns[1]);
             epitope.setEpitope(columns[2]);
             epitope.setStart(Integer.parseInt(columns[3]));
-            epitope.setEnd(Integer.parseInt(columns[4]));
+            epitope.setEndEpitope(Integer.parseInt(columns[4]));
             epitope.setNGlyc(columns[5]);
             epitope.setNGlycCount(Integer.parseInt(columns[6]));
             epitope.setLength(Integer.parseInt(columns[8]));

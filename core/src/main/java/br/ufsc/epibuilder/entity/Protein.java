@@ -22,8 +22,8 @@ public class Protein implements Comparable<Protein> {
     public String getDescription() {
         return description;
     }
-    
-    public String getNglycMotifsAsString(){
+
+    public String getNglycMotifsAsString() {
         return FormatHelper.getListAsString("-", nglycMotifs);
     }
 
@@ -38,11 +38,11 @@ public class Protein implements Comparable<Protein> {
     public void setSequence(String sequence) {
         this.sequence = sequence;
     }
-    
-    public String getSequence(){
+
+    public String getSequence() {
         String res = "";
         for (AminoEpitopo aminoEpitopo : aminoEpitopos) {
-            res+=aminoEpitopo.getAmino();
+            res += aminoEpitopo.getAmino();
         }
         return res;
     }
@@ -73,14 +73,14 @@ public class Protein implements Comparable<Protein> {
                 epitopo.addAminoEpitopo(aminoEpitopo);
             } else {
                 if (!epitopo.getSequence().isEmpty()) {
-                    epitopo.setEnd(aminoEpitopo.getPosition());
+                    epitopo.setEndEpitope(aminoEpitopo.getPosition());
                     epitopos.add(epitopo);
                 }
                 epitopo = new Epitopo();
             }
         }
         if (!epitopo.getSequence().isEmpty()) {
-            epitopo.setEnd(epitopo.getSequence().length());
+            epitopo.setEndEpitope(epitopo.getSequence().length());
             epitopos.add(epitopo);
         }
 
@@ -97,7 +97,7 @@ public class Protein implements Comparable<Protein> {
 
         epitopes.clear();
         epitopes.addAll(epitoposFinais);
-        //Process Nglyc motif
+        // Process Nglyc motif
         for (Epitopo ept : epitoposFinais) {
             ept.processNglycMotif();
         }
@@ -136,23 +136,23 @@ public class Protein implements Comparable<Protein> {
     }
 
     public double getThreshold(SoftwareBcellEnum software) {
-        if(Parameters.MAP_SOFTWARES.containsKey(software)){
-            if(Parameters.MAP_SOFTWARES.get(software)!=null){
+        if (Parameters.MAP_SOFTWARES.containsKey(software)) {
+            if (Parameters.MAP_SOFTWARES.get(software) != null) {
                 return Parameters.MAP_SOFTWARES.get(software);
             }
         }
         int start = 3;
         int end = 3;
-        
+
         double threshold = 0;
         if (software == SoftwareBcellEnum.EMINI) {
             start = 2;
         }
-        if(software==SoftwareBcellEnum.KARPLUS_SCHULZ){
+        if (software == SoftwareBcellEnum.KARPLUS_SCHULZ) {
             end = 4;
         }
-        for (int i = start; i < aminoEpitopos.size()-end; i++) {
-            
+        for (int i = start; i < aminoEpitopos.size() - end; i++) {
+
             AminoEpitopo aa = aminoEpitopos.get(i);
             switch (software) {
                 case PARKER: {
@@ -177,6 +177,6 @@ public class Protein implements Comparable<Protein> {
                 }
             }
         }
-        return threshold / (aminoEpitopos.size()-(end+start));
+        return threshold / (aminoEpitopos.size() - (end + start));
     }
 }

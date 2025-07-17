@@ -4,7 +4,7 @@ set -e
 
 export FRONTEND_PORT="${FRONTEND_PORT:-80}"
 export BACKEND_PORT="${BACKEND_PORT:-8080}"
-export DB_PORT="${DB_PORT:-3306}"
+export DB_PORT="${DB_PORT:-5432}"
 
 echo "Generating JWT Secret..."
 JWT_SECRET=$(openssl rand -base64 32 | tr -d '\n')
@@ -25,21 +25,26 @@ echo "export DB_PORT=\"$DB_PORT\"" | tee -a /etc/environment >/dev/null
 echo "export PORT=\"$PORT\"" | tee -a /etc/environment >/dev/null
 echo "export JWT_SECRET=\"$JWT_SECRET\"" | tee -a /etc/environment >/dev/null
 
-echo "Starting MariaDB on port ${DB_PORT}..."
-sed -i "s/^port\s*=.*/port = ${DB_PORT}/" /etc/mysql/my.cnf || true
-/usr/bin/mysqld_safe --datadir='/var/lib/mysql' --port=${DB_PORT} &
+echo "Starting PostgreSQL on port ${DB_PORT}..."
+# Inicia o serviço do PostgreSQL (ajuste conforme imagem usada)
+pg_ctlcluster 14 main start || service postgresql start || true
 
-echo "Waiting for MariaDB to be ready..."
-until mysqladmin ping -h "127.0.0.1" --port=$DB_PORT --silent; do
+echo "Waiting for PostgreSQL to be ready..."
+until pg_isready -h "$DB_HOST" -p "$DB_PORT" -U postgres; do
     sleep 2
 done
 
-echo "Configuring database..."
-mysql -u root -P $DB_PORT <<-EOSQL
-    CREATE DATABASE IF NOT EXISTS ${DB_NAME};
-    CREATE USER IF NOT EXISTS '${DB_USERNAME}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';
-    GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USERNAME}'@'localhost';
-    FLUSH PRIVILEGES;
+echo "Configuring PostgreSQL database..."
+psql -U postgres -h "$DB_HOST" -p "$DB_PORT" <<-EOSQL
+    DO \$\$
+    BEGIN
+        IF NOT EXISTS (SELECT FROM pg_database WHERE datname = '${DB_NAME}') THEN
+            CREATE DATABASE "${DB_NAME}";
+        END IF;
+    END
+    \$\$;
+    CREATE USER "${DB_USERNAME}" WITH PASSWORD '${DB_PASSWORD}' CREATEDB;
+    GRANT ALL PRIVILEGES ON DATABASE "${DB_NAME}" TO "${DB_USERNAME}";
 EOSQL
 
 echo "Adjusting NGINX configuration for ports..."
@@ -53,7 +58,7 @@ nginx
 echo "Starting Spring Boot on port ${BACKEND_PORT}..."
 exec java -jar /epibuilder/epibuilder-backend.jar \
     --server.port=${BACKEND_PORT} \
-    --spring.datasource.url=jdbc:mariadb://${DB_HOST}:${DB_PORT}/${DB_NAME} \
+    --spring.datasource.url=jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME} \
     --spring.datasource.username=${DB_USERNAME} \
     --spring.datasource.password=${DB_PASSWORD} \
     --jwt.secret=${JWT_SECRET}

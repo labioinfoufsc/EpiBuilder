@@ -121,14 +121,14 @@ public class Epitopo {
     /**
      * @return the end
      */
-    public int getEnd() {
+    public int getEndEpitope() {
         return end;
     }
 
     /**
      * @param end the end to set
      */
-    public void setEnd(int end) {
+    public void setEndEpitope(int end) {
         this.end = end;
     }
 
@@ -159,23 +159,27 @@ public class Epitopo {
     }
 
     /*
-    public double getPercentScore(double eminiThreshold, double parkerThreshold, double karplusThreshold, double chouFosmanThreshold, double kolaskarThreshold) {
-        double size = sequence.length();
-        double total = 0;
-        for (AminoEpitopo aminoEpitopo : aaEpitopes) {
-            double emini = aminoEpitopo.getValue(SoftwareBcellEnum.EMINI);
-            double parker = aminoEpitopo.getValue(SoftwareBcellEnum.PARKER);
-            double karplus = aminoEpitopo.getValue(SoftwareBcellEnum.KARPLUS_SCHULZ);
-            double chouFosman = aminoEpitopo.getValue(SoftwareBcellEnum.CHOU_FOSMAN);
-            double kolaskar = aminoEpitopo.getValue(SoftwareBcellEnum.KOLASKAR);
-
-            if (emini >= eminiThreshold && parker >= parkerThreshold && karplus >= karplusThreshold && chouFosman >= chouFosmanThreshold && kolaskar >= kolaskarThreshold) {
-
-                total++;
-            }
-        }
-        return total / size;
-    }
+     * public double getPercentScore(double eminiThreshold, double parkerThreshold,
+     * double karplusThreshold, double chouFosmanThreshold, double
+     * kolaskarThreshold) {
+     * double size = sequence.length();
+     * double total = 0;
+     * for (AminoEpitopo aminoEpitopo : aaEpitopes) {
+     * double emini = aminoEpitopo.getValue(SoftwareBcellEnum.EMINI);
+     * double parker = aminoEpitopo.getValue(SoftwareBcellEnum.PARKER);
+     * double karplus = aminoEpitopo.getValue(SoftwareBcellEnum.KARPLUS_SCHULZ);
+     * double chouFosman = aminoEpitopo.getValue(SoftwareBcellEnum.CHOU_FOSMAN);
+     * double kolaskar = aminoEpitopo.getValue(SoftwareBcellEnum.KOLASKAR);
+     * 
+     * if (emini >= eminiThreshold && parker >= parkerThreshold && karplus >=
+     * karplusThreshold && chouFosman >= chouFosmanThreshold && kolaskar >=
+     * kolaskarThreshold) {
+     * 
+     * total++;
+     * }
+     * }
+     * return total / size;
+     * }
      */
     public Topology getTopologyValue(SoftwareBcellEnum soft, double threshold) {
         String res = "";
@@ -201,10 +205,10 @@ public class Epitopo {
         if (nGlycMotifs.isEmpty()) {
             res = sequence.replaceAll(".", ".");
         } else {
-            
+
             for (int i = 0; i < sequence.length(); i++) {
                 for (Motif nGlycMotif : nGlycMotifs) {
-                    if (i >= nGlycMotif.getStart() - 1 && i <= nGlycMotif.getEnd() - 1) {
+                    if (i >= nGlycMotif.getStart() - 1 && i <= nGlycMotif.getEndEpitope() - 1) {
                         pos.add(i);
                     }
                 }
@@ -216,7 +220,7 @@ public class Epitopo {
             res = new String(seq);
         }
 
-        return new Topology(res, ((double)pos.size())/(sequence.length()));
+        return new Topology(res, ((double) pos.size()) / (sequence.length()));
     }
 
     public Topology getHydropathyTopology() {
@@ -255,7 +259,8 @@ public class Epitopo {
         return res;
     }
 
-    public String getTopologyValidation(double eminiThreshold, double parkerThreshold, double karplusThreshold, double chouFosmanThreshold, double kolaskarThreshold) {
+    public String getTopologyValidation(double eminiThreshold, double parkerThreshold, double karplusThreshold,
+            double chouFosmanThreshold, double kolaskarThreshold) {
         String res = "";
         for (AminoEpitopo aminoEpitopo : aaEpitopes) {
             double emini = aminoEpitopo.getValue(SoftwareBcellEnum.EMINI);
@@ -264,7 +269,8 @@ public class Epitopo {
             double chouFosman = aminoEpitopo.getValue(SoftwareBcellEnum.CHOU_FOSMAN);
             double kolaskar = aminoEpitopo.getValue(SoftwareBcellEnum.KOLASKAR);
 
-            if (emini >= eminiThreshold && parker >= parkerThreshold && karplus >= karplusThreshold && chouFosman >= chouFosmanThreshold && kolaskar >= kolaskarThreshold) {
+            if (emini >= eminiThreshold && parker >= parkerThreshold && karplus >= karplusThreshold
+                    && chouFosman >= chouFosmanThreshold && kolaskar >= kolaskarThreshold) {
                 res += "E";
             } else {
                 res += ".";
@@ -287,7 +293,8 @@ public class Epitopo {
         return res;
     }
 
-    public float getBestSequenceAminoSizeScore(double eminiThreshold, double parkerThreshold, double karplusThreshold, double chouFosmanThreshold, double kolaskarThreshold) {
+    public float getBestSequenceAminoSizeScore(double eminiThreshold, double parkerThreshold, double karplusThreshold,
+            double chouFosmanThreshold, double kolaskarThreshold) {
         int i = 0;
         TreeSet<Integer> areas = new TreeSet<>();
         for (AminoEpitopo ae : getAaEpitopes()) {
@@ -362,7 +369,8 @@ public class Epitopo {
         return getStline(getSequence(), choose);
     }
 
-    public String getTopologyBestSequenceAmino(double eminiThreshold, double parkerThreshold, double karplusThreshold, double chouFosmanThreshold, double kolaskarThreshold) {
+    public String getTopologyBestSequenceAmino(double eminiThreshold, double parkerThreshold, double karplusThreshold,
+            double chouFosmanThreshold, double kolaskarThreshold) {
         String pep = "";
         ArrayList<String> areas = new ArrayList<>();
         for (AminoEpitopo ae : getAaEpitopes()) {

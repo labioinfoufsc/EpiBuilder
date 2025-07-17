@@ -54,7 +54,7 @@ public class EpitopeServiceTest {
         epitope.setEpitopeId("EPI_123");
         epitope.setEpitope("PEPTIDE");
         epitope.setStart(1);
-        epitope.setEnd(7);
+        epitope.setEndEpitope(7);
         epitope.setLength(7);
         epitope.setScore(0.85);
         epitope.setEpitopeTaskData(taskData);
