@@ -2,7 +2,7 @@
 
 ## What is EpiBuilder?
 
-**EpiBuilder** is scientific software for assembling, searching, and classifying linear B-cell epitopes, especially for vaccine research using proteome-wide approaches.
+**EpiBuilder** is a scientific software for assembling, searching, and classifying linear B-cell epitopes, especially for vaccine research using proteome-wide approaches.
 
 It runs as a self-contained web application inside a single Docker container (monolith), which includes:
 
@@ -17,62 +17,95 @@ It runs as a self-contained web application inside a single Docker container (mo
   - No need to install programming languages, databases, or libraries separately.
   - Suitable for use on personal machines, lab computers, or servers.
 
-## Downloading the Docker Image
+## Step 1: Download the Docker Image (Only Once)
 
-Choose the appropriate version based on your system:
+Run this command only once to download the EpiBuilder image:
 
-- **For systems with a compatible NVIDIA GPU (Ubuntu-based):**
+- **If your system has an NVIDIA GPU and drivers (Ubuntu-based):**
 
 ```bash
 docker pull bioinfoufsc/epibuilder:ubuntu-gpu
 ````
 
-* **For standard systems without a GPU (Debian-based):**
+* **If your system does not have a GPU (Debian-based):**
 
 ```bash
 docker pull bioinfoufsc/epibuilder:debian-cpu
 ```
 
-## Running the Docker Container
+> **Tip:** If unsure, use the CPU version.
 
-### 1. Running the CPU version (Debian-based)
+## Step 2: Create and Start the EpiBuilder Container (Only Once)
+
+Run the command below **only once** to create the container. This will also start it.
+
+### Debian (CPU)
 
 ```bash
-docker run -p 80:80 \
+docker run -it --name epibuilder \
+  -p 80:80 \
+  -p 8080:8080 \
+  -p 5435:5432 \
   -e FRONTEND_PORT=80 \
   -e BACKEND_PORT=8080 \
-  -e DB_PORT=3306 \
+  -e DB_PORT=5435 \
+  -e DB_NAME=epibuilder \
+  -e DB_USERNAME=epiuser \
+  -e DB_PASSWORD=epiuser \
+  -e ENV=development \
   bioinfoufsc/epibuilder:debian-cpu
 ```
-
-### 2. Running the GPU version (Ubuntu-based, requires NVIDIA drivers)
+Or
+### Ubuntu (GPU)
 
 ```bash
-docker run -it --gpus all -p 80:80 \
+docker run --gpus all -it --name epibuilder \
+  -p 80:80 \
+  -p 8080:8080 \
+  -p 5432:5432 \
   -e FRONTEND_PORT=80 \
   -e BACKEND_PORT=8080 \
-  -e DB_PORT=3306 \
+  -e DB_PORT=5432 \
+  -e DB_NAME=epibuilder \
+  -e DB_USERNAME=epiuser \
+  -e DB_PASSWORD=epiuser \
+  -e ENV=development \
   bioinfoufsc/epibuilder:ubuntu-gpu
 ```
 
-> **Note:** The GPU version should only be used if your system has a compatible NVIDIA GPU and the necessary drivers installed.
+> The `--name epibuilder` option ensures the container is reusable.
 
-## Accessing the Web Interface
+## Step 3: Access the Web Interface
 
-Once the container is running, open your web browser and go to:
+After starting the container, open your browser and go to:
 
 ```
 http://localhost
 ```
 
-The EpiBuilder web interface should load automatically.
+You should see the EpiBuilder web interface.
+
+## Step 4: Reusing the Container (Next Times)
+
+You do **not** need to run `docker run` again.
+
+To start the container via Terminal or command-line interface (CLI):
+
+```bash
+docker start epibuilder
+```
+
+To stop the container via Terminal or command-line interface (CLI):
+
+```bash
+docker stop epibuilder
+```
 
 ## Login Credentials
 
-* **Admin User**
+Use the following to log in for the first time:
 
-Username: `admin`
+* **Username:** `admin`
+* **Password:** `admin`
 
-Password: `admin`
-
-> **Note:** An admin user has permission to create other users.
+> The admin account can create other users.
