@@ -12,7 +12,7 @@
 	<groupId>ufsc.br</groupId>
 	<artifactId>backend</artifactId>
 
-	<name>backend</name>
+	<name>epibuilder-backend</name>
 	<description>EpiBuilder backend</description>
 	<url />
 	<licenses>
