@@ -4,11 +4,17 @@ LABEL app="EpiBuilder"
 LABEL version="2.0"
 LABEL description="Bioinformatics tool environment for epitope prediction"
 
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=America/Sao_Paulo
+
 RUN apt-get update && \
     apt-get install --no-install-recommends -y \
+    tzdata \
     python3 python3-pip python3-venv libgomp1 git unzip nano wget curl nginx \
-    postgresql postgresql-contrib postgresql-client \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    postgresql postgresql-contrib postgresql-client && \
+    ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
+    dpkg-reconfigure --frontend noninteractive tzdata && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 RUN ln -sf /usr/bin/python3 /usr/bin/python
 
