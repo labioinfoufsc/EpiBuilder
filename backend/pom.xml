@@ -12,7 +12,7 @@
 	<groupId>ufsc.br</groupId>
 	<artifactId>backend</artifactId>
 
-	<name>backend</name>
+	<name>epibuilder-backend</name>
 	<description>EpiBuilder backend</description>
 	<url />
 	<licenses>
@@ -88,10 +88,9 @@
 		</dependency>
 
 		<dependency>
-			<groupId>org.mariadb.jdbc</groupId>
-			<artifactId>mariadb-java-client</artifactId>
-			<version>3.3.2</version>
-			<scope>runtime</scope>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<version>42.7.3</version>
 		</dependency>
 
 		<dependency>

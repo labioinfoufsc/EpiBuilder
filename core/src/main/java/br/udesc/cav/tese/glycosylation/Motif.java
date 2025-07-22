@@ -21,11 +21,11 @@ public class Motif {
         this.end = end;
     }
 
-    public int getEnd() {
+    public int getEndEpitope() {
         return end;
     }
 
-    public void setEnd(int end) {
+    public void setEndEpitope(int end) {
         this.end = end;
     }
 

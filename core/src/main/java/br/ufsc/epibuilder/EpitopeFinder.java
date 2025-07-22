@@ -24,6 +24,8 @@ import java.util.Map;
 import java.util.TreeSet;
 
 import static br.ufsc.epibuilder.Parameters.*;
+
+import br.ufsc.epibuilder.Parameters.BEPIPRED_TYPE;
 import br.ufsc.epibuilder.converter.BepiPred3Converter;
 import static br.ufsc.epibuilder.entity.SoftwareBcellEnum.CHOU_FOSMAN;
 import static br.ufsc.epibuilder.entity.SoftwareBcellEnum.EMINI;
@@ -178,7 +180,7 @@ public class EpitopeFinder {
             ArrayList<ProteinConverter> proteins = new ArrayList<>();
 
             sout("Reading BepiPred-3.0 file");
-            if(Parameters.BEPIPRED_INPUT == BEPIPRED_TYPE.FASTA){
+            if (Parameters.BEPIPRED_INPUT == BEPIPRED_TYPE.FASTA) {
                 sout("Source file: FASTA");
                 sout("Executing BepiPred-3.0");
                 BepiPred3Runner.execute();
@@ -268,7 +270,7 @@ public class EpitopeFinder {
                     Report rep = new Report();
                     rep.setProteinId(re.getId());
                     rep.setStart(epitopo.getStart());
-                    rep.setEnd(epitopo.getEnd());
+                    rep.setEndEpitope(epitopo.getEndEpitope());
                     rep.setnGlyc(epitopo.isNglycolised() ? "Y" : "N");
                     rep.setLength(epitopo.getSequence().length());
                     rep.setEpitope(epitopo.getSequence());
@@ -352,25 +354,36 @@ public class EpitopeFinder {
             stParameters.append("\n");
             stParameters.append("\n---- Softwares Threshold ----");
             if (Parameters.MAP_SOFTWARES.containsKey(EMINI)) {
-                stParameters.append("\nEmini                  : " + (Parameters.MAP_SOFTWARES.get(EMINI) == null ? "Default" : Parameters.MAP_SOFTWARES.get(EMINI)));
+                stParameters
+                        .append("\nEmini                  : " + (Parameters.MAP_SOFTWARES.get(EMINI) == null ? "Default"
+                                : Parameters.MAP_SOFTWARES.get(EMINI)));
             }
             if (Parameters.MAP_SOFTWARES.containsKey(PARKER)) {
-                stParameters.append("\nParker                 : " + (Parameters.MAP_SOFTWARES.get(PARKER) == null ? "Default" : Parameters.MAP_SOFTWARES.get(PARKER)));
+                stParameters.append(
+                        "\nParker                 : " + (Parameters.MAP_SOFTWARES.get(PARKER) == null ? "Default"
+                                : Parameters.MAP_SOFTWARES.get(PARKER)));
             }
             if (Parameters.MAP_SOFTWARES.containsKey(CHOU_FOSMAN)) {
-                stParameters.append("\nChou Fosman            : " + (Parameters.MAP_SOFTWARES.get(CHOU_FOSMAN) == null ? "Default" : Parameters.MAP_SOFTWARES.get(CHOU_FOSMAN)));
+                stParameters.append(
+                        "\nChou Fosman            : " + (Parameters.MAP_SOFTWARES.get(CHOU_FOSMAN) == null ? "Default"
+                                : Parameters.MAP_SOFTWARES.get(CHOU_FOSMAN)));
             }
             if (Parameters.MAP_SOFTWARES.containsKey(KARPLUS_SCHULZ)) {
-                stParameters.append("\nKarplus Schulz         : " + (Parameters.MAP_SOFTWARES.get(KARPLUS_SCHULZ) == null ? "Default" : Parameters.MAP_SOFTWARES.get(KARPLUS_SCHULZ)));
+                stParameters.append("\nKarplus Schulz         : "
+                        + (Parameters.MAP_SOFTWARES.get(KARPLUS_SCHULZ) == null ? "Default"
+                                : Parameters.MAP_SOFTWARES.get(KARPLUS_SCHULZ)));
             }
             if (Parameters.MAP_SOFTWARES.containsKey(KOLASKAR)) {
-                stParameters.append("\nKolaskar               : " + (Parameters.MAP_SOFTWARES.get(KOLASKAR) == null ? "Default" : Parameters.MAP_SOFTWARES.get(KOLASKAR)));
+                stParameters.append(
+                        "\nKolaskar               : " + (Parameters.MAP_SOFTWARES.get(KOLASKAR) == null ? "Default"
+                                : Parameters.MAP_SOFTWARES.get(KOLASKAR)));
             }
 
             stParameters.append("\n\n---- Proteomes ----");
             stParameters.append("\n" + StringUtils.rightPad("Alias", 15, ' ') + "\tFile");
             for (Proteome proteome : Parameters.PROTEOMES) {
-                stParameters.append("\n" + StringUtils.rightPad(proteome.getOrganism(), 15, ' ') + "\t" + proteome.getFile().getAbsolutePath());
+                stParameters.append("\n" + StringUtils.rightPad(proteome.getOrganism(), 15, ' ') + "\t"
+                        + proteome.getFile().getAbsolutePath());
             }
 
             if (Parameters.SEARCH_BLAST) {
@@ -387,50 +400,58 @@ public class EpitopeFinder {
             stParameters.append("\nIdentified epitopes    : " + totalEpitopes);
             stParameters.append("\nN-Glycosylated epitopes: " + totalEpitopesNglyc);
             stParameters.append("\n");
-            String fileParameters = saveRandomFileName(dest + "/" + basename + "epibuilder-parameters", stParameters.toString(), "txt");
+            String fileParameters = saveRandomFileName(dest + "/" + basename + "epibuilder-parameters",
+                    stParameters.toString(), "txt");
             sout("\t Parameters - done\t");
 
             StringBuilder stReport = new StringBuilder();
 
             sout("\t Report by Protein\t");
             String reportByProtein = generateReportByProtein(proteinList);
-            String fileEpibuilderProteinSummary = saveRandomFileName(dest + "/" + basename + "epibuilder-protein-summary", reportByProtein, "tsv");
+            String fileEpibuilderProteinSummary = saveRandomFileName(
+                    dest + "/" + basename + "epibuilder-protein-summary", reportByProtein, "tsv");
             sout("\t Report by Protein - done\t");
 
             sout("\t Report by Topology\t");
             String reportTopology = generateReportByTopology(reportList);
-            String fileEpibuilderTopology = saveRandomFileName(dest + "/" + basename + "epibuilder-topology", reportTopology, "tsv");
+            String fileEpibuilderTopology = saveRandomFileName(dest + "/" + basename + "epibuilder-topology",
+                    reportTopology, "tsv");
 
             sout("\t Report by Topology - Done\t");
 
             sout("\t Report Scores\t");
             String reportScores = generateMethodScore(proteinList);
-            String fileEpibuilderScores = saveRandomFileName(dest + "/" + basename + "epibuilder-scores", reportScores, "tsv");
+            String fileEpibuilderScores = saveRandomFileName(dest + "/" + basename + "epibuilder-scores", reportScores,
+                    "tsv");
 
             sout("\t Report Scores - done\t");
 
             sout("\t Epitopes FASTA\t");
 
-            String fileEpibuilderFastaEpitopo = saveRandomFileName(dest + "/" + basename + "epibuilder-epitopes-fasta", generateReportFastaEpitope(reportList), "fasta");
+            String fileEpibuilderFastaEpitopo = saveRandomFileName(dest + "/" + basename + "epibuilder-epitopes-fasta",
+                    generateReportFastaEpitope(reportList), "fasta");
             sout("\t Epitopes FASTA - done\t");
 
             sout("\t Report Detailed\t");
             String reportDetailed = generateReportDetailed(reportList);
 
-            //Performe a BLAST search and append it to the report
+            // Performe a BLAST search and append it to the report
             if (Parameters.SEARCH_BLAST) {
                 sout("\tBlast\t");
-                //Each blast result append in the last reportDetaild textFile until generate the last
+                // Each blast result append in the last reportDetaild textFile until generate
+                // the last
                 for (Proteome proteome : Parameters.PROTEOMES) {
                     File blastoutput = getBlastResults(proteome, fileEpibuilderFastaEpitopo);
                     Blast blast = new Blast(proteome.getOrganism(), blastoutput);
-                    reportDetailed = ReportBlastJoiner.joinReport(reportDetailed, blast.getListReport(Parameters.BLAST_IDENTITY, Parameters.BLAST_COVER), blast.getName());
+                    reportDetailed = ReportBlastJoiner.joinReport(reportDetailed,
+                            blast.getListReport(Parameters.BLAST_IDENTITY, Parameters.BLAST_COVER), blast.getName());
                 }
                 sout("\tBlast - done\t");
             }
-            String fileEpibuilderDetail = saveRandomFileName(dest + "/" + basename + "epibuilder-epitope-detail", reportDetailed, "tsv");
+            String fileEpibuilderDetail = saveRandomFileName(dest + "/" + basename + "epibuilder-epitope-detail",
+                    reportDetailed, "tsv");
             sout("\t Report Detailed - Done\t");
-            //END BLAST
+            // END BLAST
 
             stReport.append(stParameters.toString());
             stReport.append("\n---- Protein Summary ----\n");
@@ -445,7 +466,7 @@ public class EpitopeFinder {
             excelTab.add(new ExcelTabReport("Epitopes Detailed", reportDetailed));
             excelTab.add(new ExcelTabReport("Protein Summary", reportByProtein));
             excelTab.add(new ExcelTabReport("Epitopes Topology", reportTopology));
-            //excelTab.add(new ExcelTabReport("Scores", reportScores));
+            // excelTab.add(new ExcelTabReport("Scores", reportScores));
 
             boolean excelReport = false;
             String fileEpibuilderExcel = dest + "/" + basename + "epibuilder.xlsx";
@@ -479,7 +500,7 @@ public class EpitopeFinder {
             sout("Finish\t");
             return stReport.toString();
         } catch (Exception e) {
-            sout("An error occured: "+ e.getMessage());
+            sout("An error occured: " + e.getMessage());
             e.printStackTrace();
             return e.getMessage();
         }
@@ -517,7 +538,8 @@ public class EpitopeFinder {
         sb.append("Protein Id\tEpitopes\tStart\tEnd\tN-glyc\tN-Glyc motifs");
         sb.append("\n");
         for (Report report : reportList) {
-            sb.append(String.format("%s\t%s\t%s\t%s\t%s\t%s\n", report.getProteinId(), report.getEpitope(), report.getStart(), report.getEnd(), report.getnGlyc(), report.getNglycmotif()));
+            sb.append(String.format("%s\t%s\t%s\t%s\t%s\t%s\n", report.getProteinId(), report.getEpitope(),
+                    report.getStart(), report.getEndEpitope(), report.getnGlyc(), report.getNglycmotif()));
         }
         return sb.toString();
     }
@@ -533,7 +555,8 @@ public class EpitopeFinder {
 
     public static String generateReportByTopology(ArrayList<Report> reportList) {
         StringBuilder sb = new StringBuilder();
-        sb.append("N\tId\t" + StringUtils.leftPad("Method", 15, ' ') + "\tThreshold\tAvg Score\tCover\tEpitope\tStart\tEnd\tN-Glyc\tN-Glyc-Count\tN-Glyc-Motifs\tLength\tkDa\tI.P\tAvg Hydropathy\tAvg Cover");
+        sb.append("N\tId\t" + StringUtils.leftPad("Method", 15, ' ')
+                + "\tThreshold\tAvg Score\tCover\tEpitope\tStart\tEnd\tN-Glyc\tN-Glyc-Count\tN-Glyc-Motifs\tLength\tkDa\tI.P\tAvg Hydropathy\tAvg Cover");
         sb.append("\n");
         int count = 1;
         for (Report report : reportList) {
@@ -547,7 +570,7 @@ public class EpitopeFinder {
 
             sb.append(String.format("\t%s\t%s\t%s\t%s\t%s\t%s\t%.2f\t%.2f\t%.2f\t%.2f\n",
                     report.getStart(),
-                    report.getEnd(),
+                    report.getEndEpitope(),
                     report.getnGlyc(),
                     report.getnGlycMotifs().size(),
                     report.getNglycmotif(),
@@ -555,8 +578,7 @@ public class EpitopeFinder {
                     report.getMw() / 1000,
                     report.getIp(),
                     report.getAvgHydropathy(),
-                    report.getAvgCover()
-            ));
+                    report.getAvgCover()));
 
             for (EpitopeReport epitopeReport : report.getEpitopeReports()) {
                 sb.append(String.format("\t\t%s\t%.2f\t%.2f\t%.2f\t%s%s\n",
@@ -603,7 +625,8 @@ public class EpitopeFinder {
 
         for (Proteome proteome : Parameters.PROTEOMES) {
             try {
-                sout("\t\tLoading proteome: " + proteome.getOrganism() + "\t" + proteome.getFile().getAbsolutePath() + "\t");
+                sout("\t\tLoading proteome: " + proteome.getOrganism() + "\t" + proteome.getFile().getAbsolutePath()
+                        + "\t");
                 proteome.load();
                 sout("\t\tLoaded " + proteome.getProteins().size() + " proteins\t");
             } catch (Exception ex) {
@@ -615,31 +638,39 @@ public class EpitopeFinder {
             stOrganismCount += "\t" + proteome.getOrganism() + "_count\t" + proteome.getOrganism() + "_acc";
         }
 
-        /*        String stOrganismId = "";
-        for (Proteome proteome : Parameters.PROTEOMES) {
-            stOrganismId += "\t" + proteome.getOrganism() + "_acc";
-        }*/
+        /*
+         * String stOrganismId = "";
+         * for (Proteome proteome : Parameters.PROTEOMES) {
+         * stOrganismId += "\t" + proteome.getOrganism() + "_acc";
+         * }
+         */
         String stMethod = "";
         for (SoftwareBcellEnum softwareBcellEnum : Parameters.MAP_SOFTWARES.keySet()) {
             stMethod += "\t" + softwareBcellEnum.description;
         }
 
         StringBuilder sb = new StringBuilder();
-        sb.append("N\tId\tEpitope\tStart\tEnd\tN-Glyc\tN-Glyc-Count\tN-Glyc-Motifs\tLength\tMW(kDa)\tI.P\tHydropathy\tAll Matches Cover\tAvg Cover\tBepiPred3" + stMethod + stOrganismCount + "\n");
+        sb.append(
+                "N\tId\tEpitope\tStart\tEnd\tN-Glyc\tN-Glyc-Count\tN-Glyc-Motifs\tLength\tMW(kDa)\tI.P\tHydropathy\tAll Matches Cover\tAvg Cover\tBepiPred3"
+                        + stMethod + stOrganismCount + "\n");
         int count = 1;
         for (Report report : reportList) {
             String stOrganismEpitopeCount = "";
             String stMethodScore = "";
 
-            //String stOrganismEpitopeProteinId = "";
+            // String stOrganismEpitopeProteinId = "";
             for (Proteome proteome : Parameters.PROTEOMES) {
-                sout(String.format("Start searching for epitope: %s\t%s/%s in %s(%s proteins)", report.getEpitope(), count, reportList.size(), proteome.getOrganism(), proteome.getProteins().size()));
-                //sout("Start searching for epitope: " + count + "/" + reportList.size() + " in " + proteome.getOrganism() + " - " + report.getEpitope());
+                sout(String.format("Start searching for epitope: %s\t%s/%s in %s(%s proteins)", report.getEpitope(),
+                        count, reportList.size(), proteome.getOrganism(), proteome.getProteins().size()));
+                // sout("Start searching for epitope: " + count + "/" + reportList.size() + " in
+                // " + proteome.getOrganism() + " - " + report.getEpitope());
                 EpitopeCount epitopeCount = count(report.getEpitope(), proteome);
 
                 stOrganismEpitopeCount += "\t" + epitopeCount.getTotalhits() + "\t" + epitopeCount.getIds();
-                //stOrganismEpitopeProteinId += "\t" + epitopeCount.getIds();
-                sout(String.format("End searching for epitope: %s\t%s/%s in %s(%s proteins). Found (%s hits)", report.getEpitope(), count, reportList.size(), proteome.getOrganism(), proteome.getProteins().size(), epitopeCount.getTotalhits()));
+                // stOrganismEpitopeProteinId += "\t" + epitopeCount.getIds();
+                sout(String.format("End searching for epitope: %s\t%s/%s in %s(%s proteins). Found (%s hits)",
+                        report.getEpitope(), count, reportList.size(), proteome.getOrganism(),
+                        proteome.getProteins().size(), epitopeCount.getTotalhits()));
             }
 
             for (EpitopeReport epitopeReport : report.getEpitopeReports()) {
@@ -651,7 +682,7 @@ public class EpitopeFinder {
                     report.getProteinId(),
                     report.getEpitope(),
                     report.getStart(),
-                    report.getEnd(),
+                    report.getEndEpitope(),
                     report.getnGlyc(),
                     report.getnGlycMotifs().size(),
                     report.getNglycmotif(),
@@ -664,7 +695,7 @@ public class EpitopeFinder {
                     report.getAvgBepipredScore(),
                     stMethodScore,
                     stOrganismEpitopeCount
-            //stOrganismEpitopeProteinId
+            // stOrganismEpitopeProteinId
             ));
         }
 
@@ -713,8 +744,7 @@ public class EpitopeFinder {
                         stMethod,
                         ProteomicCalculator.getMolecularWeight(aminoEpitopo.getAmino()),
                         ProteomicCalculator.getIsoelectricPoint(aminoEpitopo.getAmino()),
-                        ProteomicCalculator.getHydropathy(aminoEpitopo.getAmino())
-                );
+                        ProteomicCalculator.getHydropathy(aminoEpitopo.getAmino()));
                 sb.append(res);
 
             }

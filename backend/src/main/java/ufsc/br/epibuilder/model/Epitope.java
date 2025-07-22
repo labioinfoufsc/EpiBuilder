@@ -77,7 +77,7 @@ public class Epitope {
      * The ending position of the epitope in the parent protein sequence.
      */
     @Column
-    private Integer end;
+    private Integer endEpitope;
 
     /**
      * The length of the epitope sequence.

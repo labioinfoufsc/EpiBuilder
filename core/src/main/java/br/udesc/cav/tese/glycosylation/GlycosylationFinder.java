@@ -18,7 +18,7 @@ import org.biojava.nbio.core.sequence.io.FastaReaderHelper;
 /**
  *
  * @author renato Asparagina (ASN) - N + Qualquer aminoacido menos prolina (Xaa)
- * P + Serina/Threonine(Ser/Thr) S/T
+ *         P + Serina/Threonine(Ser/Thr) S/T
  */
 public class GlycosylationFinder {
 
@@ -78,7 +78,8 @@ public class GlycosylationFinder {
                             res.append("\n");
 
                         } else {
-                            res.append(String.format("INSERT INTO NGLYC VALUES (NULL, '%s', '%s', %s, %s);", id, seq, (i + 1), (i + 3)));
+                            res.append(String.format("INSERT INTO NGLYC VALUES (NULL, '%s', '%s', %s, %s);", id, seq,
+                                    (i + 1), (i + 3)));
                             res.append("\n");
 
                         }
@@ -113,11 +114,13 @@ public class GlycosylationFinder {
             ArrayList<Motif> motivos = getNGlycMotif(entry.getValue().getSequenceAsString());
             String delim = "-";
 
-            //Ï= String res = Joiner.on(delim).join(motivos);
-            System.out.println("Motivos para " + entry.getValue().getAccession().getID() + "\t" + FormatHelper.getListAsString(delim, motivos));
-//            for (Motif motivo : motivos) {
-//                System.out.println(motivo.getSequence()+"\t"+motivo.getStart()+ "\t"+motivo.getEnd());
-//            }
+            // Ï= String res = Joiner.on(delim).join(motivos);
+            System.out.println("Motivos para " + entry.getValue().getAccession().getID() + "\t"
+                    + FormatHelper.getListAsString(delim, motivos));
+            // for (Motif motivo : motivos) {
+            // System.out.println(motivo.getSequence()+"\t"+motivo.getStart()+
+            // "\t"+motivo.getEndEpitope());
+            // }
         }
 
     }

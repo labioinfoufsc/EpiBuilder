@@ -1,59 +1,85 @@
 #!/bin/bash
-
 set -e
+set -o pipefail
+
+log() { echo -e "\e[32m[INFO]\e[0m $1"; }
+err() { echo -e "\e[31m[ERROR]\e[0m $1"; }
 
 export FRONTEND_PORT="${FRONTEND_PORT:-80}"
 export BACKEND_PORT="${BACKEND_PORT:-8080}"
-export DB_PORT="${DB_PORT:-3306}"
-
-echo "Generating JWT Secret..."
-JWT_SECRET=$(openssl rand -base64 32 | tr -d '\n')
-export JWT_SECRET
-echo "export JWT_SECRET=\"$JWT_SECRET\"" | tee -a /etc/environment >/dev/null
-
-export DB_USERNAME="epiuser"
-export DB_PASSWORD="epiuser"
-export DB_NAME="epibuilder"
+export DB_PORT="${DB_PORT:-5432}"
 export DB_HOST="localhost"
+export DB_NAME="${DB_NAME:-epibuilder}"
+export DB_USERNAME="${DB_USERNAME:-epiuser}"
+export DB_PASSWORD="${DB_PASSWORD:-epiuser}"
+export ENV="${ENV:-development}"
 export PORT="${BACKEND_PORT}"
 
-echo "export DB_USERNAME=\"$DB_USERNAME\"" | tee -a /etc/environment >/dev/null
-echo "export DB_PASSWORD=\"$DB_PASSWORD\"" | tee -a /etc/environment >/dev/null
-echo "export DB_NAME=\"$DB_NAME\"" | tee -a /etc/environment >/dev/null
-echo "export DB_HOST=\"$DB_HOST\"" | tee -a /etc/environment >/dev/null
-echo "export DB_PORT=\"$DB_PORT\"" | tee -a /etc/environment >/dev/null
-echo "export PORT=\"$PORT\"" | tee -a /etc/environment >/dev/null
-echo "export JWT_SECRET=\"$JWT_SECRET\"" | tee -a /etc/environment >/dev/null
+log "Generating JWT_SECRET..."
+JWT_SECRET=$(openssl rand -base64 32 | tr -d '\n')
+export JWT_SECRET
 
-echo "Starting MariaDB on port ${DB_PORT}..."
-sed -i "s/^port\s*=.*/port = ${DB_PORT}/" /etc/mysql/my.cnf || true
-/usr/bin/mysqld_safe --datadir='/var/lib/mysql' --port=${DB_PORT} &
+DATA_DIR="/var/lib/postgresql/data"
+mkdir -p "$DATA_DIR"
+chown -R postgres:postgres "$DATA_DIR"
 
-echo "Waiting for MariaDB to be ready..."
-until mysqladmin ping -h "127.0.0.1" --port=$DB_PORT --silent; do
-    sleep 2
+if [ ! -s "$DATA_DIR/PG_VERSION" ]; then
+  log "Initializing PostgreSQL cluster..."
+  su - postgres -c "/usr/lib/postgresql/13/bin/initdb -D $DATA_DIR"
+fi
+
+PG_HBA="$DATA_DIR/pg_hba.conf"
+if [[ "$ENV" != "production" ]]; then
+  log "Setting 'trust' in pg_hba.conf (dev mode)"
+  sed -i 's/^host.*all.*all.*.*md5$/host all all 0.0.0.0\/0 trust/' "$PG_HBA"
+fi
+
+log "Starting PostgreSQL..."
+su - postgres -c "/usr/lib/postgresql/13/bin/pg_ctl -D $DATA_DIR -o \"-p $DB_PORT\" -w start"
+
+log "Waiting for PostgreSQL to be ready..."
+until pg_isready -h "$DB_HOST" -p "$DB_PORT" -U postgres > /dev/null 2>&1; do
+  sleep 2
 done
 
-echo "Configuring database..."
-mysql -u root -P $DB_PORT <<-EOSQL
-    CREATE DATABASE IF NOT EXISTS ${DB_NAME};
-    CREATE USER IF NOT EXISTS '${DB_USERNAME}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';
-    GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USERNAME}'@'localhost';
-    FLUSH PRIVILEGES;
+log "Creating role if not exists..."
+psql -U postgres -h "$DB_HOST" -p "$DB_PORT" -v ON_ERROR_STOP=1 <<EOSQL
+DO \$\$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${DB_USERNAME}') THEN
+    CREATE ROLE "${DB_USERNAME}" WITH LOGIN PASSWORD '${DB_PASSWORD}' CREATEDB;
+  END IF;
+END
+\$\$;
 EOSQL
 
-echo "Adjusting NGINX configuration for ports..."
+log "Checking if database '${DB_NAME}' exists..."
+DB_EXISTS=$(psql -U postgres -h "$DB_HOST" -p "$DB_PORT" -tAc "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'")
+
+if [ "$DB_EXISTS" != "1" ]; then
+  log "Creating database '${DB_NAME}' owned by '${DB_USERNAME}'..."
+  psql -U postgres -h "$DB_HOST" -p "$DB_PORT" -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"${DB_NAME}\" OWNER \"${DB_USERNAME}\""
+else
+  log "Database '${DB_NAME}' already exists, skipping creation."
+fi
+
+log "Granting all privileges on database '${DB_NAME}' to '${DB_USERNAME}'..."
+psql -U postgres -h "$DB_HOST" -p "$DB_PORT" -v ON_ERROR_STOP=1 -c "GRANT ALL PRIVILEGES ON DATABASE \"${DB_NAME}\" TO \"${DB_USERNAME}\""
+
+log "Database setup complete."
+
+log "Updating NGINX configuration..."
 NGINX_CONF="/etc/nginx/sites-enabled/default"
 sed -i "s/listen\s\+[0-9]\+;/listen ${FRONTEND_PORT};/" "$NGINX_CONF"
 sed -i "s|proxy_pass http://localhost:[0-9]\+/|proxy_pass http://localhost:${BACKEND_PORT}/|" "$NGINX_CONF"
 
-echo "Starting NGINX on port ${FRONTEND_PORT}..."
+log "Starting NGINX..."
 nginx
 
-echo "Starting Spring Boot on port ${BACKEND_PORT}..."
+log "Starting Spring Boot backend..."
 exec java -jar /epibuilder/epibuilder-backend.jar \
-    --server.port=${BACKEND_PORT} \
-    --spring.datasource.url=jdbc:mariadb://${DB_HOST}:${DB_PORT}/${DB_NAME} \
-    --spring.datasource.username=${DB_USERNAME} \
-    --spring.datasource.password=${DB_PASSWORD} \
-    --jwt.secret=${JWT_SECRET}
+  --server.port=${BACKEND_PORT} \
+  --spring.datasource.url=jdbc:postgresql://$DB_HOST:${DB_PORT}/${DB_NAME} \
+  --spring.datasource.username=${DB_USERNAME} \
+  --spring.datasource.password=${DB_PASSWORD} \
+  --jwt.secret=${JWT_SECRET}

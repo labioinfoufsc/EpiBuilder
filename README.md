@@ -9,7 +9,7 @@ It runs as a self-contained web application inside a single Docker container (mo
 - A graphical user interface (frontend)
 - Analysis and processing logic (backend)
 - Workflow with NextFlow to use BepiPred 3.0 and BLAST
-- A database (MySQL/MariaDB) to persist users and task data
+- A database (PostgreSQL) to persist users and task data
 
 ## Requirements
 
