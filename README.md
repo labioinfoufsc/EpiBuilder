@@ -2,7 +2,7 @@
 
 ## What is EpiBuilder?
 
-**EpiBuilder** is a scientific software for assembling, searching, and classifying linear B-cell epitopes, especially for vaccine research using proteome-wide approaches.
+EpiBuilder is a scientific software for assembling, searching, and classifying linear B-cell epitopes, particularly for pathogen research and vaccine development using proteome-wide approaches.
 
 It runs as a self-contained web application inside a single Docker container (monolith), which includes:
 
