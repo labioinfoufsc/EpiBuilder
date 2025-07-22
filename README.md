@@ -26,8 +26,12 @@ Run this command only once to download the EpiBuilder image:
 ```bash
 docker pull bioinfoufsc/epibuilder:ubuntu-gpu
 ````
+> **Note:** You must have NVIDIA GPU drivers installed to run this GPU-based Docker container.  
+> If you're using Linux and want to use EpiBuilder with GPU support, please make sure you have CUDA installed:  
+> [https://docs.nvidia.com/cuda/cuda-installation-guide-linux](https://docs.nvidia.com/cuda/cuda-installation-guide-linux)
 
-* **If your system does not have a GPU (Debian-based):**
+
+* **If your system does not have a NVIDIA GPU (Debian-based):**
 
 ```bash
 docker pull bioinfoufsc/epibuilder:debian-cpu
@@ -73,7 +77,7 @@ docker run --gpus all -it --name epibuilder \
   bioinfoufsc/epibuilder:ubuntu-gpu
 ```
 
-> The `--name epibuilder` option ensures the container is reusable.
+> **Tip:** The `--name epibuilder` option ensures the container is reusable.
 
 ## Step 3: Access the Web Interface
 
@@ -108,4 +112,4 @@ Use the following to log in for the first time:
 * **Username:** `admin`
 * **Password:** `admin`
 
-> The admin account can create other users.
+> **Note:** The admin account can create other users.
