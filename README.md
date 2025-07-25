@@ -52,13 +52,6 @@ docker run -it --name epibuilder \
   -p 80:80 \
   -p 8080:8080 \
   -p 5435:5432 \
-  -e FRONTEND_PORT=80 \
-  -e BACKEND_PORT=8080 \
-  -e DB_PORT=5435 \
-  -e DB_NAME=epibuilder \
-  -e DB_USERNAME=epiuser \
-  -e DB_PASSWORD=epiuser \
-  -e ENV=development \
   bioinfoufsc/epibuilder:debian-cpu
 ```
 Or
@@ -69,13 +62,6 @@ docker run --gpus all -it --name epibuilder \
   -p 80:80 \
   -p 8080:8080 \
   -p 5432:5432 \
-  -e FRONTEND_PORT=80 \
-  -e BACKEND_PORT=8080 \
-  -e DB_PORT=5432 \
-  -e DB_NAME=epibuilder \
-  -e DB_USERNAME=epiuser \
-  -e DB_PASSWORD=epiuser \
-  -e ENV=development \
   bioinfoufsc/epibuilder:ubuntu-gpu
 ```
 
