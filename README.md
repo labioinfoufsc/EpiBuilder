@@ -1,17 +1,26 @@
-🇧🇷 [PT-BR](./README.pt-br.md) | [🇪🇸 ES](./README.es.md) | [🇺🇸 EN](./README.md)
+🇺🇸 [EN](./README.md) | 🇪🇸 [ES](./README.es.md) | 🇫🇷 [FR](./README.fr.md) | 🇮🇹 [IT](./README.it.md) | 🇧🇷 [PT-BR](./README.pt-br.md)
 
 # EpiBuilder
 
 ## What is EpiBuilder?
 
-EpiBuilder is a scientific software for assembling, searching, and classifying linear B-cell epitopes, particularly for pathogen research and vaccine development using proteome-wide approaches.
+EpiBuilder is a scientific software for assembling, searching, and classifying linear B-cell epitopes, for research using approaches with partial or complete proteomes.
 
 It runs as a self-contained web application inside a single Docker container (monolith), which includes:
 
-- A graphical user interface (frontend)
-- Analysis and processing logic (backend)
+- A graphical user interface (`frontend`)
+- Analysis and processing logic (`backend` and `core`)
 - Workflow with NextFlow to use BepiPred 3.0 and BLAST
 - A database (PostgreSQL) to persist users and task data
+
+## Who should use EpiBuilder?
+
+The platform is designed for researchers and professionals working at the intersection of immunology, proteomics, and bioinformatics. It is ideal for anyone who needs to perform *in silico* analysis of epitopes to accelerate their research.
+
+Key application areas include:
+- **Infectious Diseases:** identify target epitopes in pathogens, accelerating the development of vaccines and diagnostic tests;
+- **Oncology:** identify epitopes in tumor proteins, enabling the selection of precise targets for the development of immunotherapies and cancer vaccines;
+- **Neuroscience:** predict epitopes in nervous system proteins, facilitating the search for autoantibody biomarkers for the diagnosis of neurodegenerative diseases.
 
 ## Requirements
 

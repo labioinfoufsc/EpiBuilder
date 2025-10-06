@@ -1,17 +1,26 @@
-🇧🇷 [PT-BR](./README.pt-br.md) | [🇪🇸 ES](./README.es.md) | [🇺🇸 EN](./README.md)
+🇺🇸 [EN](./README.md) | 🇪🇸 [ES](./README.es.md) | 🇫🇷 [FR](./README.fr.md) | 🇮🇹 [IT](./README.it.md) | 🇧🇷 [PT-BR](./README.pt-br.md)
 
 # EpiBuilder
 
 ## ¿Qué es EpiBuilder?
 
-EpiBuilder es un software científico para ensamblar, buscar y clasificar epítopos lineales de células B, especialmente enfocado en la investigación de patógenos y el desarrollo de vacunas utilizando enfoques a nivel de proteoma.
+EpiBuilder es un software científico para el ensamblaje, la búsqueda y la clasificación de epítopos lineales de células B, para investigaciones que utilizan enfoques con proteomas parciales o completos.
 
 Funciona como una aplicación web autónoma dentro de un único contenedor Docker (monolito), que incluye:
 
-- Interfaz gráfica de usuario (frontend)
-- Lógica de análisis y procesamiento (backend)
+- Interfaz gráfica de usuario (`frontend`)
+- Lógica de análisis y procesamiento (`backend` y `core`)
 - Flujo de trabajo con NextFlow que utiliza BepiPred 3.0 y BLAST
 - Base de datos (PostgreSQL) para almacenar usuarios y datos de tareas
+
+## ¿Para quién es EpiBuilder?
+
+La plataforma está diseñada para investigadores y profesionales que trabajan en la intersección de la inmunología, la proteómica y la bioinformática. Es ideal para cualquiera que necesite realizar análisis *in silico* de epítopos para acelerar su investigación.
+
+Las áreas clave de aplicación incluyen:
+- **Enfermedades Infecciosas:** identificar epítopos diana en patógenos, acelerando el desarrollo de vacunas y pruebas de diagnóstico;
+- **Oncología:** identificar epítopos en proteínas tumorales, permitiendo la selección de dianas precisas para el desarrollo de inmunoterapias y vacunas contra el cáncer;
+- **Neurociencia:** predecir epítopos en proteínas del sistema nervioso, facilitando la búsqueda de biomarcadores de autoanticuerpos para el diagnóstico de enfermedades neurodegenerativas.
 
 ## Requisitos
 
