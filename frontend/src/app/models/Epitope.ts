@@ -9,7 +9,7 @@ export class Epitope {
   epitope?: string;
   epitopeTopologies?: EpitopeTopology[];
   start?: number;
-  end?: number;
+  endEpitope?: number;
   nglyc?: string;
   nglycCount?: number;
   length?: number;
