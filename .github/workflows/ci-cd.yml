@@ -1,5 +1,5 @@
 name: CI/CD - Epibuilder Deploy
-  
+
 on:
   push:
     branches: [main]
@@ -31,7 +31,7 @@ jobs:
 
   build-and-push:
     needs: detect-changes
-    if: needs.detect-changes.outputs.changed == 'true'
+    if: github.event_name == 'workflow_dispatch' || needs.detect-changes.outputs.changed == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
