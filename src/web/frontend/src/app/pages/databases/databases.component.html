@@ -2,7 +2,7 @@
 
 <div class="container mt-4">
   <div class="d-flex justify-content-center">
-    <div class="card col-5 mx-auto">
+    <div class="card col-7 mx-auto">
       <div class="card-header custom-header"><b>Databases Management</b></div>
       <div class="card-body">
         <div *ngIf="alertMessage" class="alert alert-{{ alertType }} alert-dismissible fade show" role="alert">
@@ -22,7 +22,7 @@
 
           <div class="mb-3">
             <label for="alias" class="form-label" style="font-weight: bold;">Alias</label>
-            <input type="text" class="form-control" id="alias" name="alias" ngModel required>
+            <input type="text" class="form-control" id="alias" name="alias" ngModel required maxlength="30">
             <small class="text-muted d-block mt-1">
               <i style="color: #ffc107 !important" class="fa-solid fa-circle-info"></i>
               Provide a descriptive alias for the uploaded file
@@ -51,7 +51,7 @@
               </td>
             </tr>
             <tr *ngFor="let file of files">
-              <td>{{ file.alias }}</td>
+              <td style="word-break: break-word; max-width: 200px;">{{ file.alias }}</td>
               <td>{{ file.date | date: 'dd-MM-yyyy' }}</td>
               <td>
                 <ng-container *ngIf="file.fileName.includes('iedb') && file.alias?.includes('iedb'); else showDelete">
@@ -66,10 +66,13 @@
               </td>
 
               <td>
-                <button class="btn btn-link p-0" (click)="downloadFile(file)" title="Download file">
-                  <i class="fas fa-download" style="color:white !important; cursor: pointer;"></i>
+                <button class="btn p-0" style="background: transparent !important; border: none !important;" (click)="downloadFile(file)"
+                  title="Download file">
+                  <i class="fas fa-download" style="color: #0d6efd; cursor: pointer;"></i>
                 </button>
               </td>
+
+
             </tr>
           </tbody>
         </table>
