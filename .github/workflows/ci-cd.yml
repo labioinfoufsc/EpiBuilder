@@ -1,9 +1,7 @@
 name: CI/CD - Epibuilder Deploy
-
+  
 on:
   push:
-    branches: [main]
-  pull_request:
     branches: [main]
   workflow_dispatch:
 
@@ -11,216 +9,47 @@ jobs:
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
-      frontend: ${{ steps.changes.outputs.frontend }}
-      backend: ${{ steps.changes.outputs.backend }}
-      core: ${{ steps.changes.outputs.core }}
+      changed: ${{ steps.filter.outputs.changed }}
     steps:
-      - name: Checkout monorepo
+      - name: Checkout repository
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - name: List changed files
-        run: |
-          git fetch origin main
-          echo "Changed files:"
-          git diff --name-only origin/main ${{ github.sha }}
-
-      - name: Detect changes
-        id: changes
+      - name: Detect changes in src modules
+        id: filter
         run: |
           git fetch origin main
           CHANGED=$(git diff --name-only origin/main ${{ github.sha }})
           echo "Changed files: $CHANGED"
 
-          if echo "$CHANGED" | grep -q '^frontend/'; then echo "frontend=true" >> $GITHUB_OUTPUT; else echo "frontend=false" >> $GITHUB_OUTPUT; fi
-          if echo "$CHANGED" | grep -q '^backend/'; then echo "backend=true" >> $GITHUB_OUTPUT; else echo "backend=false" >> $GITHUB_OUTPUT; fi
-          if echo "$CHANGED" | grep -q '^core/'; then echo "core=true" >> $GITHUB_OUTPUT; else echo "core=false" >> $GITHUB_OUTPUT; fi
+          if echo "$CHANGED" | grep -qE '^src/(web|core|bepipred3)/'; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Show changed modules
-        run: |
-          echo "Core changed:     [${{ steps.changes.outputs.core }}]"
-          echo "Backend changed:  [${{ steps.changes.outputs.backend }}]"
-          echo "Frontend changed: [${{ steps.changes.outputs.frontend }}]"
-
-  build-core:
+  build-and-push:
     needs: detect-changes
-    if: github.event_name == 'workflow_dispatch' || needs.detect-changes.outputs.core == 'true'
+    if: needs.detect-changes.outputs.changed == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-java@v3
-        with:
-          distribution: "temurin"
-          java-version: 21
-          cache: "maven"
-      - name: Build core
-        run: |
-          cd core
-          mvn clean package
-          mkdir -p ../core-build
-          cp target/epibuilder-core-jar-with-dependencies.jar ../core-build/epibuilder-core.jar
-      - name: Upload core artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: core-build
-          path: core-build
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-  build-backend:
-    needs: detect-changes
-    if: github.event_name == 'workflow_dispatch' || needs.detect-changes.outputs.backend == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-java@v3
-        with:
-          distribution: "temurin"
-          java-version: 21
-          cache: "maven"
-      - name: Build backend
-        run: |
-          cd backend
-          mvn package -DskipTests
-          mkdir -p ../backend-build
-          cp target/*.jar ../backend-build/epibuilder-backend.jar
-      - name: Upload backend artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-build
-          path: backend-build
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-  build-frontend:
-    needs: detect-changes
-    if: github.event_name == 'workflow_dispatch' || needs.detect-changes.outputs.frontend == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 18
-      - name: Build frontend
-        run: |
-          cd frontend
-          npm ci
-          npm run build
-          echo "Inspecting build output..."
-          ls -R dist || echo "'dist' folder not found."
-          mkdir -p ../frontend-build
-          cp -r dist/frontend/browser/* ../frontend-build/
-      - name: Upload frontend artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-build
-          path: frontend-build
-
-  docker-build-push:
-    needs: [detect-changes, build-core, build-backend, build-frontend]
-    if: github.event_name == 'workflow_dispatch' || needs.detect-changes.outputs.core == 'true' || needs.detect-changes.outputs.backend == 'true' || needs.detect-changes.outputs.frontend == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: "*-build"
-          path: build-artifacts
-
-      - uses: docker/setup-buildx-action@v3
-
-      - uses: docker/login-action@v3
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Prepare build context
+      - name: Build & push final image
         run: |
-          mkdir build
-          cp -r build-artifacts/backend-build build/backend
-          cp -r build-artifacts/core-build build/core
-          cp -r build-artifacts/frontend-build build/frontend
-          cp -r pipeline build/pipeline
-          cp bepipred3.zip requirements.txt nginx.conf entrypoint.sh epibuilder.sh build/
-
-      - name: Cleanup Docker
-        run: |
-          docker builder prune --all --force || true
-          docker system prune --all --force || true
-
-      - name: Build & push Docker image (debian-cpu)
-        run: |
-          cd build
           docker buildx build --push \
-            -f ../Dockerfile.debian \
-            -t ${{ secrets.DOCKER_USERNAME }}/epibuilder:debian-cpu-${{ github.sha }} \
-            -t ${{ secrets.DOCKER_USERNAME }}/epibuilder:debian-cpu .
-
-      - name: Build & push Docker image (ubuntu-gpu)
-        run: |
-          cd build
-          docker buildx build --push \
-            -f ../Dockerfile.ubuntu \
-            -t ${{ secrets.DOCKER_USERNAME }}/epibuilder:ubuntu-gpu-${{ github.sha }} \
-            -t ${{ secrets.DOCKER_USERNAME }}/epibuilder:ubuntu-gpu .
-
-  docker-build-artifacts:
-    needs: [detect-changes, build-core, build-backend, build-frontend]
-    if: github.event_name == 'workflow_dispatch' || needs.detect-changes.outputs.core == 'true' || needs.detect-changes.outputs.backend == 'true' || needs.detect-changes.outputs.frontend == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: "*-build"
-          path: build-artifacts
-
-      - name: Build frontend Docker image
-        run: |
-          mkdir docker-frontend
-          cp -r build-artifacts/frontend-build/* docker-frontend/
-          cat <<EOF > docker-frontend/Dockerfile
-          FROM nginx:alpine
-          COPY . /usr/share/nginx/html/
-          EOF
-          docker build -t epibuilder-frontend:latest docker-frontend
-          docker save epibuilder-frontend:latest -o frontend-image.tar
-
-      - name: Upload frontend Docker image
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-docker-image
-          path: frontend-image.tar
-
-      - name: Build backend+core Docker image
-        run: |
-          mkdir docker-backend-core
-          cp -r build-artifacts/backend-build docker-backend-core/backend
-          cp -r build-artifacts/core-build docker-backend-core/core
-          cp -r pipeline docker-backend-core/pipeline
-          cp bepipred3.zip requirements.txt entrypoint.sh epibuilder.sh docker-backend-core/
-          cat <<EOF > docker-backend-core/Dockerfile
-          FROM ubuntu:22.04
-          ENV DEBIAN_FRONTEND=noninteractive
-          RUN apt-get update && \
-              apt-get install -y openjdk-21-jdk python3 python3-pip && \
-              apt-get clean && rm -rf /var/lib/apt/lists/*
-          WORKDIR /app
-          COPY backend/epibuilder-backend.jar epibuilder-backend.jar
-          COPY core/epibuilder-core.jar epibuilder-core.jar
-          COPY pipeline/ pipeline/
-          COPY bepipred3.zip requirements.txt entrypoint.sh epibuilder.sh ./
-          RUN pip3 install --upgrade pip && pip3 install -r requirements.txt
-          ENTRYPOINT ["bash", "entrypoint.sh"]
-          EOF
-          docker build -t epibuilder-backend-core:latest docker-backend-core
-          docker save epibuilder-backend-core:latest -o backend-core-image.tar
-
-      - name: Upload backend+core Docker image
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-core-docker-image
-          path: backend-core-image.tar
-
-      - name: Clean up temporary files
-        run: |
-          rm -rf docker-frontend docker-backend-core frontend-image.tar backend-core-image.tar
+            -f src/web/Dockerfile \
+            -t bioinfoufsc/epibuilder:latest \
+            -t bioinfoufsc/epibuilder:${{ github.sha }} \
+            src/web
