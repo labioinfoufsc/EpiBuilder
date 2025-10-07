@@ -1,0 +1,28 @@
+
+---- Running Parameters ----
+BepiPred-3.0 Threshold : 0.1512
+Min epitope length     : 10
+Max epitope length     : 30
+
+---- Softwares Threshold ----
+Emini                  : Default
+Parker                 : Default
+Chou Fosman            : Default
+Karplus Schulz         : Default
+Kolaskar               : Default
+
+---- Proteomes ----
+Alias          	File
+iedb           	/epibuilder/pipeline/db/iedb.fasta
+
+---- Blast ----
+Identity         : 90.0
+Cover            : 90.0
+Word size        : 4
+Task blastp-short: blastp-short
+
+---- Stats ----
+Processed proteins     : 7
+N-Glycosylated proteins : 1
+Identified epitopes    : 8
+N-Glycosylated epitopes: 1
