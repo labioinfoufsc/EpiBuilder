@@ -76,8 +76,8 @@ export class TopologyComponent {
           ? epitope.blasts
           : epitope.blasts ? [epitope.blasts] : [];
       } else {
-        this.epitopeTopologies = [];  // Caso não exista epítopo, esvazia o array de topologies
-        this.blasts = [];  // Caso não exista epítopo, esvazia o array de blasts
+        this.epitopeTopologies = [];
+        this.blasts = [];
       }
     });
   }

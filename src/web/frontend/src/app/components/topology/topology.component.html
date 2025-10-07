@@ -24,29 +24,31 @@
           </td>
         </tr>
 
-        <tr *ngFor="let row of epitopeTopologies">
+        <tr *ngFor="let row of epitopeTopologies; let i = index" [ngClass]="{ 'bg-transparent text-dark': i === 0 }">
           <td>{{ row.method }}</td>
           <td>{{ row.threshold === undefined ? '-' : row.threshold }}</td>
           <td>{{ row.avgScore === undefined ? '-' : row.avgScore }}</td>
           <td>{{ row.cover === undefined ? '-' : (row.cover | number:'1.2-2') }}</td>
-
+        
           <ng-container *ngFor="let char of getValidTopologyChars(row.topologyData)">
-            <td *ngIf="char !== ''" [class.bg-danger]="char === '.'" [class.text-danger]="char === '.'"
-              [class.bg-primary]="char !== '.'" [class.text-primary]="char !== '.'" class="text-center fw-bold p-2">
+            <td *ngIf="char !== ''" [class.bg-danger]="char === '.' && i !== 0" [class.text-danger]="char === '.' && i !== 0"
+              [class.bg-primary]="char !== '.' && i !== 0" [class.text-primary]="char !== '.' && i !== 0"
+              [class.text-dark]="i === 0" class="text-center fw-bold p-2">
               {{ char }}
             </td>
           </ng-container>
         </tr>
+
       </tbody>
     </table>
 
     <div class="text-muted small mt-2 me-2 text-end">
       <span
         style="display: inline-block; width: 12px; height: 12px; background-color: #0d6efd; border-radius: 2px; margin-right: 4px;"></span>
-      above cutoff point &nbsp;&nbsp;
+      above threshold point &nbsp;&nbsp;
       <span
         style="display: inline-block; width: 12px; height: 12px; background-color: #dc3545; border-radius: 2px; margin-right: 4px;"></span>
-      below cutoff point
+      below threshold point
     </div>
   </div>
   <br>
