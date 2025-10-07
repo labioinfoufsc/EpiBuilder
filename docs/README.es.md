@@ -32,51 +32,42 @@ Las áreas clave de aplicación incluyen:
 
 Ejecute este comando solo una vez para descargar la imagen de EpiBuilder:
 
-- **Si su sistema tiene una GPU NVIDIA con los controladores instalados (basado en Ubuntu):**
-
 ```bash
-docker pull bioinfoufsc/epibuilder:ubuntu-gpu
+docker pull bioinfoufsc/epibuilder:latest
 ````
-
-> **Nota:** Es necesario tener los controladores de GPU NVIDIA instalados para ejecutar este contenedor con soporte GPU.
-> Si está usando Linux y quiere usar EpiBuilder con soporte GPU, asegúrese de tener CUDA instalado:
-> [https://docs.nvidia.com/cuda/cuda-installation-guide-linux](https://docs.nvidia.com/cuda/cuda-installation-guide-linux)
-
-* **Si su sistema no tiene GPU NVIDIA (basado en Debian):**
-
-```bash
-docker pull bioinfoufsc/epibuilder:debian-cpu
-```
-
-> **Consejo:** En caso de duda, use la versión para CPU.
 
 ## Paso 2: Crear e Iniciar el Contenedor EpiBuilder (Solo una vez)
 
 Ejecute el siguiente comando **solo una vez** para crear el contenedor. Esto también lo iniciará.
 
-### Debian (CPU)
+### (CPU)
 
 ```bash
 docker run -it --name epibuilder \
   -p 80:80 \
   -p 8080:8080 \
   -p 5435:5432 \
-  bioinfoufsc/epibuilder:debian-cpu
+  bioinfoufsc/epibuilder:latest
 ```
 
 O
 
-### Ubuntu (GPU)
+### (GPU)
 
 ```bash
 docker run --gpus all -it --name epibuilder \
   -p 80:80 \
   -p 8080:8080 \
   -p 5432:5432 \
-  bioinfoufsc/epibuilder:ubuntu-gpu
+  bioinfoufsc/epibuilder:latest
 ```
 
-> **Consejo:** La opción `--name epibuilder` permite reutilizar el contenedor.
+> **Nota:** Es necesario tener los controladores de GPU NVIDIA instalados para ejecutar este contenedor con soporte GPU.
+> Si está usando Linux y quiere usar EpiBuilder con soporte GPU, asegúrese de tener CUDA instalado:
+> [https://docs.nvidia.com/cuda/cuda-installation-guide-linux](https://docs.nvidia.com/cuda/cuda-installation-guide-linux)
+
+> **Consejo 1:** En caso de duda, use la versión para CPU.
+> **Consejo 2:** La opción `--name epibuilder` permite reutilizar el contenedor.
 
 ## Paso 3: Acceder a la Interfaz Web
 

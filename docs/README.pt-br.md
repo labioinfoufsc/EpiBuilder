@@ -32,51 +32,42 @@ As principais áreas de aplicação incluem:
 
 Execute este comando apenas uma vez para baixar a imagem do EpiBuilder:
 
-- **Se o seu sistema possui GPU NVIDIA com drivers instalados (base Ubuntu):**
-
 ```bash
-docker pull bioinfoufsc/epibuilder:ubuntu-gpu
+docker pull bioinfoufsc/epibuilder:latest
 ````
-
-> **Nota:** É necessário ter os drivers da GPU NVIDIA instalados para rodar este contêiner com suporte a GPU.
-> Se estiver usando Linux e quiser utilizar o EpiBuilder com suporte a GPU, certifique-se de ter o CUDA instalado:
-> [https://docs.nvidia.com/cuda/cuda-installation-guide-linux](https://docs.nvidia.com/cuda/cuda-installation-guide-linux)
-
-* **Se o seu sistema não possui GPU NVIDIA (base Debian):**
-
-```bash
-docker pull bioinfoufsc/epibuilder:debian-cpu
-```
-
-> **Dica:** Em caso de dúvida, utilize a versão para CPU.
 
 ## Etapa 2: Criar e Iniciar o Contêiner EpiBuilder (Apenas Uma Vez)
 
 Execute o comando abaixo **apenas uma vez** para criar o contêiner. Isso também irá iniciá-lo.
 
-### Debian (CPU)
+### (CPU)
 
 ```bash
 docker run -it --name epibuilder \
   -p 80:80 \
   -p 8080:8080 \
   -p 5435:5432 \
-  bioinfoufsc/epibuilder:debian-cpu
+  bioinfoufsc/epibuilder:latest
 ```
 
 Ou
 
-### Ubuntu (GPU)
+### (GPU)
 
 ```bash
 docker run --gpus all -it --name epibuilder \
   -p 80:80 \
   -p 8080:8080 \
   -p 5432:5432 \
-  bioinfoufsc/epibuilder:ubuntu-gpu
+  bioinfoufsc/epibuilder:latest
 ```
 
-> **Dica:** A opção `--name epibuilder` permite reutilizar o contêiner.
+> **Nota:** É necessário ter os drivers da GPU NVIDIA instalados para rodar este contêiner com suporte a GPU.
+> Se estiver usando Linux e quiser utilizar o EpiBuilder com suporte a GPU, certifique-se de ter o CUDA instalado:
+> [https://docs.nvidia.com/cuda/cuda-installation-guide-linux](https://docs.nvidia.com/cuda/cuda-installation-guide-linux)
+
+> **Dica 1:** Em caso de dúvida, utilize a versão para CPU.
+> **Dica 2:** A opção `--name epibuilder` permite reutilizar o contêiner.
 
 ## Etapa 3: Acessar a Interface Web
 

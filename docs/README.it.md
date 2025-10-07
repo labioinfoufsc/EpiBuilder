@@ -32,53 +32,42 @@ Le principali aree di applicazione includono:
 
 Esegui questo comando una sola volta per scaricare l'immagine di EpiBuilder:
 
-- **Se il tuo sistema ha una GPU NVIDIA e i relativi driver (basato su Ubuntu):**
-
 ```bash
-docker pull bioinfoufsc/epibuilder:ubuntu-gpu
+docker pull bioinfoufsc/epibuilder:latest
 ````
-
-> **Nota:** È necessario avere installato i driver della GPU NVIDIA per eseguire questo container Docker basato su GPU.
-> Se utilizzi Linux e vuoi usare EpiBuilder con supporto GPU, assicurati di aver installato CUDA:
-> [https://docs.nvidia.com/cuda/cuda-installation-guide-linux](https://docs.nvidia.com/cuda/cuda-installation-guide-linux)
-
-  - **Se il tuo sistema non ha una GPU NVIDIA (basato su Debian):**
-
-<!-- end list -->
-
-```bash
-docker pull bioinfoufsc/epibuilder:debian-cpu
-```
-
-> **Suggerimento:** In caso di dubbio, utilizza la versione per CPU.
 
 ## Passaggio 2: Crea e avvia il container di EpiBuilder (una sola volta)
 
 Esegui il comando sottostante **una sola volta** per creare il container. Questo comando lo avvierà anche.
 
-### Debian (CPU)
+### (CPU)
 
 ```bash
 docker run -it --name epibuilder \
   -p 80:80 \
   -p 8080:8080 \
   -p 5435:5432 \
-  bioinfoufsc/epibuilder:debian-cpu
+  bioinfoufsc/epibuilder:latest
 ```
 
 O
 
-### Ubuntu (GPU)
+### (GPU)
 
 ```bash
 docker run --gpus all -it --name epibuilder \
   -p 80:80 \
   -p 8080:8080 \
   -p 5432:5432 \
-  bioinfoufsc/epibuilder:ubuntu-gpu
+  bioinfoufsc/epibuilder:latest
 ```
 
-> **Suggerimento:** L'opzione `--name epibuilder` garantisce che il container sia riutilizzabile.
+> **Nota:** È necessario avere installato i driver della GPU NVIDIA per eseguire questo container Docker basato su GPU.
+> Se utilizzi Linux e vuoi usare EpiBuilder con supporto GPU, assicurati di aver installato CUDA:
+> [https://docs.nvidia.com/cuda/cuda-installation-guide-linux](https://docs.nvidia.com/cuda/cuda-installation-guide-linux)
+
+> **Suggerimento 1:** In caso di dubbio, utilizza la versione per CPU.
+> **Suggerimento 2:** L'opzione `--name epibuilder` garantisce che il container sia riutilizzabile.
 
 ## Passaggio 3: Accedi all'interfaccia Web
 
