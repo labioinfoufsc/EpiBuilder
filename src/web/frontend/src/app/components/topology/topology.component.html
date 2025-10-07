@@ -6,6 +6,7 @@
   </div>
 
   <div class="table-responsive">
+
     <table class="table table-striped table-hover table-bordered" style="text-align: center;">
       <thead class="table-light">
         <tr>
@@ -38,8 +39,17 @@
         </tr>
       </tbody>
     </table>
-  </div>
 
+    <div class="text-muted small mt-2 me-2 text-end">
+      <span
+        style="display: inline-block; width: 12px; height: 12px; background-color: #0d6efd; border-radius: 2px; margin-right: 4px;"></span>
+      above cutoff point &nbsp;&nbsp;
+      <span
+        style="display: inline-block; width: 12px; height: 12px; background-color: #dc3545; border-radius: 2px; margin-right: 4px;"></span>
+      below cutoff point
+    </div>
+  </div>
+  <br>
   <div class="card-header custom-header">
     <b>BLAST of Protein ID <span style="color: #ffff00;">#{{ proteinId || 'N/A' }}</span> - Epitope N <span
         style="color: #ffff00;">#{{ epitopeId || 'N/A' }}</span> - using <span style="color: #ffff00;">{{
