@@ -35,18 +35,11 @@ Run this command only once to download the EpiBuilder image:
 - **If your system has an NVIDIA GPU and drivers (Ubuntu-based):**
 
 ```bash
-docker pull bioinfoufsc/epibuilder:ubuntu-gpu
+docker pull bioinfoufsc/epibuilder:latest
 ````
 > **Note:** You must have NVIDIA GPU drivers installed to run this GPU-based Docker container.  
 > If you're using Linux and want to use EpiBuilder with GPU support, please make sure you have CUDA installed:  
 > [https://docs.nvidia.com/cuda/cuda-installation-guide-linux](https://docs.nvidia.com/cuda/cuda-installation-guide-linux)
-
-
-* **If your system does not have a NVIDIA GPU (Debian-based):**
-
-```bash
-docker pull bioinfoufsc/epibuilder:debian-cpu
-```
 
 > **Tip:** If unsure, use the CPU version.
 
@@ -54,24 +47,24 @@ docker pull bioinfoufsc/epibuilder:debian-cpu
 
 Run the command below **only once** to create the container. This will also start it.
 
-### Debian (CPU)
+### (CPU)
 
 ```bash
 docker run -it --name epibuilder \
   -p 80:80 \
   -p 8080:8080 \
   -p 5435:5432 \
-  bioinfoufsc/epibuilder:debian-cpu
+  bioinfoufsc/epibuilder:latest
 ```
 Or
-### Ubuntu (GPU)
+### (GPU)
 
 ```bash
 docker run --gpus all -it --name epibuilder \
   -p 80:80 \
   -p 8080:8080 \
   -p 5432:5432 \
-  bioinfoufsc/epibuilder:ubuntu-gpu
+  bioinfoufsc/epibuilder:latest
 ```
 
 > **Tip:** The `--name epibuilder` option ensures the container is reusable.
