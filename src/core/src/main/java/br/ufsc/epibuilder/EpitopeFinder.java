@@ -508,7 +508,7 @@ public class EpitopeFinder {
 
     public static String generateReportByProtein(ArrayList<Protein> proteinList) {
         StringBuilder stParameters = new StringBuilder();
-        stParameters.append("Id\tEpitopes\tN-Glyc\n");
+        stParameters.append("Id\tDescription\tEpitopes\tN-Glyc\n");
         for (Protein re : proteinList) {
             int nglycLocal = 0;
 
@@ -517,7 +517,7 @@ public class EpitopeFinder {
                     nglycLocal++;
                 }
             }
-            stParameters.append(String.format("%s\t%s\t%s\n", re.getId(), re.getEpitopes().size(), nglycLocal));
+            stParameters.append(String.format("%s\t%s\t%s\t%s\n", re.getId(), re.getDescription(), re.getEpitopes().size(), nglycLocal));
         }
         return stParameters.toString();
     }
@@ -533,17 +533,6 @@ public class EpitopeFinder {
 
     }
 
-    public static String generateEpitopeList(TreeSet<Report> reportList) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("Protein Id\tEpitopes\tStart\tEnd\tN-glyc\tN-Glyc motifs");
-        sb.append("\n");
-        for (Report report : reportList) {
-            sb.append(String.format("%s\t%s\t%s\t%s\t%s\t%s\n", report.getProteinId(), report.getEpitope(),
-                    report.getStart(), report.getEndEpitope(), report.getnGlyc(), report.getNglycmotif()));
-        }
-        return sb.toString();
-    }
-
     public static String generateReportFastaEpitope(ArrayList<Report> reportList) {
         StringBuilder sb = new StringBuilder();
         int count = 1;
@@ -555,14 +544,15 @@ public class EpitopeFinder {
 
     public static String generateReportByTopology(ArrayList<Report> reportList) {
         StringBuilder sb = new StringBuilder();
-        sb.append("N\tId\t" + StringUtils.leftPad("Method", 15, ' ')
+        sb.append("N\tId\tDescription\t" + StringUtils.leftPad("Method", 15, ' ')
                 + "\tThreshold\tAvg Score\tCover\tEpitope\tStart\tEnd\tN-Glyc\tN-Glyc-Count\tN-Glyc-Motifs\tLength\tkDa\tI.P\tAvg Hydropathy\tAvg Cover");
         sb.append("\n");
         int count = 1;
         for (Report report : reportList) {
-            sb.append(String.format("%s\t%s\t%s\t%.2f\t%.2f\t-\t%s",
+            sb.append(String.format("%s\t%s\t%s\t%s\t%.2f\t%.2f\t-\t%s",
                     count++,
                     report.getProteinId(),
+                    report.getDescription(),
                     StringUtils.leftPad(SoftwareBcellEnum.BEPIPRED.description, 15, ' '),
                     Parameters.THRESHOLD_BEPIPRED,
                     report.getAvgBepipredScore(),
@@ -581,7 +571,7 @@ public class EpitopeFinder {
                     report.getAvgCover()));
 
             for (EpitopeReport epitopeReport : report.getEpitopeReports()) {
-                sb.append(String.format("\t\t%s\t%.2f\t%.2f\t%.2f\t%s%s\n",
+                sb.append(String.format("\t\t\t%s\t%.2f\t%.2f\t%.2f\t%s%s\n",
                         StringUtils.leftPad(epitopeReport.getMethod().description, 15, ' '),
                         epitopeReport.getThreshold(),
                         epitopeReport.getAvgScore(),
@@ -590,34 +580,24 @@ public class EpitopeFinder {
                         StringUtils.leftPad("\t", 10, ' ')));
             }
             if (!report.getEpitopeReports().isEmpty()) {
-                sb.append(String.format("\t\t%s\t-\t-\t%.2f\t%s%s\n",
+                sb.append(String.format("\t\t\t%s\t-\t-\t%.2f\t%s%s\n",
                         StringUtils.leftPad("All matches", 15, ' '),
                         report.getTopologyCoverValidation(),
                         report.getTopologyValidation(),
                         StringUtils.leftPad("\t", 10, ' ')));
             }
-            sb.append(String.format("\t\t%s\t-\t-\t%.2f\t%s%s\n",
+            sb.append(String.format("\t\t\t%s\t-\t-\t%.2f\t%s%s\n",
                     StringUtils.leftPad("N-Glyc", 15, ' '),
                     report.getnGlycTopology().getValue(),
                     report.getnGlycTopology().getDescription(),
                     StringUtils.leftPad("\t", 10, ' ')));
-            sb.append(String.format("\t\t%s\t-\t%.2f\t-\t%s%s\n",
+            sb.append(String.format("\t\t\t%s\t-\t%.2f\t-\t%s%s\n",
                     StringUtils.leftPad("Hydropathy", 15, ' '),
                     report.getAvgHydropathy(),
                     report.getHydropathyTopology().getDescription(),
                     StringUtils.leftPad("\t", 10, ' ')));
         }
         return sb.toString();
-    }
-
-    public static String getNglycTopology(Report report) {
-        String res = "";
-        String sequence = report.getEpitope();
-        ArrayList<Motif> motifs = report.getnGlycMotifs();
-        for (int i = 0; i < sequence.length(); i++) {
-
-        }
-        return res;
     }
 
     public static String generateReportDetailed(ArrayList<Report> reportList) {
@@ -651,7 +631,7 @@ public class EpitopeFinder {
 
         StringBuilder sb = new StringBuilder();
         sb.append(
-                "N\tId\tEpitope\tStart\tEnd\tN-Glyc\tN-Glyc-Count\tN-Glyc-Motifs\tLength\tMW(kDa)\tI.P\tHydropathy\tAll Matches Cover\tAvg Cover\tBepiPred3"
+                "N\tId\tDescription\tEpitope\tStart\tEnd\tN-Glyc\tN-Glyc-Count\tN-Glyc-Motifs\tLength\tMW(kDa)\tI.P\tHydropathy\tAll Matches Cover\tAvg Cover\tBepiPred3"
                         + stMethod + stOrganismCount + "\n");
         int count = 1;
         for (Report report : reportList) {
@@ -677,9 +657,28 @@ public class EpitopeFinder {
                 stMethodScore += String.format("\t%.2f", epitopeReport.getAvgScore());
             }
 
-            sb.append(String.format("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f%s%s\n",
+            sb.append(String.format(
+                            "%s\t" +
+                            "%s\t" +
+                            "%s\t" +
+                            "%s\t" +
+                            "%s\t" +
+                            "%s\t" +
+                            "%s\t" +
+                            "%s\t" +
+                            "%s\t" +
+                            "%s\t" +
+                            "%.2f\t" +
+                            "%.2f\t" +
+                            "%.2f\t" +
+                            "%.2f\t" +
+                            "%.2f\t" +
+                            "%.2f" +
+                            "%s" +
+                            "%s\n",
                     count++,
                     report.getProteinId(),
+                    report.getDescription(),
                     report.getEpitope(),
                     report.getStart(),
                     report.getEndEpitope(),
@@ -736,8 +735,9 @@ public class EpitopeFinder {
                             break;
                     }
                 }
-                String res = String.format("%s\t%s\t%s\t%.2f%s\t%.2f\t%.2f\t%.2f\n",
+                String res = String.format("%s\t%s\t%s\t%s\t%.2f%s\t%.2f\t%.2f\t%.2f\n",
                         proteina.getId(),
+                        proteina.getDescription(),
                         aminoEpitopo.getPosition() + 1,
                         aminoEpitopo.getAmino(),
                         aminoEpitopo.getBepipred2(),

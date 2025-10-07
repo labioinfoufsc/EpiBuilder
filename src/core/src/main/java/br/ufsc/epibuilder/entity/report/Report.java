@@ -6,6 +6,7 @@
 package br.ufsc.epibuilder.entity.report;
 
 import br.udesc.cav.tese.glycosylation.Motif;
+import br.ufsc.epibuilder.Parameters;
 import br.ufsc.epibuilder.entity.Topology;
 import java.util.ArrayList;
 
@@ -254,5 +255,10 @@ public class Report {
         }
 
         return e / total;
+    }
+
+    public String getDescription() {
+        String key = proteinId.trim();
+        return Parameters.MAP_PROTEIN_DESCRIPTION.getOrDefault(key, "-");
     }
 }

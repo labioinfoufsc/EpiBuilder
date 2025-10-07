@@ -15,12 +15,8 @@ public class Protein implements Comparable<Protein> {
     private ArrayList<Epitopo> epitopes = new ArrayList<>();
     private String description;
 
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
     public String getDescription() {
-        return description;
+        return Parameters.MAP_PROTEIN_DESCRIPTION.getOrDefault(id, "-");
     }
 
     public String getNglycMotifsAsString() {
@@ -179,4 +175,5 @@ public class Protein implements Comparable<Protein> {
         }
         return threshold / (aminoEpitopos.size() - (end + start));
     }
+
 }

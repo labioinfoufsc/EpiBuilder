@@ -7,6 +7,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.concurrent.Callable;
 
+import br.ufsc.epibuilder.converter.ProteinDescriptionReader;
 import org.apache.commons.lang3.StringUtils;
 
 import br.ufsc.epibuilder.EpitopeFinder;
@@ -22,6 +23,7 @@ public class Main implements Callable<Integer> {
 
     @Option(names = { "-i", "--input" }, required = true, description = "Input file")
     File input;
+
     @Option(names = { "-f",
             "--format" }, required = true, description = "Input file type: ${COMPLETION-CANDIDATES} \ncsv - BepiPred-3.0 generated file (default)"
                     +
@@ -89,6 +91,9 @@ public class Main implements Callable<Integer> {
             "--proteomes" }, required = false, description = "Input proteome files format (separated by :) <alias1>=<fasta1>:<alias2>=<fasta2>\nUse this option to search in one or more proteomes. This option can be used with the p1-p6 option.")
     String proteomes;
 
+    @Option(names = { "-d", "--description" }, required = false, description = "Input file with id\tproteins to join with final result")
+    File proteinsDescription;
+
     @Override
     public Integer call() throws IOException {
         Parameters.FASTA = input;
@@ -148,6 +153,7 @@ public class Main implements Callable<Integer> {
             Parameters.PROTEOMES = proteomeFiles;
         }
         Parameters.OUTPUT_FILE = false;
+        Parameters.MAP_PROTEIN_DESCRIPTION = ProteinDescriptionReader.readTsvToMap(proteinsDescription);
         EpitopeFinder.process();
         return 0;
     }

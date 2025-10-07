@@ -5,6 +5,7 @@ import br.ufsc.epibuilder.entity.SoftwareBcellEnum;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 
 /*
@@ -40,6 +41,7 @@ public class Parameters {
     public static String MAKEBLASTDB_PATH = "makeblastdb";
     public static String BLASTP_PATH = "blastp";
     public static File FASTA;
+    public static HashMap<String, String> MAP_PROTEIN_DESCRIPTION = new HashMap<>();
 
     public enum SO {
         windows, linux, macos
