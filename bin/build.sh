@@ -5,8 +5,8 @@ project_bepipred3="../src/bepipred3"
 project_core="../src/core"
 project_root="../src/web"
 
-dockerfile_bepipred3="$project_root/Dockerfile"
-dockerfile_core="$project_root/Dockerfile"
+dockerfile_bepipred3="$project_bepipred3/Dockerfile"
+dockerfile_core="$project_core/Dockerfile"
 dockerfile="$project_root/Dockerfile"
 
 image_bepipred3_name="bioinfoufsc/bepipred3"

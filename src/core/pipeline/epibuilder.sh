@@ -103,6 +103,8 @@ if [[ -z "$INPUT_FILE" ]]; then
     exit 1
 fi
 
+[[ -n "$BASENAME" ]] && mkdir -p "$BASENAME/reports"
+
 # Build Nextflow command with all parameters
 NF_CMD="nextflow run /epibuilder/pipeline/main.nf --input_file \"$INPUT_FILE\" --search \"$SEARCH\""
 
@@ -115,5 +117,12 @@ NF_CMD+=" --cover \"$COVER\""
 NF_CMD+=" --identity \"$IDENTITY\""
 NF_CMD+=" --word-size \"$WORD_SIZE\""
 
+# Add Nextflow reports if BASENAME is defined
+[[ -n "$BASENAME" ]] && NF_CMD+=" \
+    -with-report $BASENAME/reports/report.html \
+    -with-trace $BASENAME/reports/trace.txt \
+    -with-timeline $BASENAME/reports/timeline.html \
+    -with-dag $BASENAME/reports/flowchart.png"
+    
 # Execute
 eval $NF_CMD
