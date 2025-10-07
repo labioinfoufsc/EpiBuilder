@@ -20,5 +20,6 @@ export class EpitopeTaskData {
   minIdentityCutoff?: number;
   maxIdentityCutoff?: number;
   wordSize?: number;
+  status?: string;
 }
 

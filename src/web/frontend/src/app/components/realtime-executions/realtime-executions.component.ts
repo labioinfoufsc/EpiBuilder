@@ -19,11 +19,12 @@ export class RealtimeExecutionsComponent implements OnInit, OnDestroy {
   modalVisible: boolean = false;
   currentProcess: EpitopeTaskData | undefined;
 
-  private tableUpdateInterval = 60000;
-  private logUpdateInterval = 10000;
+  private tableUpdateInterval = 30000; 
+  private logUpdateInterval = 5000;   
   private tableUpdateTimer: any;
   private logUpdateTimer: any;
   private elapsedTimeUpdateTimer: any;
+  private isUpdatingLog = false;
 
   @ViewChild('logContent') private logContentRef!: ElementRef;
 
@@ -32,40 +33,35 @@ export class RealtimeExecutionsComponent implements OnInit, OnDestroy {
     private loginService: LoginService
   ) { }
 
-  ngOnInit() {
+  ngOnInit(): void {
     this.userId = this.loginService.getUser()?.id;
     if (this.userId !== undefined) {
       this.loadTasks();
-
       this.startTableUpdates();
+      this.startElapsedTimeUpdates();
 
       this.taskListChangedSubscription = this.epitopesService.taskListChanged$.subscribe(() => {
         this.loadTasks();
       });
-
-      this.startElapsedTimeUpdates();
     } else {
       console.error("User ID is undefined");
     }
   }
 
-  ngOnDestroy() {
+  ngOnDestroy(): void {
     this.cleanUpIntervals();
-    if (this.taskListChangedSubscription) {
-      this.taskListChangedSubscription.unsubscribe();
-    }
+    this.taskListChangedSubscription?.unsubscribe();
   }
 
   private scrollToBottom(): void {
-    if (this.logContentRef?.nativeElement) {
-      const element = this.logContentRef.nativeElement;
+    const element = this.logContentRef?.nativeElement;
+    if (element) {
       element.scrollTop = element.scrollHeight;
     }
   }
 
   private startTableUpdates(): void {
     this.cleanUpTableInterval();
-
     this.tableUpdateTimer = setInterval(() => {
       this.loadTasks();
     }, this.tableUpdateInterval);
@@ -79,7 +75,6 @@ export class RealtimeExecutionsComponent implements OnInit, OnDestroy {
 
   private updateElapsedTime(): void {
     const now = new Date();
-
     this.processes.forEach(process => {
       process.elapsedTime = this.calculateElapsedTime(process.executionDate, now);
     });
@@ -87,32 +82,24 @@ export class RealtimeExecutionsComponent implements OnInit, OnDestroy {
 
   private startLogUpdates(): void {
     this.cleanUpLogInterval();
-
     this.logUpdateTimer = setInterval(() => {
       this.updateLogContent();
     }, this.logUpdateInterval);
-
   }
 
   private cleanUpTableInterval(): void {
-    if (this.tableUpdateTimer) {
-      clearInterval(this.tableUpdateTimer);
-      this.tableUpdateTimer = undefined;
-    }
+    clearInterval(this.tableUpdateTimer);
+    this.tableUpdateTimer = undefined;
   }
 
   private cleanUpLogInterval(): void {
-    if (this.logUpdateTimer) {
-      clearInterval(this.logUpdateTimer);
-      this.logUpdateTimer = undefined;
-    }
+    clearInterval(this.logUpdateTimer);
+    this.logUpdateTimer = undefined;
   }
 
   private cleanUpElapsedTimeInterval(): void {
-    if (this.elapsedTimeUpdateTimer) {
-      clearInterval(this.elapsedTimeUpdateTimer);
-      this.elapsedTimeUpdateTimer = undefined;
-    }
+    clearInterval(this.elapsedTimeUpdateTimer);
+    this.elapsedTimeUpdateTimer = undefined;
   }
 
   private cleanUpIntervals(): void {
@@ -125,36 +112,51 @@ export class RealtimeExecutionsComponent implements OnInit, OnDestroy {
     this.currentProcess = process;
     this.modalVisible = true;
     this.updateLogContent();
-
     this.startLogUpdates();
   }
 
   closeModal(): void {
     this.modalVisible = false;
     this.cleanUpLogInterval();
+    this.loadTasks(); // força atualização ao fechar
   }
 
   private updateLogContent(): void {
-    if (!this.currentProcess?.id) return;
+    if (!this.currentProcess?.id || this.isUpdatingLog) return;
+
+    this.isUpdatingLog = true;
 
     this.epitopesService.getTaskLog(this.currentProcess.id).subscribe({
       next: (logBlob: Blob) => {
         const reader = new FileReader();
         reader.onload = () => {
-          this.logText = reader.result as string;
+          const logText = reader.result as string;
+          this.logText = logText;
           setTimeout(() => this.scrollToBottom(), 0);
+
+          if (
+            this.currentProcess &&
+            logText.includes('Your results are in') &&
+            this.currentProcess.status !== 'COMPLETED'
+          ) {
+            this.loadTasks();
+            this.currentProcess.status = 'COMPLETED';
+          }
+
+          this.isUpdatingLog = false;
         };
         reader.onerror = (error) => {
           this.logText = 'Error loading log: ' + error;
+          this.isUpdatingLog = false;
         };
         reader.readAsText(logBlob);
       },
       error: (err: { error: any; message: any }) => {
         this.logText = 'Error loading log: ' + (err.error || err.message);
+        this.isUpdatingLog = false;
       }
     });
   }
-
 
   loadTasks(): void {
     if (this.userId === undefined) {
