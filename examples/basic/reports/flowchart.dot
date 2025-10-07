@@ -1,0 +1,27 @@
+digraph "flowchart" {
+rankdir=TB;
+v0 [shape=point,label="",fixedsize=true,width=0.1];
+v1 [label="run_bepipred"];
+v0 -> v1 [label="input_file"];
+
+v1 [label="run_bepipred"];
+v3 [label="run_epibuilder"];
+v1 -> v3;
+
+v2 [shape=point,label="",fixedsize=true,width=0.1];
+v3 [label="run_epibuilder"];
+v2 -> v3 [label="epibuilder_jar"];
+
+v3 [label="run_epibuilder"];
+v4 [label="copy_results"];
+v3 -> v4;
+
+v4 [label="copy_results"];
+v5 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="view"];
+v4 -> v5 [label="-"];
+
+v5 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="view"];
+v6 [shape=point];
+v5 -> v6;
+
+}

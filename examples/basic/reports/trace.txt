@@ -1,0 +1,4 @@
+task_id	hash	native_id	name	status	exit	submit	duration	realtime	%cpu	peak_rss	peak_vmem	rchar	wchar
+1	25/d91d10	222	run_bepipred (bepipred)	COMPLETED	0	2025-10-07 00:45:00.680	16.1s	16.1s	640.8%	5.2 GB	9.3 GB	2.6 GB	73.9 MB
+2	29/65090a	953	run_epibuilder (epibuilder)	COMPLETED	0	2025-10-07 00:45:16.909	3.6s	3.6s	161.6%	416.2 MB	12.3 GB	58.7 MB	35.4 MB
+3	c9/b6092d	1343	copy_results	COMPLETED	0	2025-10-07 00:45:20.547	108ms	81ms	118.8%	5.5 MB	8.1 MB	34.8 MB	34.4 MB
