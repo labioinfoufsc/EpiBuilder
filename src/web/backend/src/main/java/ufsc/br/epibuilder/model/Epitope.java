@@ -32,6 +32,9 @@ public class Epitope {
     private String epitopeId;
 
     @Column
+    private String description;
+
+    @Column
     private Long N;
 
     /**
@@ -92,6 +95,18 @@ public class Epitope {
     private Double hydropathy;
 
     /**
+     * All matches cover.
+     */
+    @Column
+    private Double allMatchesCover;
+
+    /**
+     * Avg cover.
+     */
+    @Column
+    private Double avgCover;
+
+    /**
      * The isoelectric point (pI) of the epitope.
      */
     @Column
@@ -120,6 +135,12 @@ public class Epitope {
      */
     @Column
     private Integer nGlycCount;
+
+    /**
+     * The motifs of potential N-glycosylation sites.
+     */
+    @Column
+    private String nGlycMotifs;
 
     /**
      * The Karplus-Schulz flexibility prediction score.

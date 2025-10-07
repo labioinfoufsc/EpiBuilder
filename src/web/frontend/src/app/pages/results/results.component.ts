@@ -26,6 +26,7 @@ export class ResultsComponent implements OnInit {
   columns = [
     { key: "n", label: "N" },
     { key: "id", label: "Protein ID" },
+    { key: "description", label: "Description" },
     { key: "epitopeId", label: "Epitope" },
     { key: "start", label: "Start" },
     { key: "end", label: "End" },

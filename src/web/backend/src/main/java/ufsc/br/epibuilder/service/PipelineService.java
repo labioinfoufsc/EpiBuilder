@@ -406,21 +406,25 @@ public class PipelineService {
 
             epitope.setN(Long.parseLong(columns[0]));
             epitope.setEpitopeId(columns[1]);
-            epitope.setEpitope(columns[2]);
-            epitope.setStart(Integer.parseInt(columns[3]));
-            epitope.setEndEpitope(Integer.parseInt(columns[4]));
-            epitope.setNGlyc(columns[5]);
-            epitope.setNGlycCount(Integer.parseInt(columns[6]));
-            epitope.setLength(Integer.parseInt(columns[8]));
-            epitope.setMolecularWeight(Double.parseDouble(columns[9]));
-            epitope.setIsoelectricPoint(Double.parseDouble(columns[10]));
-            epitope.setHydropathy(Double.parseDouble(columns[11]));
-            epitope.setBepiPred3(Double.parseDouble(columns[14]));
-            epitope.setEmini(Double.parseDouble(columns[15]));
-            epitope.setKolaskar(Double.parseDouble(columns[16]));
-            epitope.setChouFosman(Double.parseDouble(columns[17]));
-            epitope.setKarplusSchulz(Double.parseDouble(columns[18]));
-            epitope.setParker(Double.parseDouble(columns[19]));
+            epitope.setDescription(columns[2]);
+            epitope.setEpitope(columns[3]);
+            epitope.setStart(Integer.parseInt(columns[4]));
+            epitope.setEndEpitope(Integer.parseInt(columns[5]));
+            epitope.setNGlyc(columns[6]);
+            epitope.setNGlycCount(Integer.parseInt(columns[7]));
+            epitope.setNGlycMotifs(columns[8]);
+            epitope.setLength(Integer.parseInt(columns[9]));
+            epitope.setMolecularWeight(Double.parseDouble(columns[10]));
+            epitope.setIsoelectricPoint(Double.parseDouble(columns[11]));
+            epitope.setHydropathy(Double.parseDouble(columns[12]));
+            epitope.setAllMatchesCover(Double.parseDouble(columns[13]));
+            epitope.setAvgCover(Double.parseDouble(columns[14]));
+            epitope.setBepiPred3(Double.parseDouble(columns[15]));
+            epitope.setEmini(Double.parseDouble(columns[16]));
+            epitope.setKolaskar(Double.parseDouble(columns[17]));
+            epitope.setChouFosman(Double.parseDouble(columns[18]));
+            epitope.setKarplusSchulz(Double.parseDouble(columns[19]));
+            epitope.setParker(Double.parseDouble(columns[20]));
             epitope.setEpitopeTaskData(task);
 
             epitopes.add(epitope);
@@ -452,11 +456,11 @@ public class PipelineService {
 
             if (!parts[0].trim().isEmpty()) {
                 currentN = Long.parseLong(parts[0]);
-                String methodName = parts[2].trim();
+                String methodName = parts[3].trim();
                 EpitopeTopology topology = createTopology(currentN, parts, methodName);
                 topologies.add(topology);
             } else {
-                String methodName = parts[2].trim();
+                String methodName = parts[3].trim();
                 EpitopeTopology topology = createTopology(currentN, parts, methodName);
                 topologies.add(topology);
             }
@@ -479,6 +483,7 @@ public class PipelineService {
 
             // Handle special cases
             if (cleanedMethodName.equals("BepiPred-3.0")) {
+                topology.setDescription(parts[2]);
                 cleanedMethodName = "BepiPred";
             }
 

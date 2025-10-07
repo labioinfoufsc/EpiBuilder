@@ -3,6 +3,7 @@ import { EpitopeTopology } from "./EpitopeTopology";
 
 export class Epitope {
   id?: string;
+  description?: string;
   blasts?: Blast[];
   n?: number;
   epitopeId?: string;

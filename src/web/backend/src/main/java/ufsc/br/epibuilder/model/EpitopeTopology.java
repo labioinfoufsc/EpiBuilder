@@ -44,6 +44,9 @@ public class EpitopeTopology {
     @Column
     private Long N;
 
+    @Column
+    private String description;
+
     /**
      * Associated epitope to which this topology belongs.
      * Uses LAZY loading to optimize performance.
