@@ -1,6 +1,11 @@
 package ufsc.br.epibuilder.controller;
 
 import lombok.RequiredArgsConstructor;
+
+import java.time.LocalDateTime;
+import java.util.Map;
+import java.util.HashMap;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ufsc.br.epibuilder.dto.UserDTO;
@@ -24,7 +29,8 @@ public class AuthController {
      * Handles user login requests.
      *
      * @param request the user credentials for authentication
-     * @return a ResponseEntity containing the authenticated user data or an error message
+     * @return a ResponseEntity containing the authenticated user data or an error
+     *         message
      */
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody User request) {
@@ -39,4 +45,19 @@ public class AuthController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    /**
+     * Endpoint to check if backend is ready.
+     *
+     * @return a simple confirmation message
+     */
+    @GetMapping("/status")
+    public ResponseEntity<Map<String, Object>> checkBackendStatus() {
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "ready");
+        response.put("message", "Backend is ready");
+        response.put("timestamp", LocalDateTime.now());
+        return ResponseEntity.ok(response);
+    }
+
 }
