@@ -6,4 +6,5 @@ export class Database {
   date?: Date;
   sourceType?: string;
   dbFile?: File;
+  downloadUrl?: string;
 }

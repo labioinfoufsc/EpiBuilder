@@ -79,6 +79,26 @@ public class DatabaseController {
         }
     }
 
+    @GetMapping("/download/{fileName}")
+    public ResponseEntity<byte[]> downloadFile(@PathVariable String fileName) {
+        try {
+            Path filePath = Paths.get("/pipeline/db", fileName); // caminho fixo atualizado
+            if (!Files.exists(filePath)) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            }
+
+            byte[] fileBytes = Files.readAllBytes(filePath);
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .header("Content-Disposition", "attachment; filename=\"" + fileName + "\"")
+                    .body(fileBytes);
+        } catch (IOException e) {
+            log.error("Erro ao baixar o arquivo: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Database> create(
             @RequestPart("data") Database database,

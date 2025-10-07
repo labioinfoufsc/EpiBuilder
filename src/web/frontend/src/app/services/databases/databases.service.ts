@@ -12,6 +12,11 @@ export class DatabasesService {
 
   constructor(private http: HttpClient) { }
 
+  download(fileName: string): Observable<Blob> {
+    const url = `${this.apiUrl}/download/${encodeURIComponent(fileName)}`;
+    return this.http.get(url, { responseType: 'blob' });
+  }
+  
   getDatabases(): Observable<Database[]> {
     return this.http.get<Database[]>(this.apiUrl);
   }

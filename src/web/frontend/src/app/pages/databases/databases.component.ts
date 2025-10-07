@@ -1,8 +1,9 @@
 import { Component, ElementRef, ViewChild } from '@angular/core';
+import { NgForm } from '@angular/forms';
 import { Modal } from 'bootstrap';
+import { saveAs } from 'file-saver';
 import { Database } from '../../models/Database';
 import { DatabasesService } from '../../services/databases/databases.service';
-
 @Component({
   selector: 'app-databases',
   standalone: false,
@@ -29,6 +30,17 @@ export class DatabasesComponent {
     this.loadDatabases();
   }
 
+  downloadFile(file: Database): void {
+    this.databasesService.download(file.fileName).subscribe({
+      next: (blob: Blob) => {
+        saveAs(blob, file.fileName);
+      },
+      error: (err) => {
+        console.error('Error while downloading file:', err);
+      }
+    });
+  }
+
   onFileChange(event: Event): void {
     const target = event.target as HTMLInputElement;
     if (target.files && target.files.length > 0) {
@@ -36,26 +48,24 @@ export class DatabasesComponent {
     }
   }
 
-  onSubmit(): void {
-
+  onSubmit(databaseForm: NgForm): void {
     this.isLoading = true;
 
-    if (!this.selectedFile) {
-      this.showAlert("Please select a file", "danger");
+    if (!this.selectedFile || !databaseForm.value.alias) {
+      this.showAlert("Please select a file and provide an alias", "danger");
       this.isLoading = false;
       return;
     }
 
-    const originalName = this.selectedFile.name;
-    const fileNameWithoutExtension = originalName.replace(/\.[^/.]+$/, "");
-    const formattedAlias = fileNameWithoutExtension
+    const alias = databaseForm.value.alias.trim();
+    const sanitizedAlias = alias
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-zA-Z0-9_-]/g, '_')
       .toLowerCase();
 
     const databaseToUpload: Partial<Database> = {
-      alias: formattedAlias,
+      alias: sanitizedAlias,
       fileName: this.selectedFile.name,
     };
 
@@ -65,25 +75,27 @@ export class DatabasesComponent {
         if (res) {
           this.showAlert("Database successfully uploaded!", "success");
           this.loadDatabases();
+          this.resetForm();
         }
       },
       error: (err) => {
         this.isLoading = false;
-        if (err.status) {
-          this.showAlert(err.status, "danger");
-        }
+        this.showAlert("Error uploading database", "danger");
+        console.error(err);
       }
     });
   }
 
-  resetForm() {
+  resetForm(): void {
     this.newDatabase = new Database();
     this.selectedFile = undefined!;
     this.alertMessage = null;
+
     if (this.fileInput) {
       this.fileInput.nativeElement.value = '';
     }
   }
+
 
   deleteDatabase(): void {
     if (!this.fileToDelete) return;
@@ -126,8 +138,6 @@ export class DatabasesComponent {
       this.alertMessage = null;
     }, 5000);
   }
-
-
 
   loadDatabases(): void {
     this.databasesService.getDatabases().subscribe({

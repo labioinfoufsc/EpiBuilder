@@ -9,16 +9,26 @@
           {{ alertMessage }}
           <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
-        <form (ngSubmit)="onSubmit()" #databaseForm="ngForm">
+        <form (ngSubmit)="onSubmit(databaseForm)" #databaseForm="ngForm">
           <div class="mb-3">
             <label for="file" class="form-label" style="font-weight: bold;">Upload FASTA File</label>
             <input #fileInput type="file" class="form-control" id="file" (change)="onFileChange($event)" required
-              accept=".fasta,.csv,.tsv" name="file">
+              accept=".fasta,.csv,.tsv" name="file" ngModel>
             <small class="text-muted d-block mt-1">
               <i style="color: #ffc107 !important" class="fa-solid fa-circle-info"></i>
               Allowed Formats: CSV, FASTA
             </small>
           </div>
+
+          <div class="mb-3">
+            <label for="alias" class="form-label" style="font-weight: bold;">Alias</label>
+            <input type="text" class="form-control" id="alias" name="alias" ngModel required>
+            <small class="text-muted d-block mt-1">
+              <i style="color: #ffc107 !important" class="fa-solid fa-circle-info"></i>
+              Provide a descriptive alias for the uploaded file
+            </small>
+          </div>
+
           <button type="submit" class="btn btn-primary" [disabled]="!databaseForm.form.valid || isLoading">
             <i class="fa-solid fa-floppy-disk"></i>&nbsp;
             <span *ngIf="!isLoading">Save</span>
@@ -26,31 +36,42 @@
           </button>
         </form>
 
+
         <table class="table table-striped mt-3" style="text-align: center;">
           <thead>
             <tr>
-              <th *ngFor="let column of columns">{{column}}</th>
+              <th *ngFor="let column of columns">{{ column }}</th>
+              <th>Download</th> <!-- Nova coluna -->
             </tr>
           </thead>
           <tbody>
             <tr *ngIf="files.length === 0">
-              <td class="text-center text-muted" [attr.colspan]="columns.length">
+              <td class="text-center text-muted" [attr.colspan]="columns.length + 1">
                 No data available
               </td>
             </tr>
             <tr *ngFor="let file of files">
-              <td>{{ file.fileName }}</td>
+              <td>{{ file.alias }}</td>
               <td>{{ file.date | date: 'dd-MM-yyyy' }}</td>
               <td>
-                <a *ngIf="!file.fileName.includes('iedb')" (click)="confirmDelete(file)" title="Delete task">
-                  <i class="fas fa-trash" style="color: #dc3545 !important; cursor: pointer;"></i>
-                </a>
-                <p *ngIf="file.fileName.includes('iedb')">None<br><span style="font-style: italic;">Default
-                    database</span></p>
+                <ng-container *ngIf="file.fileName.includes('iedb') && file.alias?.includes('iedb'); else showDelete">
+                  <p>None<br><span style="font-style: italic;">Default database</span></p>
+                </ng-container>
+
+                <ng-template #showDelete>
+                  <a (click)="confirmDelete(file)" title="Delete task">
+                    <i class="fas fa-trash" style="color: #dc3545 !important; cursor: pointer;"></i>
+                  </a>
+                </ng-template>
+              </td>
+
+              <td>
+                <button class="btn btn-link p-0" (click)="downloadFile(file)" title="Download file">
+                  <i class="fas fa-download" style="color:white !important; cursor: pointer;"></i>
+                </button>
               </td>
             </tr>
           </tbody>
-
         </table>
 
       </div>
