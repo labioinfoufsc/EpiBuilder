@@ -15,6 +15,7 @@ RUN apt-get update && \
     dpkg-reconfigure --frontend noninteractive tzdata && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
+RUN pip install biopython
 
 RUN wget -P /tmp https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.17.0+-x64-linux.tar.gz && \
     tar -xzf /tmp/ncbi-blast-2.17.0+-x64-linux.tar.gz -C /tmp && \
