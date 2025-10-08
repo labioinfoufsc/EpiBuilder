@@ -28,6 +28,7 @@ export class ResultsComponent implements OnInit {
     { key: "id", label: "Protein ID" },
     { key: "description", label: "Description" },
     { key: "epitopeId", label: "Epitope" },
+    { key: "avgCover", label: "EpiBuilder Score" },
     { key: "start", label: "Start" },
     { key: "end", label: "End" },
     { key: "length", label: "Length" },

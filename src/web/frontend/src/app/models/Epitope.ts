@@ -4,6 +4,7 @@ import { EpitopeTopology } from "./EpitopeTopology";
 export class Epitope {
   id?: string;
   description?: string;
+  avgCover?: string;
   blasts?: Blast[];
   n?: number;
   epitopeId?: string;
