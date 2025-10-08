@@ -33,9 +33,12 @@ workflow {
         if (result.valid_proteins) println "Valid proteins saved at: ${result.valid_proteins}"
         if (result.invalid_proteins) println "Invalid proteins saved at: ${result.invalid_proteins}"
 
+        // Run extract_description to generate proteins.tsv
+        def desc = extract_description(input_file_path)
+
         if (result.status) {
             run_bepipred(result.valid_proteins)
-            def epibuilder = run_epibuilder(run_bepipred.out, jar_path)
+            def epibuilder = run_epibuilder(run_bepipred.out, desc.tsv, jar_path)
             copy_results(epibuilder.out).view()
         }else {
             error "Review the fasta file, ${result.invalid_proteins} invalid proteins "
@@ -46,6 +49,22 @@ workflow {
     } else {
         error 'Unsupported file type. Use .fasta or .csv'
     }
+}
+
+process extract_description {
+    tag 'extract_description'
+
+    input:
+    path input_fasta
+
+    output:
+    path "proteins.tsv", emit: tsv
+
+    script:
+    """
+    echo "Extracting protein descriptions..."
+    python3 /epibuilder/pipeline/extract_description.py ${input_fasta} -o proteins.tsv
+    """
 }
 
 /**
@@ -166,6 +185,7 @@ process run_epibuilder {
 
     input:
     path input_file
+    path desc_file
     path epibuilder_jar
 
     output:
@@ -189,7 +209,9 @@ process run_epibuilder {
         args << "--proteomes '${params.proteomes}'"
     }
 
-    def cmd = "java -jar ${epibuilder_jar} --input ${input_file} --format csv ${args.join(' ')} --output epibuilder-results"
+    def descArg = desc_file ? "-d ${desc_file}" : ""
+
+    def cmd = "java -jar ${epibuilder_jar} --input ${input_file} --format csv ${descArg} ${args.join(' ')} --output epibuilder-results"
 
     """
     echo "Running command: ${cmd}"
