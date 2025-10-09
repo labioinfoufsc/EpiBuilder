@@ -272,7 +272,6 @@ public class PipelineService {
                             log.info("BLASTs converted: {}", convertedBlasts.size());
 
                             List<Epitope> updatedEpitopes = associateBlasts(completeEpitopes, convertedBlasts);
-                            completeEpitopes.addAll(updatedEpitopes);
 
                             log.info("BLAST completed for file {}", blastPath.getFileName());
                         }

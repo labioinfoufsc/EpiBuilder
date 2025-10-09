@@ -82,7 +82,7 @@ if [ ! -d "/data/db" ]; then
 fi
 
 log "Starting Spring Boot backend..."
-exec java -jar /epibuilder/epibuilder-backend.jar \
+exec java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005 -jar /epibuilder/epibuilder-backend.jar \
   --server.port=${BACKEND_PORT} \
   --spring.datasource.url=jdbc:postgresql://$DB_HOST:${DB_PORT}/${DB_NAME} \
   --spring.datasource.username=${DB_USERNAME} \
