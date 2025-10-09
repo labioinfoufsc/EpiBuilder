@@ -13,6 +13,10 @@ RUN apt-get update && \
 
 RUN ln -sf /usr/bin/python3 /usr/bin/python
 
+COPY bepipred.sh /bepipred.sh
+RUN chmod +x /bepipred.sh
+RUN ln -sf /bepipred.sh /usr/bin/bepipred
+
 COPY bepipred3.zip /tmp/bepipred3.zip
 RUN unzip /tmp/bepipred3.zip -d / && rm -f /tmp/bepipred3.zip
 
@@ -46,5 +50,5 @@ WORKDIR /
 RUN apt-get remove --purge -y unzip curl && \
     apt-get autoremove -y && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
-    
-ENTRYPOINT ["python", "bepipred3_CLI.py"]
+
+ENTRYPOINT []

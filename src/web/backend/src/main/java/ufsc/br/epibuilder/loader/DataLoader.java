@@ -8,6 +8,9 @@ import ufsc.br.epibuilder.model.*;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
+
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Date;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -65,9 +68,25 @@ public class DataLoader implements CommandLineRunner {
     private void loadInitialData() {
         User admin = createUser("Admin", "admin", "admin", Role.ADMIN);
         User regularUser = createUser("User", "user", "user", Role.USER);
-        String filePath = "/epibuilder/pipeline/db/iedb.fasta";
-        System.out.println("Loading " + filePath);
-        loadDatabaseFile(filePath);
+
+        Path dir = Paths.get("/data/db");
+
+        if (!Files.exists(dir)) {
+            System.err.println("Directory not found: " + dir);
+            return;
+        }
+
+        try {
+            Files.list(dir)
+                    .filter(Files::isRegularFile)
+                    .filter(path -> path.toString().endsWith(".fasta"))
+                    .forEach(path -> {
+                        System.out.println("Loading " + path);
+                        loadDatabaseFile(path.toString(), path.getFileName().toString().replace(".fasta", ""));
+                    });
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private User createUser(String name, String username, String password, Role role) {
@@ -80,13 +99,13 @@ public class DataLoader implements CommandLineRunner {
         return user;
     }
 
-    private void loadDatabaseFile(String filePath) {
+    private void loadDatabaseFile(String filePath, String alias) {
         File file = new File(filePath);
 
         if (file.exists() && file.isFile()) {
             // Criar o objeto Database
             Database database = new Database();
-            database.setAlias("iedb");
+            database.setAlias(alias);
             database.setFileName(file.getName());
             database.setAbsolutePath(file.getAbsolutePath());
             LocalDateTime now = ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).toLocalDateTime();

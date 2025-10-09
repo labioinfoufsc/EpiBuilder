@@ -1,4 +1,4 @@
-FROM bioinfoufsc/bepipred3:latest
+FROM ubuntu:25.10
 
 LABEL app="EpiBuilder - CLI"
 LABEL version="2.0"
@@ -10,10 +10,15 @@ ENV TZ=America/Sao_Paulo
 RUN apt-get update && \
     apt-get install --no-install-recommends -y \
     tzdata \ 
+    python3 python3-pip python3-venv \
+    docker.io unzip libgomp1 \
     maven curl wget && \
     ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
     dpkg-reconfigure --frontend noninteractive tzdata && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
+    
+RUN python3 -m venv /venv
+ENV PATH="/venv/bin:$PATH"
 
 RUN pip install biopython
 
@@ -28,7 +33,7 @@ RUN wget -P /tmp https://download.oracle.com/java/21/latest/jdk-21_linux-x64_bin
     tar -xzf /tmp/jdk-21_linux-x64_bin.tar.gz -C /usr/local/java && \
     rm /tmp/jdk-21_linux-x64_bin.tar.gz && \
     ln -sf /usr/local/java/jdk-21* /usr/local/java/default-java
-    
+
 ENV JAVA_HOME=/usr/local/java/default-java
 ENV PATH=$JAVA_HOME/bin:$PATH
 
@@ -48,7 +53,5 @@ RUN rm -rf target/
 RUN chmod +x /epibuilder/pipeline/epibuilder.sh
 RUN ln -s /epibuilder/pipeline/epibuilder.sh /usr/local/bin/epibuilder
 
-WORKDIR /
-CMD ["epibuilder"]
 
-ENTRYPOINT ["epibuilder"]
+WORKDIR /

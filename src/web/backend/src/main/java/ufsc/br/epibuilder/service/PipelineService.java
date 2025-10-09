@@ -83,8 +83,11 @@ public class PipelineService {
             command.add("-c");
 
             StringBuilder fullCommand = new StringBuilder();
-            fullCommand.append("source /venv/bin/activate && ");
-            fullCommand.append("epibuilder ");
+
+            fullCommand.append("docker run --rm ");
+            fullCommand.append("-v /var/run/docker.sock:/var/run/docker.sock ");
+            fullCommand.append("-v epibuilder-data:/data ");
+            fullCommand.append("bioinfoufsc/epibuilder-core:latest epibuilder ");
             fullCommand.append("--input_file ").append(taskData.getFile().getAbsolutePath()).append(" ");
             fullCommand.append("--basename ").append(taskData.getCompleteBasename()).append(" ");
 

@@ -157,7 +157,7 @@ public class EpitopeController {
         String username = taskData.getUser().getUsername();
         String timestamp = ZonedDateTime.now(ZoneId.of("America/Sao_Paulo"))
                 .format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
-        Path baseDir = Paths.get("/www", username, taskData.getRunName() + "_" + timestamp);
+        Path baseDir = Paths.get("/data", username, taskData.getRunName() + "_" + timestamp);
 
         Files.createDirectories(baseDir);
         log.info("Directory created: {}", baseDir);

@@ -1,17 +1,36 @@
 # Base image: Debian 11
-FROM bioinfoufsc/epibuilder-core:latest
+FROM ubuntu:22.04
 
 LABEL app="EpiBuilder"
 LABEL version="2.0"
 LABEL description="Bioinformatics tool environment for epitope prediction"
 
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=America/Sao_Paulo
+
 # Atualiza pacotes e instala dependências básicas
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     gnupg2 \
+    tzdata \
     lsb-release \
     ca-certificates \
-    curl
+    curl \
+    docker.io \
+    maven \
+    aria2 && \
+    ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
+    dpkg-reconfigure --frontend noninteractive tzdata
+
+
+RUN wget -P /tmp https://download.oracle.com/java/21/latest/jdk-21_linux-x64_bin.tar.gz && \
+    mkdir -p /usr/local/java && \
+    tar -xzf /tmp/jdk-21_linux-x64_bin.tar.gz -C /usr/local/java && \
+    rm /tmp/jdk-21_linux-x64_bin.tar.gz && \
+    ln -sf /usr/local/java/jdk-21* /usr/local/java/default-java
+
+ENV JAVA_HOME=/usr/local/java/default-java
+ENV PATH=$JAVA_HOME/bin:$PATH
 
 # --- Instala PostgreSQL 15 ---
 RUN echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
@@ -45,6 +64,14 @@ WORKDIR /opt/tools
 # Copy application files
 
 COPY backend/ /epibuilder/backend
+COPY db /db
+
+RUN aria2c --continue=true --max-connection-per-server=8 --min-split-size=2M \
+    -d /db https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz && \
+    gzip -d /db/uniprot_sprot.fasta.gz && \
+    DATE=$(date +%Y_%m_%d) && \
+    mv /db/uniprot_sprot.fasta /db/uniprot_sprot_${DATE}.fasta
+
 WORKDIR /epibuilder/backend
 
 RUN mvn clean package -DskipTests

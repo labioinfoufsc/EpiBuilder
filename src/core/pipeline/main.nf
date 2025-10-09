@@ -137,7 +137,6 @@ process copy_results {
     echo "Your results are in \$(realpath ${params.basename})"
     """
 }
-
 /*
  * Process: run_bepipred
  * Description:
@@ -156,11 +155,12 @@ process run_bepipred {
     path input_file
 
     output:
-    path 'bepipred_output/raw_output.csv', emit: output
+    path 'raw_output.csv', emit: output
 
     script:
     """
-    python3 /bepipred3_CLI.py -i ${input_file} -pred vt_pred -o bepipred_output/
+    INPUT_TEXT=\$(cat ${input_file})
+    docker run --rm bioinfoufsc/bepipred3 bepipred "\$INPUT_TEXT" > raw_output.csv 2>/dev/null
     """
 }
 
