@@ -59,6 +59,14 @@ export class EpitopesService {
       );
   }
 
+  markTaskAsCompleted(taskId: number): Observable<void> {
+    return this.http.put<void>(
+      `${this.apiUrl}/tasks/${taskId}/complete`,
+      {},
+      { withCredentials: true }
+    );
+  }
+
   downloadFile(taskId: number): any {
     return this.http
       .get(`${this.apiUrl}/tasks/${taskId}/download`, {

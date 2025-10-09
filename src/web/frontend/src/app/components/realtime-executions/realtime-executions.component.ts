@@ -19,8 +19,8 @@ export class RealtimeExecutionsComponent implements OnInit, OnDestroy {
   modalVisible: boolean = false;
   currentProcess: EpitopeTaskData | undefined;
 
-  private tableUpdateInterval = 30000; 
-  private logUpdateInterval = 5000;   
+  private tableUpdateInterval = 30000;
+  private logUpdateInterval = 5000;
   private tableUpdateTimer: any;
   private logUpdateTimer: any;
   private elapsedTimeUpdateTimer: any;
@@ -130,7 +130,7 @@ export class RealtimeExecutionsComponent implements OnInit, OnDestroy {
   closeModal(): void {
     this.modalVisible = false;
     this.cleanUpLogInterval();
-    this.loadTasks(); // força atualização ao fechar
+    this.loadTasks();
   }
 
   private updateLogContent(): void {
@@ -151,8 +151,18 @@ export class RealtimeExecutionsComponent implements OnInit, OnDestroy {
             logText.includes('Your results are in') &&
             this.currentProcess.status !== 'COMPLETED'
           ) {
-            this.loadTasks();
-            this.currentProcess.status = 'COMPLETED';
+            const taskId = this.currentProcess.id;
+            if (typeof taskId === 'number') {
+              this.epitopesService.markTaskAsCompleted(taskId).subscribe({
+                next: () => {
+                  this.loadTasks();
+                  this.currentProcess!.status = 'COMPLETED';
+                },
+                error: (err) => {
+                  console.error('Erro ao notificar backend:', err);
+                }
+              });
+            }
           }
 
           this.isUpdatingLog = false;

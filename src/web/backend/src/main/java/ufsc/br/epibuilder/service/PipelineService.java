@@ -19,8 +19,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
 
 import io.jsonwebtoken.lang.Objects;
 import lombok.extern.slf4j.Slf4j;
@@ -216,6 +220,19 @@ public class PipelineService {
         } catch (Exception e) {
             log.error("Error in monitorRunningTasks: {}", e.getMessage());
         }
+    }
+
+    @PutMapping("/tasks/{id}/complete")
+    public ResponseEntity<Void> markTaskAsCompleted(@PathVariable Long id) {
+       
+        EpitopeTaskData task = epitopeTaskDataService.findById(id);
+        if (task.getTaskStatus() != null && task.getTaskStatus().getStatus() != Status.COMPLETED) {
+            task.getTaskStatus().setStatus(Status.COMPLETED);
+            epitopeTaskDataService.save(task);
+            return ResponseEntity.ok().build();
+        }
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).build();
     }
 
     private void processCompletedTask(EpitopeTaskData task) {
