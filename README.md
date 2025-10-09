@@ -43,31 +43,17 @@ Run the command below **only once** to create the container. This will also star
 ### (CPU)
 
 ```bash
-docker run -it --name epibuilder \
+  docker run -it --name epibuilder \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v epibuilder-data:/data \
   -p 80:80 \
   -p 8080:8080 \
   -p 5435:5432 \
+  -p 5005:5005 \
   bioinfoufsc/epibuilder:latest
 ```
 
-Or
-
-### (GPU)
-
-```bash
-docker run --gpus all -it --name epibuilder \
-  -p 80:80 \
-  -p 8080:8080 \
-  -p 5432:5432 \
-  bioinfoufsc/epibuilder:latest
-```
-
-> **Note:** You must have NVIDIA GPU drivers installed to run this GPU-based Docker container.  
-> If you're using Linux and want to use EpiBuilder with GPU support, please make sure you have CUDA installed:  
-> [https://docs.nvidia.com/cuda/cuda-installation-guide-linux](https://docs.nvidia.com/cuda/cuda-installation-guide-linux)
-
-> **Tip 1:** If unsure, use the CPU version.
-> **Tip 2:** The `--name epibuilder` option ensures the container is reusable.
+> **Tip 1:** The `--name epibuilder` option ensures the container is reusable.
 
 ## Step 3: Access the Web Interface
 
