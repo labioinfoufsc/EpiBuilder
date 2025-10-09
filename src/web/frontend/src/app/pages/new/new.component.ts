@@ -306,85 +306,6 @@ export class NewComponent {
     return true;
   }
 
-  // Método para processar os proteomas e retornar os arquivos e metadados
-  /* private processProteomes(): { proteomeFiles: File[], proteomeMeta: any[] } | null {
-     const proteomeMeta: any[] = [];
-     const proteomeFiles: File[] = [];
- 
-     for (let i = 0; i < this.proteomes.length; i++) {
-       const proteomeGroup = this.proteomes.at(i) as FormGroup;
-       const sourceType = proteomeGroup.get('sourceType')?.value;
-       const alias = proteomeGroup.get('proteomeAlias')?.value;
- 
-       console.log(sourceType);
-       if (sourceType === 'database') {
-         const dbPath = proteomeGroup.get('databaseFile')?.value;
-         console.log(dbPath);
-         if (dbPath === null || dbPath === undefined) {
-           this.showMessage({
-             text: `Please select a proteome ${i + 1} database for BLAST`,
-             category: 'danger'
-           });
-           return null;
-         }
- 
-         const selectedDb = this.databases.find(db => db.absolutePath === dbPath);
-         if (selectedDb) {
-           proteomeMeta.push({
-             sourceType: 'database',
-             databaseFile: selectedDb.absolutePath,
-             alias: alias || selectedDb.alias
-           });
-           console.log('Selected DB:', selectedDb);
-         }
-       } else if (sourceType === 'fasta_blast') {
-         const file = this.uploadedDBFiles[i];
-         if (!file) {
-           this.showMessage({
-             text: `Please upload a FASTA file for Proteome ${i + 1}`,
-             category: 'danger'
-           });
-           return null;
-         }
-         if (!alias || alias.trim() === '') {
-           this.showMessage({
-             text: `Please provide an alias for Proteome ${i + 1}`,
-             category: 'danger'
-           });
-           return null;
-         }
-         proteomeMeta.push({
-           sourceType: 'fasta_blast',
-           alias: alias || file.name,
-           originalName: file.name
-         });
-         proteomeFiles.push(file);
-       }
-     }
- 
-     console.log('Values');
-     console.log('Proteome files:', proteomeFiles.length);
-     console.log('Proteome metadata:', proteomeMeta.length);
- 
-     if (proteomeFiles.length === 0) {
-       this.showMessage({
-         text: 'Please upload at least one proteome for BLAST.',
-         category: 'danger'
-       });
-       return null;
-     }
- 
-     if (proteomeMeta.length === 0) {
-       this.showMessage({
-         text: 'Please select at least one proteome for BLAST.',
-         category: 'danger'
-       });
-       return null;
-     }
- 
-     return { proteomeFiles, proteomeMeta };
-   }*/
-
   private processProteomes(): { proteomeFiles: File[], proteomeMeta: any[] } | null {
     const proteomeMeta: any[] = [];
     const proteomeFiles: File[] = [];
@@ -454,11 +375,6 @@ export class NewComponent {
     return false;
   }
 
-  logSelectedDb(index: number, value: string) {
-    console.log(`Proteome ${index + 1} selected DB:`, value);
-  }
-
-
   /**
    * Handles file input change and validates the file extension.
    * If the file is valid, it updates the form with the file.
@@ -487,7 +403,6 @@ export class NewComponent {
             const lines = content.split('\n');
             const count = lines.filter(line => line.trim().startsWith('>')).length;
             this.sequenceCount = count;
-            console.log('Number of sequences (lines starting with ">"):', count);
 
           } else if (extension === 'csv') {
             this.fileType = 'csv';
@@ -502,7 +417,6 @@ export class NewComponent {
             }
 
             this.sequenceCount = uniqueFirstColumn.size;
-            console.log('Unique values in the 1st column:', uniqueFirstColumn);
           } else {
             this.fileType = null;
             this.sequenceCount = null;
@@ -627,7 +541,6 @@ export class NewComponent {
   }
 
   loadExampleFile(event: Event) {
-    console.log('Loading example FASTA file')
     event.preventDefault(); // evita recarregar a página
 
     fetch('assets/example.fasta')
@@ -651,7 +564,6 @@ export class NewComponent {
         //Show the content file
         reader.onload = () => {
           const content = reader.result as string;
-          console.log('Fasta file content:\n', content);
         };
 
         reader.onerror = () => {
@@ -666,7 +578,6 @@ export class NewComponent {
   }
 
   loadExampleManual(event: Event): void {
-    console.log('Loading example FASTA content into manual input');
     event.preventDefault(); // evita recarregar a página
 
     fetch('assets/example.fasta')
@@ -706,7 +617,6 @@ export class NewComponent {
     const reader = new FileReader();
     reader.onload = () => {
       const fasta = reader.result as string;
-      console.log('Fasta file content:\n', fasta);
       const lines = fasta.split('\n');
       const count = lines.filter(line => line.startsWith('>')).length;
       this.sequenceCount = count;
