@@ -486,7 +486,7 @@ public class PipelineService {
 
             // Handle special cases
             if (cleanedMethodName.equals("BepiPred-3.0")) {
-                topology.setDescription(parts[2]);
+                topology.setDescription(parts[3]);
                 cleanedMethodName = "BepiPred";
             }
 
@@ -509,10 +509,10 @@ public class PipelineService {
                 return topology;
             }
 
-            topology.setThreshold(parseDoubleSafe(parts[3]));
-            topology.setAvgScore(parseDoubleSafe(parts[4]));
-            topology.setCover(parts[5].equals("-") ? 0.0 : parseDoubleSafe(parts[5]));
-            topology.setTopologyData(parts[6]);
+            topology.setThreshold(parseDoubleSafe(parts[4]));
+            topology.setAvgScore(parseDoubleSafe(parts[5]));
+            topology.setCover(parts[6].equals("-") ? 0.0 : parseDoubleSafe(parts[6]));
+            topology.setTopologyData(parts[7]);
 
         } catch (Exception e) {
             log.error("Error parsing topology data for method {}: {}", methodName, e.getMessage());
