@@ -50,8 +50,8 @@
   </div>
 </div>
 
-<div class="modal-overlay" *ngIf="modalVisible">
-  <div class="modal-terminal-container">
+<div class="modal-overlay" *ngIf="modalVisible" (click)="onOverlayClick($event)">
+  <div class="modal-terminal-container" (click)="$event.stopPropagation()">
     <div class="modal-header d-flex justify-content-between align-items-center">
 
       <h5 *ngIf="currentProcess" class="modal-title mb-0">

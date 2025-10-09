@@ -34,6 +34,7 @@ export class RealtimeExecutionsComponent implements OnInit, OnDestroy {
   ) { }
 
   ngOnInit(): void {
+    document.addEventListener('keydown', this.handleEscape, true);
     this.userId = this.loginService.getUser()?.id;
     if (this.userId !== undefined) {
       this.loadTasks();
@@ -49,15 +50,26 @@ export class RealtimeExecutionsComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    document.removeEventListener('keydown', this.handleEscape, true);
     this.cleanUpIntervals();
     this.taskListChangedSubscription?.unsubscribe();
   }
+
+  private handleEscape = (event: KeyboardEvent): void => {
+    if (event.key === 'Escape') {
+      this.closeModal();
+    }
+  };
 
   private scrollToBottom(): void {
     const element = this.logContentRef?.nativeElement;
     if (element) {
       element.scrollTop = element.scrollHeight;
     }
+  }
+
+  public onOverlayClick(event: MouseEvent): void {
+    this.closeModal();
   }
 
   private startTableUpdates(): void {
