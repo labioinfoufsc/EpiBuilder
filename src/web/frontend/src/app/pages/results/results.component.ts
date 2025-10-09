@@ -43,6 +43,7 @@ export class ResultsComponent implements OnInit {
     { key: "chouFosman", label: "Chou Fosman" },
     { key: "karplusSchulz", label: "Karplus Schulz" },
     { key: "parker", label: "Parker" },
+    { key: "blasts", label: "Blast hit" },
   ];
 
   constructor(
