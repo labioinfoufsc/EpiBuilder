@@ -1,94 +1,94 @@
 <div class="card">
-
   <div class="card-header custom-header">
     <b>Topology of Protein ID <span style="color: #ffff00;">#{{ proteinId || 'N/A' }}</span> - Epitope N <span
         style="color: #ffff00;">#{{ epitopeId || 'N/A' }}</span></b>
   </div>
 
   <div class="table-responsive">
-
-    <table class="table table-striped table-hover table-bordered" style="text-align: center;">
+    <table class="table table-striped table-hover table-bordered text-center">
       <thead class="table-light">
         <tr>
           <th>Method</th>
           <th>Threshold</th>
           <th>Avg Score</th>
           <th>Cover</th>
-          <th [attr.colspan]="getMaxTopologyLength()" class="text-center">Epitope</th>
+          <th [attr.colspan]="getMaxTopologyLength()">Epitope</th>
         </tr>
       </thead>
       <tbody>
-        <tr *ngIf="epitopeTopologies === undefined || epitopeTopologies.length === 0">
-          <td class="text-center text-muted" [attr.colspan]="4 + getMaxTopologyLength()">
-            No data available
-          </td>
+        <tr *ngIf="epitopeTopologies.length === 0">
+          <td class="text-muted text-center" [attr.colspan]="4 + getMaxTopologyLength()">No data available</td>
         </tr>
-
         <tr *ngFor="let row of epitopeTopologies; let i = index" [ngClass]="{ 'bg-transparent text-dark': i === 0 }">
           <td>{{ row.method }}</td>
-          <td>{{ row.threshold === undefined ? '-' : row.threshold }}</td>
-          <td>{{ row.avgScore === undefined ? '-' : row.avgScore }}</td>
+          <td>{{ row.threshold ?? '-' }}</td>
+          <td>{{ row.avgScore ?? '-' }}</td>
           <td>{{ row.cover === undefined ? '-' : (row.cover | number:'1.2-2') }}</td>
-        
           <ng-container *ngFor="let char of getValidTopologyChars(row.topologyData)">
-            <td *ngIf="char !== ''" [class.bg-danger]="char === '.' && i !== 0" [class.text-danger]="char === '.' && i !== 0"
-              [class.bg-primary]="char !== '.' && i !== 0" [class.text-primary]="char !== '.' && i !== 0"
-              [class.text-dark]="i === 0" class="text-center fw-bold p-2">
+            <td *ngIf="char !== ''" [class.bg-danger]="char === '.' && i !== 0"
+              [class.text-danger]="char === '.' && i !== 0" [class.bg-primary]="char !== '.' && i !== 0"
+              [class.text-primary]="char !== '.' && i !== 0" [class.text-dark]="i === 0" class="fw-bold p-2">
               {{ char }}
             </td>
           </ng-container>
         </tr>
-
       </tbody>
     </table>
 
     <div class="text-muted small mt-2 me-2 text-end">
       <span
-        style="display: inline-block; width: 12px; height: 12px; background-color: #0d6efd; border-radius: 2px; margin-right: 4px;"></span>
+        style="width: 12px; height: 12px; background-color: #0d6efd; display: inline-block; border-radius: 2px; margin-right: 4px;"></span>
       above threshold point &nbsp;&nbsp;
       <span
-        style="display: inline-block; width: 12px; height: 12px; background-color: #dc3545; border-radius: 2px; margin-right: 4px;"></span>
+        style="width: 12px; height: 12px; background-color: #dc3545; display: inline-block; border-radius: 2px; margin-right: 4px;"></span>
       below threshold point
     </div>
   </div>
+
   <br>
+
   <div class="card-header custom-header">
     <b>BLAST of Protein ID <span style="color: #ffff00;">#{{ proteinId || 'N/A' }}</span> - Epitope N <span
         style="color: #ffff00;">#{{ epitopeId || 'N/A' }}</span> - using <span style="color: #ffff00;">{{
-        database?.includes('iedb') ? 'iedb' : 'custom' }}
-      </span>database</b>
+        database?.includes('iedb') ? 'iedb' : 'custom' }}</span> database</b>
   </div>
 
   <div class="table-responsive">
-    <table class="table table-striped table-hover table-bordered" style="text-align: center;">
+    <table class="table table-striped table-hover table-bordered text-center">
       <thead class="table-light">
         <tr>
-          <th *ngFor="let column of blastColumns">{{ column }}</th>
+          <th *ngFor="let column of blastColumns">
+            <div class="d-flex flex-column">
+              <span (click)="sortBy(column)" style="cursor: pointer;">
+                {{ column }}
+                <i *ngIf="sortColumn === column" [ngClass]="{
+                  'fas fa-sort-up': sortDirection === 'asc',
+                  'fas fa-sort-down': sortDirection === 'desc'
+                }"></i>
+              </span>
+              <input type="text" class="form-control form-control-sm mt-1" [(ngModel)]="filters[column]"
+                (input)="applyBlastFilters()" placeholder="Filter" />
+            </div>
+          </th>
         </tr>
       </thead>
-      <tbody style="text-align: center;">
+      <tbody>
         <tr *ngIf="blasts.length === 0">
-          <td class="text-center text-muted" [attr.colspan]="columns.length">
-            No data available
-          </td>
+          <td class="text-muted text-center" [attr.colspan]="blastColumns.length">No data available</td>
         </tr>
-
-        <tr *ngFor="let row of blasts; let i = index">
-          <td style="width: 15%;">
+        <tr *ngFor="let row of blasts">
+          <td>
             <ng-container *ngIf="database === 'iedb'; else plainText">
-              <div class="d-flex align-items-center">
+              <div class="d-flex align-items-center justify-content-center">
                 <span class="me-2">{{ row.sacc }}</span>
-                <a href="https://www.iedb.org/epitope/{{ row.sacc.split('-').pop() }}" target="_blank"
+                <a [href]="'https://www.iedb.org/epitope/' + row.sacc.split('-').pop()" target="_blank"
                   class="text-primary text-decoration-none">
                   <i class="fas fa-external-link-alt"></i>
                 </a>
               </div>
             </ng-container>
-            <ng-template #plainText>
-              {{ row.sacc }}
-            </ng-template>
+            <ng-template #plainText>{{ row.sacc }}</ng-template>
           </td>
-
           <td>{{ row.pident === undefined ? '-' : (row.pident | number:'1.2-2') }}</td>
           <td>{{ row.qcovs === undefined ? '-' : (row.qcovs | number:'1.2-2') }}</td>
           <td>{{ row.qseq }}</td>

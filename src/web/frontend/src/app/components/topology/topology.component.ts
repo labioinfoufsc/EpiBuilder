@@ -11,35 +11,100 @@ import { EpitopesService } from "../../services/epitopes/epitopes.service";
 export class TopologyComponent {
   epitopeTopologies: EpitopeTopology[] = [];
   expandedEpitopeIndex: number | null = null;
-  columns: string[] = ["Protein ID", "N", "Method", "Epitope", "Threshold", "Avg Score", "Cover"];
-  blasts: any[] = []
-  blastColumns: string[] = ["Epitope ID", "Identity", "Cover", "Query subject", "Search subject"];
-
-  columnMap: { [key: string]: keyof EpitopeTopology } = {
-    Id: "id",
-    N: "N",
-    Method: "method",
-    Threshold: "threshold",
-    "Avg Score": "avgScore",
-    Cover: "cover",
-  };
   epitopeId?: number;
   proteinId?: string;
   database?: string;
 
-  constructor(private epitopeService: EpitopesService) {
-    this.loadTable();
-  }
+  blastColumns: string[] = ["Epitope ID", "Identity", "Cover", "Query subject", "Search subject"];
+  blastsOriginal: any[] = [];
+  blasts: any[] = [];
+  filters: { [key: string]: string } = {};
+  sortColumn: string = '';
+  sortDirection: 'asc' | 'desc' = 'asc';
+
+  constructor(private epitopeService: EpitopesService) { }
 
   ngOnInit() {
     this.loadTable();
+  }
+
+  loadTable() {
+    this.epitopeService.selectedEpitope$.subscribe((epitope) => {
+      if (epitope) {
+        this.epitopeId = epitope.n;
+        this.proteinId = epitope.epitopeId;
+        this.database = epitope.blasts?.[0]?.database?.includes("iedb") ? "iedb" : undefined;
+
+        this.epitopeTopologies = Array.isArray(epitope.epitopeTopologies)
+          ? epitope.epitopeTopologies
+          : epitope.epitopeTopologies ? [epitope.epitopeTopologies] : [];
+
+        this.blastsOriginal = Array.isArray(epitope.blasts)
+          ? epitope.blasts
+          : epitope.blasts ? [epitope.blasts] : [];
+
+        this.blastColumns.forEach(col => this.filters[col] = '');
+        this.applyBlastFilters();
+      } else {
+        this.epitopeTopologies = [];
+        this.blastsOriginal = [];
+        this.blasts = [];
+      }
+    });
+  }
+
+  applyBlastFilters(): void {
+    const filtered = this.blastsOriginal.filter(row => {
+      for (const column of this.blastColumns) {
+        const filterText = this.filters[column]?.trim().toLowerCase();
+        if (!filterText) continue;
+
+        const key = this.mapColumnKey(column);
+        const cellValue = row[key] !== undefined && row[key] !== null
+          ? String(row[key]).toLowerCase()
+          : '';
+
+        if (!cellValue.includes(filterText)) return false;
+      }
+      return true;
+    });
+
+    this.blasts = filtered;
+    this.sortData();
+  }
+
+  sortBy(column: string): void {
+    this.sortColumn = column;
+    this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+    this.sortData();
+  }
+
+  sortData(): void {
+    if (!this.sortColumn) return;
+    const key = this.mapColumnKey(this.sortColumn);
+    this.blasts.sort((a, b) => {
+      const valA = a[key] ?? '';
+      const valB = b[key] ?? '';
+      return this.sortDirection === 'asc'
+        ? valA > valB ? 1 : -1
+        : valA < valB ? 1 : -1;
+    });
+  }
+  mapColumnKey(column: string): string {
+    const map: { [key: string]: string } = {
+      "Epitope ID": "sacc",
+      "Identity": "pident",
+      "Cover": "qcovs",
+      "Query subject": "qseq",
+      "Search subject": "sseq"
+    };
+    return map[column] || column;
   }
 
   getMaxTopologyLength(): number {
     if (!this.epitopeTopologies || this.epitopeTopologies.length === 0) {
       return 1;
     }
-
 
     const maxLength = Math.max(...this.epitopeTopologies.map(row =>
       this.getValidTopologyChars(row.topologyData).length
@@ -54,32 +119,6 @@ export class TopologyComponent {
     }
 
     return topologyData.split('').filter(char => char.trim() !== '');
-  }
-
-  loadTable() {
-    this.epitopeService.selectedEpitope$.subscribe((epitope) => {
-
-      // Verifica se o epítopo existe      
-      if (epitope) {
-        this.epitopeId = epitope.n;  // Define o epitopeId
-        this.proteinId = epitope.epitopeId;
-        this.database = epitope.blasts?.[0]?.database?.includes("iedb") ? "iedb" : undefined;
-
-        // Carrega os epitopeTopologies
-        this.epitopeTopologies = Array.isArray(epitope.epitopeTopologies)
-          ? epitope.epitopeTopologies
-          : epitope.epitopeTopologies ? [epitope.epitopeTopologies] : [];
-
-        console.log("epitopeTopologies", this.epitopeTopologies);
-        // Carrega os blasts
-        this.blasts = Array.isArray(epitope.blasts)
-          ? epitope.blasts
-          : epitope.blasts ? [epitope.blasts] : [];
-      } else {
-        this.epitopeTopologies = [];
-        this.blasts = [];
-      }
-    });
   }
 
   toggleEpitope(index: number) {
