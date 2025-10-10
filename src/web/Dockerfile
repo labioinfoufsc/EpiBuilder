@@ -18,9 +18,26 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     docker.io \
     maven \
-    aria2 && \
+    aria2 libgomp1 && \
     ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
     dpkg-reconfigure --frontend noninteractive tzdata
+
+RUN mkdir /db
+COPY db/ /db/
+
+RUN wget -P /tmp https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.17.0+-x64-linux.tar.gz && \
+    tar -xzf /tmp/ncbi-blast-2.17.0+-x64-linux.tar.gz -C /tmp && \
+    mv /tmp/ncbi-blast-2.17.0+/bin/blastp /usr/local/bin && \
+    mv /tmp/ncbi-blast-2.17.0+/bin/makeblastdb /usr/local/bin && \
+    rm -rf /tmp/ncbi-blast-2.17.0+ /tmp/ncbi-blast-2.17.0+-x64-linux.tar.gz
+
+RUN aria2c --continue=true --max-connection-per-server=8 --min-split-size=2M \
+    -d /db https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz && \
+    gzip -d /db/uniprot_sprot.fasta.gz && \
+    DATE=$(date +%Y_%m_%d) && \
+    mv /db/uniprot_sprot.fasta /db/uniprot_sprot_${DATE}.fasta && \
+    makeblastdb -in /db/uniprot_sprot_${DATE}.fasta -dbtype prot -out /db/uniprot_sprot_${DATE}.fasta && \
+    makeblastdb -in /db/iedb.fasta -dbtype prot -out /db/iedb.fasta
 
 
 RUN wget -P /tmp https://download.oracle.com/java/21/latest/jdk-21_linux-x64_bin.tar.gz && \
@@ -62,15 +79,7 @@ RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 WORKDIR /opt/tools
 
 # Copy application files
-
 COPY backend/ /epibuilder/backend
-COPY db /db
-
-RUN aria2c --continue=true --max-connection-per-server=8 --min-split-size=2M \
-    -d /db https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz && \
-    gzip -d /db/uniprot_sprot.fasta.gz && \
-    DATE=$(date +%Y_%m_%d) && \
-    mv /db/uniprot_sprot.fasta /db/uniprot_sprot_${DATE}.fasta
 
 WORKDIR /epibuilder/backend
 

@@ -18,10 +18,8 @@ import br.ufsc.epibuilder.entity.Epitopo;
 import br.ufsc.epibuilder.entity.Protein;
 import br.ufsc.epibuilder.entity.ReportBCell;
 import br.ufsc.epibuilder.entity.SoftwareBcellEnum;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.TreeSet;
+
+import java.util.*;
 
 import static br.ufsc.epibuilder.Parameters.*;
 
@@ -44,9 +42,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.Calendar;
-import java.util.Collections;
-import java.util.Comparator;
+
 import org.apache.commons.lang3.StringUtils;
 import org.biojava.nbio.core.exceptions.CompoundNotFoundException;
 
@@ -601,22 +597,6 @@ public class EpitopeFinder {
     }
 
     public static String generateReportDetailed(ArrayList<Report> reportList) {
-        String stOrganismCount = "";
-
-        for (Proteome proteome : Parameters.PROTEOMES) {
-            try {
-                sout("\t\tLoading proteome: " + proteome.getOrganism() + "\t" + proteome.getFile().getAbsolutePath()
-                        + "\t");
-                proteome.load();
-                sout("\t\tLoaded " + proteome.getProteins().size() + " proteins\t");
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
-        }
-
-        for (Proteome proteome : Parameters.PROTEOMES) {
-            stOrganismCount += "\t" + proteome.getOrganism() + "_count\t" + proteome.getOrganism() + "_acc";
-        }
 
         /*
          * String stOrganismId = "";
@@ -632,26 +612,10 @@ public class EpitopeFinder {
         StringBuilder sb = new StringBuilder();
         sb.append(
                 "N\tId\tDescription\tEpitope\tStart\tEnd\tN-Glyc\tN-Glyc-Count\tN-Glyc-Motifs\tLength\tMW(kDa)\tI.P\tHydropathy\tAll Matches Cover\tAvg Cover\tBepiPred3"
-                        + stMethod + stOrganismCount + "\n");
+                        + stMethod + "\n");
         int count = 1;
         for (Report report : reportList) {
-            String stOrganismEpitopeCount = "";
             String stMethodScore = "";
-
-            // String stOrganismEpitopeProteinId = "";
-            for (Proteome proteome : Parameters.PROTEOMES) {
-                sout(String.format("Start searching for epitope: %s\t%s/%s in %s(%s proteins)", report.getEpitope(),
-                        count, reportList.size(), proteome.getOrganism(), proteome.getProteins().size()));
-                // sout("Start searching for epitope: " + count + "/" + reportList.size() + " in
-                // " + proteome.getOrganism() + " - " + report.getEpitope());
-                EpitopeCount epitopeCount = count(report.getEpitope(), proteome);
-
-                stOrganismEpitopeCount += "\t" + epitopeCount.getTotalhits() + "\t" + epitopeCount.getIds();
-                // stOrganismEpitopeProteinId += "\t" + epitopeCount.getIds();
-                sout(String.format("End searching for epitope: %s\t%s/%s in %s(%s proteins). Found (%s hits)",
-                        report.getEpitope(), count, reportList.size(), proteome.getOrganism(),
-                        proteome.getProteins().size(), epitopeCount.getTotalhits()));
-            }
 
             for (EpitopeReport epitopeReport : report.getEpitopeReports()) {
                 stMethodScore += String.format("\t%.2f", epitopeReport.getAvgScore());
@@ -674,7 +638,6 @@ public class EpitopeFinder {
                             "%.2f\t" +
                             "%.2f\t" +
                             "%.2f" +
-                            "%s" +
                             "%s\n",
                     count++,
                     report.getProteinId(),
@@ -692,13 +655,10 @@ public class EpitopeFinder {
                     report.getTopologyCoverValidation(),
                     report.getAvgCover(),
                     report.getAvgBepipredScore(),
-                    stMethodScore,
-                    stOrganismEpitopeCount
-            // stOrganismEpitopeProteinId
+                    stMethodScore
             ));
         }
 
-        System.gc();
         return sb.toString();
     }
 

@@ -13,12 +13,10 @@ RUN apt-get update && \
 
 RUN ln -sf /usr/bin/python3 /usr/bin/python
 
-COPY bepipred.sh /bepipred.sh
-RUN chmod +x /bepipred.sh
-RUN ln -sf /bepipred.sh /usr/bin/bepipred
-
 COPY bepipred3.zip /tmp/bepipred3.zip
 RUN unzip /tmp/bepipred3.zip -d / && rm -f /tmp/bepipred3.zip
+
+COPY bepipred3_custom.py /
 
 RUN python3 -m venv /venv
 ENV PATH="/venv/bin:$PATH"

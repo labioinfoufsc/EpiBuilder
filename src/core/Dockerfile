@@ -51,7 +51,8 @@ RUN cp target/epibuilder-core-jar-with-dependencies.jar /epibuilder/epibuilder-c
 RUN rm -rf target/
 
 RUN chmod +x /epibuilder/pipeline/epibuilder.sh
+RUN chmod +x /epibuilder/pipeline/bepipred3.sh
 RUN ln -s /epibuilder/pipeline/epibuilder.sh /usr/local/bin/epibuilder
-
+RUN ln -s /epibuilder/pipeline/bepipred3.sh /usr/local/bin/bepipred3
 
 WORKDIR /

@@ -1,16 +1,9 @@
 package br.ufsc.epibuilder.entity;
 
 import br.ufsc.epibuilder.converter.ProteinConverter;
-import br.ufsc.epibuilder.proteomics.FastaAdjust;
+
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Scanner;
-import org.biojava.nbio.core.sequence.ProteinSequence;
-import org.biojava.nbio.core.sequence.io.FastaReaderHelper;
 
 /*
  * To change this license header, choose License Headers in Project Properties.
@@ -27,20 +20,6 @@ public class Proteome {
     private ArrayList<ProteinConverter> proteins = new ArrayList<>();
     private File file;
     private boolean load = false;
-
-    public void load() throws Exception {
-        if (!load) {
-            proteins = new ArrayList<>();
-            /*LinkedHashMap<String, ProteinSequence> a = FastaReaderHelper.readFastaProteinSequence(file);
-
-        for (Map.Entry<String, ProteinSequence> entry : a.entrySet()) {
-            proteins.add(new ProteinConverter(entry.getValue().getAccession().getID(), entry.getValue().getSequenceAsString()));
-        }*/
-
-            proteins.addAll(FastaAdjust.getProteins(file));
-            load = true;
-        }
-    }
 
     public Proteome(String organism) {
         this.organism = organism;
@@ -84,9 +63,5 @@ public class Proteome {
     public String toString() {
         return organism + "=" + file.getAbsolutePath();
     }
-
-   /* public void clear() {
-        proteins = new ArrayList<>();
-    }*/
 
 }

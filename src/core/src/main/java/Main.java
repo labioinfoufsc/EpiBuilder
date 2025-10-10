@@ -161,11 +161,13 @@ public class Main implements Callable<Integer> {
     private void addProteome(ArrayList<Proteome> proteomes, String proteomeFile, String alias, int i) {
         if (proteomeFile != null && !proteomeFile.trim().equals("")) {
             File f = new File(proteomeFile);
-            if (f.exists()) {
+            if (f.exists() || new File(proteomeFile+".phr").exists() ) {
                 if (alias.trim().equals("")) {
                     alias = "proteome" + i;
                 }
                 proteomes.add(new Proteome(alias, f));
+            }else{
+                System.out.println(proteomeFile+" does not exist - ignoring");
             }
         }
     }

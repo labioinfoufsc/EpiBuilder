@@ -79,26 +79,47 @@ public class BlastRunner {
         String db = String.format("%s/%s-epibuilder-blast-%s", Parameters.DESTINATION_FOLDER, Parameters.BASENAME, proteome.getOrganism());
         String blastOutput = db + "_blast.csv";
 
-        String[] makeblast = {Parameters.MAKEBLASTDB_PATH,
-            "-dbtype", "prot",
-            "-in", proteome.getFile().getAbsolutePath(),
-            "-out", db};
+        System.out.printf("BLAST in database %s",proteome.getFile().getAbsolutePath());
+        db = proteome.getFile().getAbsolutePath();
 
-        String[] blastp = {Parameters.BLASTP_PATH,
-            "-query", epiBuilderFastaEpitopesFile,
-            "-db", db,
-            "-outfmt", "6 qacc sacc pident qcovs qseq sseq qacc",
-            "-task", Parameters.BLAST_TASK,
-            "-word_size", Parameters.BLAST_WORD_SIZE + "",
-            "-out", blastOutput};
+        if(proteome.getFile().getAbsolutePath().endsWith(".fasta") &&
+                new File(proteome.getFile().getAbsolutePath()+".phr").exists()){
+
+            System.out.println("Blast: " + db);
+        }
 
         ArrayList<String[]> cmds = new ArrayList<>();
-        cmds.add(makeblast);
-        cmds.add(blastp);
+
+        String[] makeblast = {Parameters.MAKEBLASTDB_PATH,
+                    "-dbtype", "prot",
+                    "-in", proteome.getFile().getAbsolutePath(),
+                    "-out", db};
+        String[] blastp = {Parameters.BLASTP_PATH,
+                "-query", epiBuilderFastaEpitopesFile,
+                "-db", db,
+                "-outfmt", "6 qacc sacc pident qcovs qseq sseq qacc",
+                "-task", Parameters.BLAST_TASK,
+                "-word_size", Parameters.BLAST_WORD_SIZE + "",
+                "-out", blastOutput};
+        String[] removeDb = {
+            "/bin/bash", "-c", String.format("rm %s.*", db)
+        };
+
+        if(proteome.getFile().getAbsolutePath().endsWith(".fasta")){
+            if((new File(proteome.getFile().getAbsolutePath()+".phr").exists())) {
+                cmds.add(blastp);
+            }else {
+                cmds.add(makeblast);
+                cmds.add(blastp);
+                cmds.add(removeDb);
+            }
+        }else{
+            cmds.add(blastp);
+        }
+
         try {
             for (String[] cmd : cmds) {
                 System.out.print("Running command[: ");
-
                 for (String string : cmd) {
                     System.out.print(string + " ");
                 }

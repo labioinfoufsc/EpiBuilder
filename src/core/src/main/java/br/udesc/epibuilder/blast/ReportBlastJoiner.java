@@ -35,7 +35,7 @@ public class ReportBlastJoiner {
             String epibuilderDetailRe = epibuilderDetailRes[i];
             
             String[] epiLine = epibuilderDetailRe.split("\t");
-            String id = String.format("%s-%s", epiLine[0].trim(), epiLine[2].trim());
+            String id = String.format("%s-%s", epiLine[0].trim(), epiLine[3].trim());
             
             String[] blastAux = mapBlast.get(id);
             if(blastAux==null){

@@ -102,9 +102,6 @@ process copy_results {
     # Copy new results
     cp -r \$(realpath ${output_dir})/* "\$final_path/"
 
-    # Remove makeblastdb files
-    rm -f \$final_path/*.phr \$final_path/*.pin \$final_path/*.pjs \$final_path/*.pot \$final_path/*.ptf \$final_path/*.pto \$final_path/*.psq \$final_path/*.pdb \$final_path/*.pog \$final_path/*.nin \$final_path/*.nsq \$final_path/*.nhr
-
     # Rename files by removing 'epibuilder-results-' prefix
     if ls \$final_path/epibuilder-results-* 1> /dev/null 2>&1; then
         for file in \$final_path/epibuilder-results-*; do
@@ -137,6 +134,7 @@ process copy_results {
     echo "Your results are in \$(realpath ${params.basename})"
     """
 }
+
 /*
  * Process: run_bepipred
  * Description:
@@ -159,11 +157,16 @@ process run_bepipred {
 
     script:
     """
-    INPUT_TEXT=\$(cat ${input_file})
-    docker run --rm bioinfoufsc/bepipred3 bepipred "\$INPUT_TEXT" > raw_output.csv 2>/dev/null
+    # Absolute path of input_file
+    INPUT_PATH="\$(realpath ${input_file})"
+
+    # Call bepipred3 script
+    bepipred3 "\$INPUT_PATH"
+
+    # Copy the raw_output.csv to workdir
+    cp \$(dirname "\$INPUT_PATH")/raw_output.csv ./
     """
 }
-
 /*
  * Process: run_epibuilder
  * Description:
@@ -283,10 +286,6 @@ def validate_fasta(String fastaPath) {
             invalid << [header: currentHeader, seq: seq]
         }
     }
-
-    //def timestamp = System.currentTimeMillis()
-    //def tmpDir = new File("/pipeline/work/tmp/${timestamp}")
-    //tmpDir.mkdirs()
 
     def outputDir = new File(params.basename).absoluteFile
 
