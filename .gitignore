@@ -7,3 +7,6 @@ venv/
 *.out
 *.err
 *.tmp
+*.xml
+src/web/.idea/web.iml
+src/bepipred3/.idea/bepipred3.iml

@@ -35,12 +35,12 @@ cp "$INPUT_PATH" "$TMP_DIR/$FILENAME"
 echo "[INFO] Copied $INPUT_PATH to $TMP_DIR/$FILENAME"
 
 # Executa o container com o volume montado
-docker run --rm  \
+docker run --rm \
     -v /tmp/epibuilder:/tmp/epibuilder \
     bioinfoufsc/bepipred3 \
-    python3 ./bepipred3_custom.py \
+    python3 -u ./bepipred3_custom.py \
     -i "$TMP_DIR/$FILENAME" \
-    -o "$TMP_DIR"
+    -o "$TMP_DIR" 2>&1 | tee -a "$ORIG_DIR/pipeline.log"
 
 echo "[INFO] Analysis completed inside container."
 
