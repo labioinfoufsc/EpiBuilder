@@ -89,3 +89,14 @@ Use the following to log in for the first time:
 * **Password:** `admin`
 
 > **Note:** The admin account can create other users.
+
+## 📖 Citation
+
+If you use **EpiBuilder** in your research, please cite our article:
+
+> Moreira RS, Filho VB, Calomeno NA, Wagner G, Miletti LC.  
+> **EpiBuilder: A Tool for Assembling, Searching, and Classifying B-Cell Epitopes.**  
+> *Bioinformatics and Biology Insights*, 2022 May 11;16:11779322221095221.  
+> [https://doi.org/10.1177/11779322221095221](https://doi.org/10.1177/11779322221095221)  
+> PMID: [35571557](https://pubmed.ncbi.nlm.nih.gov/35571557/) — PMCID: PMC9102138
+
