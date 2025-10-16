@@ -16,7 +16,7 @@ if [ ! -f "$INPUT_PATH" ]; then
 fi
 
 # Diret  rio base dentro do volume
-BASE_DIR="/data/bepipred"
+BASE_DIR="/tmp/epibuilder/bepipred"
 
 # Nome do arquivo e diret  rio original
 FILENAME=$(basename "$INPUT_PATH")
@@ -35,8 +35,8 @@ cp "$INPUT_PATH" "$TMP_DIR/$FILENAME"
 echo "[INFO] Copied $INPUT_PATH to $TMP_DIR/$FILENAME"
 
 # Executa o container com o volume montado
-docker run --rm \
-    -v epibuilder-data:/data \
+docker run --rm  \
+    -v /tmp/epibuilder:/tmp/epibuilder \
     bioinfoufsc/bepipred3 \
     python3 ./bepipred3_custom.py \
     -i "$TMP_DIR/$FILENAME" \

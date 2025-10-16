@@ -77,8 +77,8 @@ sed -i "s|proxy_pass http://localhost:[0-9]\+/|proxy_pass http://localhost:${BAC
 log "Starting NGINX..."
 nginx
 
-if [ ! -d "/data/db" ]; then
-    mv /db /data/db
+if [ ! -d "/tmp/epibuilder/db" ]; then
+    mv /db /tmp/epibuilder/db
 fi
 
 log "Starting Spring Boot backend..."

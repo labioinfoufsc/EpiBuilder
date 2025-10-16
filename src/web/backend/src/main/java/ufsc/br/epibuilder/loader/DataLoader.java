@@ -69,7 +69,7 @@ public class DataLoader implements CommandLineRunner {
         User admin = createUser("Admin", "admin", "admin", Role.ADMIN);
         User regularUser = createUser("User", "user", "user", Role.USER);
 
-        Path dir = Paths.get("/data/db");
+        Path dir = Paths.get("/tmp/epibuilder/db");
 
         if (!Files.exists(dir)) {
             System.err.println("Directory not found: " + dir);

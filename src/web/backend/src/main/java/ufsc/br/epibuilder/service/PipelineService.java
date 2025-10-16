@@ -90,7 +90,7 @@ public class PipelineService {
 
             fullCommand.append("docker run --rm ");
             fullCommand.append("-v /var/run/docker.sock:/var/run/docker.sock ");
-            fullCommand.append("-v epibuilder-data:/data ");
+            fullCommand.append("-v /tmp/epibuilder:/tmp/epibuilder ");
             fullCommand.append("bioinfoufsc/epibuilder-core:latest epibuilder ");
             fullCommand.append("--input_file ").append(taskData.getFile().getAbsolutePath()).append(" ");
             fullCommand.append("--basename ").append(taskData.getCompleteBasename()).append(" ");
@@ -103,7 +103,7 @@ public class PipelineService {
                 taskData.setMaxEpitopeLength(null);
             }
 
-            // Adiciona parâmetros opcionais se não forem nulos
+            // Add optional parameters if not null
             if (taskData.getBepipredThreshold() != null) {
                 fullCommand.append("--threshold ").append(taskData.getBepipredThreshold()).append(" ");
             }
@@ -114,7 +114,7 @@ public class PipelineService {
                 fullCommand.append("--max-length ").append(taskData.getMaxEpitopeLength()).append(" ");
             }
 
-            // Adiciona parâmetros relacionados ao BLAST se necessário
+            // Add BLAST parameters if necessary
             if (taskData.isDoBlast()) {
                 fullCommand.append("--search blast ");
 
@@ -143,7 +143,7 @@ public class PipelineService {
 
             ProcessBuilder processBuilder = new ProcessBuilder(command);
 
-            // Configura variáveis de ambiente
+            // Environment variables
             Map<String, String> env = processBuilder.environment();
             String blastPath = "/usr/local/bin";
             String currentPath = env.getOrDefault("PATH", "");

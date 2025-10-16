@@ -18,7 +18,7 @@ else
     echo "Container '${CONTAINER_NAME}' not found. Creating and starting a new one..."
     docker run -d --name "${CONTAINER_NAME}" \
         -v /var/run/docker.sock:/var/run/docker.sock \
-  	-v epibuilder-data:/data \
+  	-v /tmp/epibuilder:/tmp/epibuilder \
   	-p 80:80 \
   	-p 8080:8080 \
   	-p 5435:5432 \
