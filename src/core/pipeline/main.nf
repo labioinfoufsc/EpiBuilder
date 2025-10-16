@@ -3,7 +3,7 @@
 nextflow.enable.dsl = 2
 
 params.input_file = params.input_file ?: null
-
+params.loc   = params.loc   ?: null
 params.minLength   = params.minLength   ?: null
 params.maxLength   = params.maxLength   ?: null
 params.threshold   = params.threshold   ?: null

@@ -8,6 +8,11 @@ show_help() {
     echo "  --input_file PATH      Path to the input file"
     echo ""
     echo "Optional parameters:"
+    echo "  --loc                  Subcellular localization: 'euk', 'arch', 'gram-pos', 'gram-neg'"
+    echo "                         euk      - Eukaryote"
+    echo "                         arch     - Archaea"
+    echo "                         gram-pos - Bacteria Gram +"
+    echo "                         gram-neg - Bacteria Gram -"
     echo "  --min-length INT       Minimum length"
     echo "  --max-length INT       Maximum length"
     echo "  --threshold FLOAT      Threshold value"
@@ -36,6 +41,11 @@ while [[ $# -gt 0 ]]; do
     case $key in
         --input_file)
             INPUT_FILE="$2"
+            shift
+            shift
+            ;;
+        --loc)
+            LOC="$2"
             shift
             shift
             ;;
@@ -108,6 +118,7 @@ fi
 # Build Nextflow command with all parameters
 NF_CMD="nextflow run /epibuilder/pipeline/main.nf --input_file \"$INPUT_FILE\" --search \"$SEARCH\""
 
+[[ -n "$LOC" ]] && NF_CMD+=" --loc \"$LOC\""
 [[ -n "$MIN_LENGTH" ]] && NF_CMD+=" --min-length \"$MIN_LENGTH\""
 [[ -n "$MAX_LENGTH" ]] && NF_CMD+=" --max-length \"$MAX_LENGTH\""
 [[ -n "$THRESHOLD" ]] && NF_CMD+=" --threshold \"$THRESHOLD\""
