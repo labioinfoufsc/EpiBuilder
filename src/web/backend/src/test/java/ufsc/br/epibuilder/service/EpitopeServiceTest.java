@@ -8,6 +8,7 @@ import ufsc.br.epibuilder.model.ActionType;
 import ufsc.br.epibuilder.model.Epitope;
 import ufsc.br.epibuilder.model.EpitopeTopology;
 import ufsc.br.epibuilder.model.Method;
+import ufsc.br.epibuilder.model.Protein;
 import ufsc.br.epibuilder.model.User;
 import ufsc.br.epibuilder.repository.EpitopeRepository;
 import ufsc.br.epibuilder.repository.EpitopeTaskDataRepository;
@@ -51,7 +52,13 @@ public class EpitopeServiceTest {
         topology.setTopologyData("BepiPred topology data");
 
         Epitope epitope = new Epitope();
-        epitope.setEpitopeId("EPI_123");
+        
+        Protein protein = new Protein();
+        protein.setProteinId("EPI_123");
+        protein.setDescription("Test");
+        protein.setLocalization("Test");
+        
+        epitope.setProtein(protein);
         epitope.setEpitope("PEPTIDE");
         epitope.setStart(1);
         epitope.setEndEpitope(7);

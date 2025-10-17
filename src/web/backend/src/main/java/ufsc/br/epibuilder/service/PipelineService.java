@@ -35,8 +35,13 @@ import ufsc.br.epibuilder.model.Epitope;
 import ufsc.br.epibuilder.model.EpitopeTaskData;
 import ufsc.br.epibuilder.model.EpitopeTopology;
 import ufsc.br.epibuilder.model.Method;
+import ufsc.br.epibuilder.model.Protein;
 import ufsc.br.epibuilder.model.Status;
 import ufsc.br.epibuilder.model.TaskStatus;
+import ufsc.br.epibuilder.model.BiologicalClassification;
+import ufsc.br.epibuilder.model.BacterialType;
+import ufsc.br.epibuilder.model.CellType;
+import ufsc.br.epibuilder.model.Organism;
 
 import ufsc.br.epibuilder.service.*;
 
@@ -101,6 +106,43 @@ public class PipelineService {
                 taskData.setBepipredThreshold(null);
                 taskData.setMinEpitopeLength(null);
                 taskData.setMaxEpitopeLength(null);
+            }
+
+            String locParam = null;
+            BiologicalClassification classification = taskData.getBiologicalClassification();
+
+            if (classification != null && classification.getCellType() != null) {
+                switch (classification.getCellType()) {
+                    case EUKARYOTE:
+                        if (classification.getOrganism() != null) {
+                            locParam = classification.getOrganism().toString().toLowerCase(); // animal, plant, fungi
+                        } else {
+                            locParam = "euka"; // eukaryote
+                        }
+                        break;
+
+                    case BACTERIA:
+                        if (classification.getBacterialType() != null) {
+                            switch (classification.getBacterialType()) {
+                                case GRAM_POSITIVE:
+                                    locParam = "gram-pos";
+                                    break;
+                                case GRAM_NEGATIVE:
+                                    locParam = "gram-neg";
+                                    break;
+                            }
+                        }
+                        break;
+
+                    case ARCHAEA:
+                        locParam = "archaea";
+                        break;
+                }
+            }
+
+            List<String> validParams = List.of("euka", "animal", "plant", "fungi", "archaea", "gram-neg", "gram-pos");
+            if (locParam != null && validParams.contains(locParam)) {
+                fullCommand.append("--loc ").append(locParam).append(" ");
             }
 
             // Add optional parameters if not null
@@ -176,9 +218,11 @@ public class PipelineService {
         }
     }
 
-    /*     * Stops a running process by its PID.
+    /*
+     * * Stops a running process by its PID.
      * 
      * @param pid
+     * 
      * @return true if the process was successfully stopped, false otherwise.
      */
     public boolean stopProcessByPid(Long pid) {
@@ -241,7 +285,7 @@ public class PipelineService {
 
     @PutMapping("/tasks/{id}/complete")
     public ResponseEntity<Void> markTaskAsCompleted(@PathVariable Long id) {
-       
+
         EpitopeTaskData task = epitopeTaskDataService.findById(id);
         if (task.getTaskStatus() != null && task.getTaskStatus().getStatus() != Status.COMPLETED) {
             task.getTaskStatus().setStatus(Status.COMPLETED);
@@ -266,10 +310,12 @@ public class PipelineService {
             Path topologyPath = completePath.resolve("topology.tsv");
             Path epitopePath = completePath.resolve("epitope-detail.tsv");
             Path proteinSummary = completePath.resolve("protein-summary.tsv");
+            Path localizationPath = completePath.resolve("localization.tsv");
 
             log.info("Checking for result files in {}", completePath);
 
-            if (!Files.exists(topologyPath) || !Files.exists(epitopePath) || !Files.exists(proteinSummary)) {
+            if (!Files.exists(topologyPath) || !Files.exists(epitopePath) || !Files.exists(proteinSummary)
+                    || !Files.exists(localizationPath)) {
                 log.error("Required result files missing in {} for task {}", completePath, task.getId());
                 task.getTaskStatus().setStatus(Status.FAILED);
                 epitopeTaskDataService.save(task);
@@ -287,6 +333,10 @@ public class PipelineService {
             log.info("Associating topologies with epitopes...");
             List<Epitope> completeEpitopes = associateTopologies(epitopes, topologies);
             log.info("Topologies associated with epitopes: {}", completeEpitopes.size());
+
+            log.info("Converting localization file for task...");
+            List<Protein> proteins = convertTsvToProteins(localizationPath.toString());
+            log.info("Proteins converted: {}", proteins.size());
 
             if (task.isDoBlast()) {
                 log.info("Processing BLAST files in {}", completePath);
@@ -348,6 +398,38 @@ public class PipelineService {
             epitopeTaskDataService.save(task);
         }
     }
+    
+    public List<Protein> convertTsvToProteins(String filePath) {
+    List<Protein> proteins = new ArrayList<>();
+
+    try (BufferedReader reader = Files.newBufferedReader(Paths.get(filePath))) {
+        String line;
+        boolean isHeader = true;
+
+        while ((line = reader.readLine()) != null) {
+            if (isHeader) {
+                isHeader = false;
+                continue;
+            }
+
+            String[] parts = line.split("\t");
+            if (parts.length < 3) continue;
+
+            String seqId = parts[0].trim();
+            String localization = parts[1].trim();
+
+            Protein protein = new Protein();
+            protein.setProteinId(seqId);
+            protein.setLocalization(localization);
+
+            proteins.add(protein);
+        }
+
+    } catch (IOException e) {
+        log.error("Error reading localization file: {}", e.getMessage(), e);
+    }
+
+    return proteins;
 
     public List<Blast> parseBlastCsv(String filePath) throws IOException {
         List<Blast> blastList = new ArrayList<>();
@@ -441,8 +523,13 @@ public class PipelineService {
             log.info("Processing line: {}", line);
 
             epitope.setN(Long.parseLong(columns[0]));
-            epitope.setEpitopeId(columns[1]);
-            epitope.setDescription(columns[2]);
+
+            Protein protein = new Protein();
+            protein.setProteinId(columns[1]);
+            protein.setDescription(columns[2]);
+            epitope.setProtein(protein);
+            // TODO set localization
+
             epitope.setEpitope(columns[3]);
             epitope.setStart(Integer.parseInt(columns[4]));
             epitope.setEndEpitope(Integer.parseInt(columns[5]));
