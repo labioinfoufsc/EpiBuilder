@@ -87,8 +87,9 @@
             <tr *ngFor="let epitope of epitopes; let i = index" (click)="selectEpitope(epitope)"
               style="cursor: pointer;">
               <td class="text-center">{{ epitope.n }}</td>
-              <td class="text-center">{{ epitope.epitopeId }}</td>
-              <td class="text-center">{{ epitope.description }}</td>
+              <td class="text-center">{{ epitope.protein?.proteinId }}</td>
+              <td class="text-center">{{ epitope.protein?.description }}</td>
+              <td class="text-center">{{ epitope.protein?.localization }}</td>
               <td class="text-center" style="font-family: 'Courier New', Courier, monospace;">
                 {{epitope.epitope}}
               </td>

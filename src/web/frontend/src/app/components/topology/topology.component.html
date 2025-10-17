@@ -1,7 +1,7 @@
 <div class="card">
   <div class="card-header custom-header">
     <b>Topology of Protein ID <span style="color: #ffff00;">#{{ proteinId || 'N/A' }}</span> - Epitope N <span
-        style="color: #ffff00;">#{{ epitopeId || 'N/A' }}</span></b>
+        style="color: #ffff00;">#{{ n || 'N/A' }}</span></b>
   </div>
 
   <div class="table-responsive">
@@ -49,7 +49,7 @@
 
   <div class="card-header custom-header">
     <b>BLAST of Protein ID <span style="color: #ffff00;">#{{ proteinId || 'N/A' }}</span> - Epitope N <span
-        style="color: #ffff00;">#{{ epitopeId || 'N/A' }}</span> - using <span style="color: #ffff00;">{{
+        style="color: #ffff00;">#{{ n || 'N/A' }}</span> - using <span style="color: #ffff00;">{{
         database?.includes('iedb') ? 'iedb' : 'custom' }}</span> database</b>
   </div>
 

@@ -21,5 +21,10 @@ export class EpitopeTaskData {
   maxIdentityCutoff?: number;
   wordSize?: number;
   status?: string;
+  biologicalClassification!: {
+    cellType: 'Eukaryote' | 'Bacteria' | 'Archaea';
+    organism?: 'Animal' | 'Plant' | 'Fungi';
+    bacterialType?: 'Gram positive' | 'Gram negative';
+  };
 }
 

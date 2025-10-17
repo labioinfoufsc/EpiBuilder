@@ -1,13 +1,12 @@
 import { Blast } from "./Blast";
 import { EpitopeTopology } from "./EpitopeTopology";
+import { Protein } from "./Protein";
 
 export class Epitope {
   id?: string;
-  description?: string;
   avgCover?: string;
   blasts?: Blast[];
   n?: number;
-  epitopeId?: string;
   epitope?: string;
   epitopeTopologies?: EpitopeTopology[];
   start?: number;
@@ -24,4 +23,5 @@ export class Epitope {
   chouFosman?: number;
   karplusSchulz?: number;
   parker?: number;
+  protein?: Protein;
 }

@@ -11,7 +11,7 @@ import { EpitopesService } from "../../services/epitopes/epitopes.service";
 export class TopologyComponent {
   epitopeTopologies: EpitopeTopology[] = [];
   expandedEpitopeIndex: number | null = null;
-  epitopeId?: number;
+  n?: number;
   proteinId?: string;
   database?: string;
 
@@ -31,8 +31,8 @@ export class TopologyComponent {
   loadTable() {
     this.epitopeService.selectedEpitope$.subscribe((epitope) => {
       if (epitope) {
-        this.epitopeId = epitope.n;
-        this.proteinId = epitope.epitopeId;
+        this.n = epitope.n;
+        this.proteinId = epitope?.protein?.proteinId;
         this.database = epitope.blasts?.[0]?.database?.includes("iedb") ? "iedb" : undefined;
 
         this.epitopeTopologies = Array.isArray(epitope.epitopeTopologies)
