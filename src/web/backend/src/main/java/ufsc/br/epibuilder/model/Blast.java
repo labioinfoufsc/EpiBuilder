@@ -16,8 +16,6 @@ import ufsc.br.epibuilder.model.TaskStatus;
 import lombok.ToString;
 import java.time.LocalDateTime;
 import ufsc.br.epibuilder.model.ActionType;
-import ufsc.br.epibuilder.model.DisplayMode;
-import ufsc.br.epibuilder.model.PredictionModelType;
 
 @Entity
 @Table(name = "blasts")
