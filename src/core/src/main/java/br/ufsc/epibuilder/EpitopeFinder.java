@@ -42,6 +42,8 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.apache.commons.lang3.StringUtils;
 import org.biojava.nbio.core.exceptions.CompoundNotFoundException;
@@ -426,7 +428,12 @@ public class EpitopeFinder {
 
             String fileEpibuilderFastaEpitopo = saveRandomFileName(dest + "/" + basename + "epibuilder-epitopes-fasta",
                     generateReportFastaEpitope(reportList), "fasta");
-            sout("\t Epitopes FASTA - done\t");
+            sout("\t Proteins FASTA\t");
+
+            sout("\t Proteins FASTA - done\t");
+            String fasta = saveRandomFileName(dest + "/" + basename + "proteins",
+                    generateReportFastaProteins(proteins), "fasta");
+            sout("\t Proteins FASTA - done\t");
 
             sout("\t Report Detailed\t");
             String reportDetailed = generateReportDetailed(reportList);
@@ -534,6 +541,25 @@ public class EpitopeFinder {
         int count = 1;
         for (Report report : reportList) {
             sb.append(String.format(">%s-%s\n%s\n", count++, report.getEpitope(), report.getEpitope()));
+        }
+        return sb.toString();
+    }
+
+    public static String generateReportFastaProteins(ArrayList<ProteinConverter> proteins) {
+        StringBuilder sb = new StringBuilder();
+        int count = 1;
+        for (ProteinConverter protein : proteins) {
+            String finalSequence = protein.getAminoacidMap().values().stream()
+                    .map(ProteinConverter.Amino::getAa)
+                    .collect(Collectors.joining());
+
+            int lineLength = 80;
+
+            String formattedSequence = IntStream.range(0, (finalSequence.length() + lineLength - 1) / lineLength)
+                    .mapToObj(i -> finalSequence.substring(i * lineLength, Math.min((i + 1) * lineLength, finalSequence.length())))
+                    .collect(Collectors.joining("\n"));
+
+            sb.append(String.format(">%s\n%s\n", protein.getId(), formattedSequence));
         }
         return sb.toString();
     }

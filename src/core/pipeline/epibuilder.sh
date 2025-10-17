@@ -9,7 +9,9 @@ show_help() {
     echo ""
     echo "Optional parameters:"
     echo "  --loc                  Subcellular localization: 'euk', 'arch', 'gram-pos', 'gram-neg'"
-    echo "                         euk      - Eukaryote"
+    echo "                         animal     - Eukaryote - Animal"
+    echo "                         plant      - Eukaryote - Plant"
+    echo "                         fungi      - Eukaryote - Fungi"
     echo "                         arch     - Archaea"
     echo "                         gram-pos - Bacteria Gram +"
     echo "                         gram-neg - Bacteria Gram -"
@@ -34,6 +36,11 @@ SEARCH="none"
 COVER=90
 IDENTITY=90
 WORD_SIZE=4
+
+SCRIPT_PATH="$(readlink -f "$0")"
+SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
+MAIN_NF="$SCRIPT_DIR/main.nf"
+JAR_PATH="$SCRIPT_DIR/epibuilder-core.jar"
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -116,7 +123,7 @@ fi
 [[ -n "$BASENAME" ]] && mkdir -p "$BASENAME/reports"
 
 # Build Nextflow command with all parameters
-NF_CMD="nextflow run /epibuilder/pipeline/main.nf --input_file \"$INPUT_FILE\" --search \"$SEARCH\""
+NF_CMD="nextflow run "$MAIN_NF" --input_file \"$INPUT_FILE\" --search \"$SEARCH\""
 
 [[ -n "$LOC" ]] && NF_CMD+=" --loc \"$LOC\""
 [[ -n "$MIN_LENGTH" ]] && NF_CMD+=" --min-length \"$MIN_LENGTH\""
@@ -127,6 +134,7 @@ NF_CMD="nextflow run /epibuilder/pipeline/main.nf --input_file \"$INPUT_FILE\" -
 NF_CMD+=" --cover \"$COVER\""
 NF_CMD+=" --identity \"$IDENTITY\""
 NF_CMD+=" --word-size \"$WORD_SIZE\""
+NF_CMD+=" --jar \"$JAR_PATH\""
 
 # Add Nextflow reports if BASENAME is defined
 [[ -n "$BASENAME" ]] && NF_CMD+=" \
@@ -134,6 +142,7 @@ NF_CMD+=" --word-size \"$WORD_SIZE\""
     -with-trace $BASENAME/reports/trace.txt \
     -with-timeline $BASENAME/reports/timeline.html \
     -with-dag $BASENAME/reports/flowchart.png"
-    
+
 # Execute
 eval $NF_CMD
+

@@ -11,44 +11,68 @@ params.basename    = params.basename    ?: null
 params.search      = params.search      ?: 'none'
 params.proteomes   = params.proteomes   ?: null
 
-workflow {
-    def input_file_path = file(params.input_file)
-    def jar_path = file('/epibuilder/epibuilder-core.jar')
-    // Garante que params.basename está definido
-    if (!params.basename) {
-        error "You must provide a value for 'params.basename'"
+process predict_localization {
+    tag "localization-${params.loc ?: 'unknown'}"
+    errorStrategy 'ignore'
+
+    input:
+    path epibuilder_results
+
+    output:
+    val(true)
+
+    script:
+    def fasta_file = "${params.basename}proteins.fasta"
+    def output_file = "${params.basename}raw_subcell.txt"
+    def output_file_tsv = "${params.basename}localization.tsv"
+
+    if (!params.loc) {
+        error "Parameter 'loc' not provided. Please set --loc to one of: animal, fungi, plant, arch, gram_pos, gram_neg"
     }
 
-    // Cria o diretório se não existir
-    def outputDir = new File(params.basename).absoluteFile
-    if (!outputDir.exists()) {
-        println "Creating output directory: ${outputDir}"
-        outputDir.mkdirs()
+    // Definir comando de acordo com o tipo
+    def cmd = ""
+    if (params.loc in ['animal', 'fungi', 'plant']) {
+        // WolfPsort
+        cmd = """
+        echo "Running WolfPsort for ${params.loc}..."
+        docker run --rm -v /tmp/epibuilder:/tmp/epibuilder bioinfoufsc/wolfpsort \\
+            -i ${fasta_file} -s ${params.loc} -o ${output_file}
+        """
     } else {
-        println "Output directory already exists: ${outputDir}"
-    }
-    if (params.input_file.endsWith('.fasta')) {
-        def result = validate_fasta(params.input_file)
-        println "Any valid proteins? ${result.status}"
-        if (result.valid_proteins) println "Valid proteins saved at: ${result.valid_proteins}"
-        if (result.invalid_proteins) println "Invalid proteins saved at: ${result.invalid_proteins}"
+        // PSORTb (arch, gram_pos, gram_neg)
+        def psort_flags = [
+            'arch'     : '-a',
+            'gram_pos' : '-p',
+            'gram_neg' : '-n'
+        ]
 
-        // Run extract_description to generate proteins.tsv
-        def desc = extract_description(input_file_path)
+        def flag = psort_flags[params.loc]
+        if (!flag) error "Invalid 'loc' for PSORTb. Use arch, gram_pos, or gram_neg."
 
-        if (result.status) {
-            run_bepipred(result.valid_proteins)
-            def epibuilder = run_epibuilder(run_bepipred.out, desc.tsv, jar_path)
-            copy_results(epibuilder.out).view()
-        }else {
-            error "Review the fasta file, ${result.invalid_proteins} invalid proteins "
-        }
-    } else if (params.input_file.endsWith('.csv')) {
-        def epibuilder = run_epibuilder(input_file_path, jar_path)
-        copy_results(epibuilder.out).view()
-    } else {
-        error 'Unsupported file type. Use .fasta or .csv'
+        cmd = """
+        echo "Running PSORTb for ${params.loc} (${flag})..."
+        docker run --rm -v /tmp/epibuilder:/tmp/epibuilder bioinfoufsc/psortb \\
+            -i ${fasta_file} ${flag} -o terse -r ${output_file_tsv}
+        """
     }
+
+    """
+    ${cmd}
+    """
+}
+
+process postprocess_localization {
+    input:
+    val trigger
+
+    script:
+    def input_file = "${params.basename}raw_subcell.txt"
+    def output_file = "${params.basename}localization.tsv"
+
+    """
+    python3 ${projectDir}/process_localization.py $input_file $output_file
+    """
 }
 
 process extract_description {
@@ -63,7 +87,7 @@ process extract_description {
     script:
     """
     echo "Extracting protein descriptions..."
-    python3 /epibuilder/pipeline/extract_description.py ${input_fasta} -o proteins.tsv
+    python3 ${projectDir}/extract_description.py ${input_fasta} -o proteins.tsv
     """
 }
 
@@ -106,7 +130,6 @@ process copy_results {
     if ls \$final_path/epibuilder-results-* 1> /dev/null 2>&1; then
         for file in \$final_path/epibuilder-results-*; do
             newname=\$(basename "\$file" | sed 's/^epibuilder-results-//')
-            echo "Renaming: \$(basename "\$file") -> \$newname"
             mv "\$file" "\$final_path/\$newname"
         done
     else
@@ -117,7 +140,6 @@ process copy_results {
     if ls \$final_path/epibuilder-* 1> /dev/null 2>&1; then
         for file in \$final_path/epibuilder-*; do
             newname=\$(basename "\$file" | sed 's/^epibuilder-//')
-            echo "Renaming: \$(basename "\$file") -> \$newname"
             mv "\$file" "\$final_path/\$newname"
         done
     else
@@ -161,7 +183,7 @@ process run_bepipred {
     INPUT_PATH="\$(realpath ${input_file})"
 
     # Call bepipred3 script
-    bepipred3 "\$INPUT_PATH"
+    ${projectDir}/bepipred3.sh "\$INPUT_PATH"
 
     # Copy the raw_output.csv to workdir
     cp \$(dirname "\$INPUT_PATH")/raw_output.csv ./
@@ -320,4 +342,56 @@ def validate_fasta(String fastaPath) {
     println "Files saved in: ${outputDir.absolutePath}"
 
     return result
+}
+
+workflow {
+    def input_file_path = file(params.input_file)
+    def jar_path = params.jar ? file(params.jar) : file("${projectDir}/epibuilder-core.jar")
+
+    if (!params.basename) {
+        error "You must provide a value for 'params.basename'"
+    }
+
+    // Cria o diretório se não existir
+    def outputDir = new File(params.basename).absoluteFile
+    if (!outputDir.exists()) {
+        println "Creating output directory: ${outputDir}"
+        outputDir.mkdirs()
+    } else {
+        println "Output directory already exists: ${outputDir}"
+    }
+    if (params.input_file.endsWith('.fasta')) {
+        def result = validate_fasta(params.input_file)
+        println "Any valid proteins? ${result.status}"
+        if (result.valid_proteins) println "Valid proteins saved at: ${result.valid_proteins}"
+        if (result.invalid_proteins) println "Invalid proteins saved at: ${result.invalid_proteins}"
+
+        // Run extract_description to generate proteins.tsv
+        def desc = extract_description(input_file_path)
+
+        if (result.status) {
+            run_bepipred(result.valid_proteins)
+            def epibuilder = run_epibuilder(run_bepipred.out, desc.tsv, jar_path)
+            if (params.loc) {
+                def loc_file = predict_localization(epibuilder.out)
+                if (params.loc in ['animal', 'fungi', 'plant']) {
+                    postprocess_localization(loc_file)
+                }
+            }
+            copy_results(epibuilder.out).view()
+        }else {
+            error "Review the fasta file, ${result.invalid_proteins} invalid proteins "
+        }
+    } else if (params.input_file.endsWith('.csv')) {
+        def epibuilder = run_epibuilder(input_file_path,file("/dev/null"), jar_path)
+        if (params.loc) {
+            def loc_file = predict_localization(epibuilder.out)
+            if (params.loc in ['animal', 'fungi', 'plant']) {
+                postprocess_localization(loc_file)
+            }
+        }
+        copy_results(epibuilder.out).view()
+    } else {
+        error 'Unsupported file type. Use .fasta or .csv'
+    }
 }

@@ -56,15 +56,6 @@ public class ProteinConverter {
     }
 
     public int count(String peptide) {
-        /*String str = sequence;
-
-        String strFind = peptide;
-        int count = 0, fromIndex = 0;
-        while ((fromIndex = str.indexOf(strFind, fromIndex)) != -1) {
-            count++;
-            fromIndex++;
-        }*/
-
         return StringUtils.countMatches(sequence, peptide);
     }
 
