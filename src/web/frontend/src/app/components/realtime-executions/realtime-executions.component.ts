@@ -1,4 +1,5 @@
 import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Modal } from "bootstrap";
 import { Subscription } from 'rxjs';
 import { EpitopeTaskData } from '../../models/EpitopeTaskData';
 import { EpitopesService } from '../../services/epitopes/epitopes.service';
@@ -12,7 +13,7 @@ import { LoginService } from '../../services/login/login.service';
 })
 export class RealtimeExecutionsComponent implements OnInit, OnDestroy {
   processes: EpitopeTaskData[] = [];
-  columns: string[] = ['PID', 'Task name', 'Started At', 'Elapsed Time', 'Status', 'View log'];
+  columns: string[] = ['PID', 'Task name', 'Started At', 'Elapsed Time', 'Status', 'Action'];
   userId: number | undefined;
   taskListChangedSubscription: Subscription | undefined;
   logText: string = '';
@@ -27,6 +28,10 @@ export class RealtimeExecutionsComponent implements OnInit, OnDestroy {
   private isUpdatingLog = false;
 
   @ViewChild('logContent') private logContentRef!: ElementRef;
+
+  @ViewChild('stopModal') stopModalRef!: ElementRef;
+
+  selectedProcessToStop: EpitopeTaskData | undefined;
 
   constructor(
     private epitopesService: EpitopesService,
@@ -66,6 +71,53 @@ export class RealtimeExecutionsComponent implements OnInit, OnDestroy {
     if (element) {
       element.scrollTop = element.scrollHeight;
     }
+  }
+
+  /**
+ * Opens the stop confirmation modal.
+ */
+  stopProcess(process: EpitopeTaskData): void {
+    this.selectedProcessToStop = process;
+    const modalEl = this.stopModalRef.nativeElement;
+    const modal = new Modal(modalEl, { backdrop: false });
+    modal.show();
+  }
+
+  /**
+   * Closes the stop modal.
+   */
+  hideStopModal(): void {
+    const modalEl = this.stopModalRef.nativeElement;
+    const modal = Modal.getInstance(modalEl);
+    modal?.hide();
+    this.selectedProcessToStop = undefined;
+  }
+
+  /**
+   * Confirms and executes the stop action.
+   */
+  confirmStop(): void {
+    if (!this.selectedProcessToStop) return;
+
+    this.epitopesService.stopTask(this.selectedProcessToStop.id).subscribe({
+      next: () => {
+        console.log(`Process ${this.selectedProcessToStop!.id} stopped successfully.`);
+        this.loadTasks();
+        this.hideStopModal();
+      },
+      error: (err: any) => {
+        console.error(`Failed to stop process ${this.selectedProcessToStop!.id}:`, err);
+        this.hideStopModal();
+      }
+    });
+  }
+
+
+  /**
+   * Closes the stop confirmation modal.
+   */
+  closeStopModal(): void {
+    this.selectedProcessToStop = undefined;
   }
 
   public onOverlayClick(event: MouseEvent): void {

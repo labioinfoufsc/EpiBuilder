@@ -244,6 +244,47 @@ public class EpitopeController {
 
         return epitopeTaskDataService.save(taskData);
     }
+    
+    @PostMapping("/tasks/stop/{id}")
+    public ResponseEntity<Map<String, Object>> stopTask(@PathVariable Long id) {
+        try {
+            EpitopeTaskData taskData = epitopeTaskDataService.findById(id);
+            if (taskData == null) {
+                return errorResponse("Task not found", HttpStatus.NOT_FOUND);
+            }
+
+            TaskStatus taskStatus = taskData.getTaskStatus();
+            if (taskStatus == null || taskStatus.getStatus() != Status.RUNNING) {
+                return errorResponse("Task is not running or already finalized", HttpStatus.CONFLICT);
+            }
+
+            Long pid = taskStatus.getPid();
+            if (pid == null) {
+                return errorResponse("Task process ID is missing", HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+
+            log.info("Attempting to stop task ID {} with PID {}", id, pid);
+
+            boolean stopped = pipelineService.stopProcessByPid(pid);
+            if (!stopped) {
+                return errorResponse("Failed to stop the process", HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+
+            taskStatus.setStatus(Status.STOPPED);
+            taskData.setFinishedDate(LocalDateTime.now());
+            epitopeTaskDataService.save(taskData);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Task stopped successfully");
+            response.put("taskId", taskData.getId());
+            response.put("status", taskStatus.getStatus().name());
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Error stopping task {}: {}", id, e.getMessage(), e);
+            return errorResponse("Internal server error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 
     private ResponseEntity<Map<String, Object>> successResponse(EpitopeTaskData savedTask) {
         Map<String, Object> response = new HashMap<>();

@@ -176,6 +176,23 @@ public class PipelineService {
         }
     }
 
+    /*     * Stops a running process by its PID.
+     * 
+     * @param pid
+     * @return true if the process was successfully stopped, false otherwise.
+     */
+    public boolean stopProcessByPid(Long pid) {
+        try {
+            ProcessHandle.of(pid).ifPresent(process -> {
+                process.destroy();
+            });
+            return true;
+        } catch (Exception e) {
+            log.error("Failed to stop process with PID {}: {}", pid, e.getMessage(), e);
+            return false;
+        }
+    }
+
     /**
      * Adds an optional parameter to the command if the parameter value is not null
      * or "none".

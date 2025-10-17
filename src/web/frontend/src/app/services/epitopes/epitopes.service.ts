@@ -41,6 +41,15 @@ export class EpitopesService {
 
   constructor(private http: HttpClient) { }
 
+  /**
+ * Sends a request to stop a running task by its ID.
+ */
+  stopTask(id: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/tasks/stop/${id}`, {}, {
+      withCredentials: true
+    });
+  }
+
   getTaskStatus(taskId: number): Observable<APIResponse<EpitopeTaskData>> {
     return this.http.get<APIResponse<EpitopeTaskData>>(
       `${this.apiUrl}/tasks/status/${taskId}`,
