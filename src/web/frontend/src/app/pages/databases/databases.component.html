@@ -53,6 +53,7 @@
             <tr *ngFor="let file of files">
               <td style="word-break: break-word; max-width: 200px;">{{ file.alias }}</td>
               <td>{{ file.date | date: 'dd-MM-yyyy' }}</td>
+              <td>{{ file.amountSequences }}</td>
               <td>
                 <ng-container *ngIf="file.fileName.includes('iedb') && file.alias?.includes('iedb'); else showDelete">
                   <p>None<br><span style="font-style: italic;">Default database</span></p>
@@ -66,8 +67,8 @@
               </td>
 
               <td>
-                <button class="btn p-0" style="background: transparent !important; border: none !important;" (click)="downloadFile(file)"
-                  title="Download file">
+                <button class="btn p-0" style="background: transparent !important; border: none !important;"
+                  (click)="downloadFile(file)" title="Download file">
                   <i class="fas fa-download" style="color: #0d6efd; cursor: pointer;"></i>
                 </button>
               </td>

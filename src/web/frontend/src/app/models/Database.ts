@@ -7,4 +7,5 @@ export class Database {
   sourceType?: string;
   dbFile?: File;
   downloadUrl?: string;
+  amountSequences?: number;
 }

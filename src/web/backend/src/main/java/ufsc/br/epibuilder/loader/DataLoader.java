@@ -19,6 +19,7 @@ import java.util.List;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.io.BufferedReader;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -99,21 +100,41 @@ public class DataLoader implements CommandLineRunner {
         return user;
     }
 
+    private int countSequences(Path filePath) throws IOException {
+        try (BufferedReader reader = Files.newBufferedReader(filePath)) {
+            int count = 0;
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.startsWith(">")) {
+                    count++;
+                }
+            }
+            return count;
+        }
+    }
+
     private void loadDatabaseFile(String filePath, String alias) {
         File file = new File(filePath);
 
         if (file.exists() && file.isFile()) {
-            // Criar o objeto Database
-            Database database = new Database();
-            database.setAlias(alias);
-            database.setFileName(file.getName());
-            database.setAbsolutePath(file.getAbsolutePath());
-            LocalDateTime now = ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).toLocalDateTime();
-            database.setDate(now);
 
-            // Persistir no banco de dados
-            entityManager.persist(database);
-            System.out.println("DataLoader: File loaded and persisted: " + file.getName());
+            try {
+                Database database = new Database();
+                database.setAlias(alias);
+                database.setFileName(file.getName());
+                database.setAbsolutePath(file.getAbsolutePath());
+                LocalDateTime now = ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).toLocalDateTime();
+                database.setDate(now);
+
+                database.setAmountSequences(countSequences(file.toPath()));
+
+                entityManager.persist(database);
+                System.out.println("DataLoader: File loaded and persisted: " + file.getName());
+            } catch (IOException e) {
+                System.err.println("Error counting sequences from file: " + file.getName());
+                e.printStackTrace();
+            }
+
         } else {
             System.out.println("DataLoader: File does not exist: " + filePath);
         }

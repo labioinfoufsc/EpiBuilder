@@ -29,6 +29,8 @@ public class Database {
     private LocalDateTime date;
     @Transient
     private String sourceType;
+    @Column(nullable = false)
+    private Integer amountSequences;
 
     @Override
     public String toString() {

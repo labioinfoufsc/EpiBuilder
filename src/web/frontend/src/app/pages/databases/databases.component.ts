@@ -14,7 +14,7 @@ export class DatabasesComponent {
   newDatabase?: Database;
   selectedFile!: File;
   files: Database[] = [];
-  columns: string[] = ['Database', 'Creation Date', 'Action'];
+  columns: string[] = ['Database', 'Creation Date', 'Number of Sequences', 'Action'];
   alertMessage: string | null = null;
   alertType: "success" | "danger" | null = null;
   fileToDelete: Database | null = null;

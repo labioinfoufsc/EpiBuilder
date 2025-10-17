@@ -99,6 +99,19 @@ public class DatabaseController {
         }
     }
 
+    private int countSequences(Path filePath) throws IOException {
+        try (BufferedReader reader = Files.newBufferedReader(filePath)) {
+            int count = 0;
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.startsWith(">")) {
+                    count++;
+                }
+            }
+            return count;
+        }
+    }
+
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Database> create(
             @RequestPart("data") Database database,
@@ -121,6 +134,9 @@ public class DatabaseController {
             LocalDateTime now = ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).toLocalDateTime();
             database.setDate(now);
             database.setFileName(sanitizedFilename);
+
+            int sequenceCount = countSequences(destinationFile);
+            database.setAmountSequences(sequenceCount);
 
             Database createdDatabase = databaseService.save(database);
 
