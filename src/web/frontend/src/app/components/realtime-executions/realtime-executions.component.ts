@@ -13,7 +13,7 @@ import { LoginService } from '../../services/login/login.service';
 })
 export class RealtimeExecutionsComponent implements OnInit, OnDestroy {
   processes: EpitopeTaskData[] = [];
-  columns: string[] = ['PID', 'Task name', 'Started At', 'Elapsed Time', 'Status', 'Action'];
+  columns: string[] = ['PID', 'Task name', 'Started At', 'Elapsed Time', 'Status', 'Actions'];
   userId: number | undefined;
   taskListChangedSubscription: Subscription | undefined;
   logText: string = '';
