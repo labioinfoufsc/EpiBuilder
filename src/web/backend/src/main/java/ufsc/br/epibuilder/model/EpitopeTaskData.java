@@ -11,6 +11,7 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -60,6 +61,9 @@ public class EpitopeTaskData {
      */
     @Column(name = "finished_date")
     private LocalDateTime finishedDate;
+
+    @Transient
+    private BiologicalClassification biologicalClassification;
 
     /**
      * User who created this task (LAZY-loaded for performance)

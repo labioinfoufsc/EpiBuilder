@@ -29,13 +29,12 @@ public class Epitope {
     private Long id;
 
     @Column
-    private String epitopeId;
-
-    @Column
-    private String description;
-
-    @Column
     private Long N;
+
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "protein_id", referencedColumnName = "id")
+    @JsonManagedReference
+    private Protein protein;
 
     /**
      * The prediction score assigned to the epitope.
