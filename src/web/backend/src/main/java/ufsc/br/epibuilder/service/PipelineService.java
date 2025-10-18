@@ -116,8 +116,6 @@ public class PipelineService {
                     case EUKARYOTE:
                         if (classification.getOrganism() != null) {
                             locParam = classification.getOrganism().toString().toLowerCase(); // animal, plant, fungi
-                        } else {
-                            locParam = "euka"; // eukaryote
                         }
                         break;
 
@@ -125,22 +123,22 @@ public class PipelineService {
                         if (classification.getBacterialType() != null) {
                             switch (classification.getBacterialType()) {
                                 case GRAM_POSITIVE:
-                                    locParam = "gram-pos";
+                                    locParam = "gram_pos"; 
                                     break;
                                 case GRAM_NEGATIVE:
-                                    locParam = "gram-neg";
+                                    locParam = "gram_neg"; 
                                     break;
                             }
                         }
                         break;
 
                     case ARCHAEA:
-                        locParam = "archaea";
+                        locParam = "arch"; 
                         break;
                 }
             }
 
-            List<String> validParams = List.of("euka", "animal", "plant", "fungi", "archaea", "gram-neg", "gram-pos");
+            List<String> validParams = List.of("animal", "plant", "fungi", "arch", "gram_pos", "gram_neg");
             if (locParam != null && validParams.contains(locParam)) {
                 fullCommand.append("--loc ").append(locParam).append(" ");
             }
@@ -314,8 +312,7 @@ public class PipelineService {
 
             log.info("Checking for result files in {}", completePath);
 
-            if (!Files.exists(topologyPath) || !Files.exists(epitopePath) || !Files.exists(proteinSummary)
-                    || !Files.exists(localizationPath)) {
+            if (!Files.exists(topologyPath) || !Files.exists(epitopePath) || !Files.exists(proteinSummary)|| !Files.exists(localizationPath)) {
                 log.error("Required result files missing in {} for task {}", completePath, task.getId());
                 task.getTaskStatus().setStatus(Status.FAILED);
                 epitopeTaskDataService.save(task);
@@ -400,36 +397,38 @@ public class PipelineService {
     }
     
     public List<Protein> convertTsvToProteins(String filePath) {
-    List<Protein> proteins = new ArrayList<>();
+        List<Protein> proteins = new ArrayList<>();
 
-    try (BufferedReader reader = Files.newBufferedReader(Paths.get(filePath))) {
-        String line;
-        boolean isHeader = true;
+        try (BufferedReader reader = Files.newBufferedReader(Paths.get(filePath))) {
+            String line;
+            boolean isHeader = true;
 
-        while ((line = reader.readLine()) != null) {
-            if (isHeader) {
-                isHeader = false;
-                continue;
+            while ((line = reader.readLine()) != null) {
+                if (isHeader) {
+                    isHeader = false;
+                    continue;
+                }
+
+                String[] parts = line.split("\t");
+                if (parts.length < 3)
+                    continue;
+
+                String seqId = parts[0].trim();
+                String localization = parts[1].trim();
+
+                Protein protein = new Protein();
+                protein.setProteinId(seqId);
+                protein.setLocalization(localization);
+
+                proteins.add(protein);
             }
 
-            String[] parts = line.split("\t");
-            if (parts.length < 3) continue;
-
-            String seqId = parts[0].trim();
-            String localization = parts[1].trim();
-
-            Protein protein = new Protein();
-            protein.setProteinId(seqId);
-            protein.setLocalization(localization);
-
-            proteins.add(protein);
+        } catch (IOException e) {
+            log.error("Error reading localization file: {}", e.getMessage(), e);
         }
 
-    } catch (IOException e) {
-        log.error("Error reading localization file: {}", e.getMessage(), e);
+        return proteins;
     }
-
-    return proteins;
 
     public List<Blast> parseBlastCsv(String filePath) throws IOException {
         List<Blast> blastList = new ArrayList<>();

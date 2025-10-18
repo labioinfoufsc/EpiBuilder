@@ -86,6 +86,7 @@
                       </div>
                     </div>
 
+
                     <!-- Action to Perform -->
                     <div class="mb-3">
                       <label class="form-label fw-bold mb-2">Parameters:&nbsp;&nbsp;</label>
@@ -107,6 +108,39 @@
 
                       <!-- Slider BepiPred Threshold -->
                       <div class="mb-3">
+
+                        <div formGroupName="biologicalClassification">
+                          <!-- Cell Type -->
+                          <strong>Cell Type</strong>
+                          <div class="form-check" *ngFor="let type of cellTypes">
+                            <input class="form-check-input" type="radio" [value]="type.value" formControlName="cellType"
+                              name="cellType" [id]="type.value" />
+                            <label class="form-check-label" [for]="type.value">{{ type.label }}</label>
+                          </div>
+
+                          <!-- Eukaryote Subtypes -->
+                          <div *ngIf="myForm.get('biologicalClassification.cellType')?.value === 'EUKARYOTE'">
+                            <strong>Eukaryote Subtype (optional)</strong>
+                            <div class="form-check" *ngFor="let org of organisms">
+                              <input class="form-check-input" type="radio" [value]="org.value"
+                                formControlName="organism" name="organism" [id]="org.value" />
+                              <label class="form-check-label" [for]="org.value">{{ org.label }}</label>
+                            </div>
+                            <small class="text-muted">Leave blank to select general Eukaryote.</small>
+                          </div>
+
+                          <!-- Bacterial Type (required) -->
+                          <div *ngIf="myForm.get('biologicalClassification.cellType')?.value === 'BACTERIA'">
+                            <strong>Bacterial Type</strong>
+                            <div class="form-check" *ngFor="let bac of bacteriaTypes">
+                              <input class="form-check-input" type="radio" [value]="bac.value"
+                                formControlName="bacterialType" name="bacterialType" [id]="bac.value" />
+                              <label class="form-check-label" [for]="bac.value">{{ bac.label }}</label>
+                            </div>
+                          </div>
+                        </div>
+
+                        <br>
                         <label for="bepipredThreshold" class="form-label fw-bold">
                           BepiPred Threshold (default = 0.1512)
                         </label>

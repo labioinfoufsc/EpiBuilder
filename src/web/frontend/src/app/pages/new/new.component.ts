@@ -22,6 +22,23 @@ export class NewComponent {
   isLoading: boolean = false;
   sequenceCount: number | null = null;
   fileType: 'fasta' | 'csv' | null = null;
+  cellTypes = [
+    { label: 'Eukaryote', value: 'EUKARYOTE' },
+    { label: 'Bacteria', value: 'BACTERIA' },
+    { label: 'Archaea', value: 'ARCHAEA' }
+  ];
+
+  organisms = [
+    { label: 'Animal', value: 'ANIMAL' },
+    { label: 'Plant', value: 'PLANT' },
+    { label: 'Fungi', value: 'FUNGI' }
+  ];
+
+  bacteriaTypes = [
+    { label: 'Gram-positive', value: 'GRAM_POSITIVE' },
+    { label: 'Gram-negative', value: 'GRAM_NEGATIVE' }
+  ];
+
 
   constructor(
     private fb: FormBuilder,
@@ -31,24 +48,63 @@ export class NewComponent {
     private cdr: ChangeDetectorRef,
     private databasesService: DatabasesService
   ) {
-    this.myForm = this.fb.group({
-      runName: 'epibuilder-task',
-      file: [null],
-      inputType: 'file',
-      actionType: 'default',
-      manualSequence: '',
-      databaseFile: [''],
-      bepipredThreshold: 0.1512,
-      minEpitopeLength: 10,
-      maxEpitopeLength: 30,
-      doBlast: 'no_search',
-      minIdentityCutoff: [90],
-      minCoverCutoff: [90],
-      wordSize: [4],
-      proteomes: this.fb.array([]),
+    this.myForm = this.fb.group({});
+    this.resetForm();
+  }
+
+  ngOnInit() {
+    const cellTypeControl = this.myForm.get('biologicalClassification.cellType');
+    const organismControl = this.myForm.get('biologicalClassification.organism');
+    const bacterialControl = this.myForm.get('biologicalClassification.bacterialType');
+
+    this.myForm.get('actionType')?.valueChanges.subscribe(action => {
+      if (action === 'customized') {
+        cellTypeControl?.setValidators(Validators.required);
+      } else {
+        cellTypeControl?.clearValidators();
+        organismControl?.clearValidators();
+        bacterialControl?.clearValidators();
+
+        cellTypeControl?.reset();
+        organismControl?.reset();
+        bacterialControl?.reset();
+      }
+
+      cellTypeControl?.updateValueAndValidity();
+      organismControl?.updateValueAndValidity();
+      bacterialControl?.updateValueAndValidity();
     });
 
-    this.resetForm();
+    cellTypeControl?.valueChanges.subscribe(cellType => {
+      if (cellType === 'EUKARYOTE') {
+        organismControl?.setValidators(Validators.required);
+
+        // ✅ Define valor padrão como 'ANIMAL' se ainda não estiver preenchido
+        if (!organismControl?.value) {
+          organismControl?.setValue('ANIMAL');
+        }
+
+        bacterialControl?.reset();
+        bacterialControl?.clearValidators();
+      } else if (cellType === 'BACTERIA') {
+        bacterialControl?.setValidators(Validators.required);
+
+        if (!bacterialControl?.value) {
+          bacterialControl?.setValue('GRAM_POSITIVE');
+        }
+
+        organismControl?.reset();
+        organismControl?.clearValidators();
+      } else if (cellType === 'ARCHAEA') {
+        organismControl?.reset();
+        bacterialControl?.reset();
+        organismControl?.clearValidators();
+        bacterialControl?.clearValidators();
+      }
+
+      organismControl?.updateValueAndValidity();
+      bacterialControl?.updateValueAndValidity();
+    });
   }
 
   loadDatabases() {
@@ -88,7 +144,13 @@ export class NewComponent {
       minCoverCutoff: [90],
       wordSize: [4],
       proteomes: this.fb.array([]),
+      biologicalClassification: this.fb.group({
+        cellType: ['EUKARYOTE', Validators.required],
+        organism: [null],
+        bacterialType: ['GRAM_POSITIVE', Validators.required],
+      }),
     });
+
 
     const fileInput = document.getElementById('fileToProcess') as HTMLInputElement;
     if (fileInput) {
@@ -206,10 +268,19 @@ export class NewComponent {
       taskData.bepipredThreshold = 0.1512;
       taskData.minEpitopeLength = 10;
       taskData.maxEpitopeLength = 30;
+      taskData.biologicalClassification = null;
     } else if (this.myForm.get('actionType')?.value === 'customized') {
       taskData.bepipredThreshold = this.myForm.get('bepipredThreshold')?.value;
       taskData.minEpitopeLength = this.myForm.get('minEpitopeLength')?.value;
       taskData.maxEpitopeLength = this.myForm.get('maxEpitopeLength')?.value;
+
+      const classificationGroup = this.myForm.get('biologicalClassification')?.value;
+
+      taskData.biologicalClassification = {
+        cellType: classificationGroup.cellType,
+        organism: classificationGroup.organism || null,
+        bacterialType: classificationGroup.bacterialType || null,
+      };
     }
 
     const formData = new FormData();
@@ -223,7 +294,6 @@ export class NewComponent {
       taskData.blastMinCoverCutoff = this.myForm.get('minCoverCutoff')?.value;
       taskData.blastWordSize = this.myForm.get('wordSize')?.value;
 
-      // Processa proteomas
       const proteomesResult = this.processProteomes();
       if (proteomesResult === null) {
         this.showMessage({
@@ -235,7 +305,6 @@ export class NewComponent {
 
       taskData.proteomes = proteomesResult.proteomeMeta;
 
-      // Adiciona arquivos ao formData
       proteomesResult?.proteomeFiles.forEach(file => {
         formData.append('proteomes', file, file.name);
       });
@@ -282,7 +351,6 @@ export class NewComponent {
       }
     });
   }
-
 
   private validateBlastParameters(): boolean {
     if (this.myForm.get('minIdentityCutoff')?.value < 0 || this.myForm.get('minIdentityCutoff')?.value > 100) {
