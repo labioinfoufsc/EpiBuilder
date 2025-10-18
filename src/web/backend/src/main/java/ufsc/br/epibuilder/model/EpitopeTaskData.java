@@ -65,6 +65,9 @@ public class EpitopeTaskData {
     @Transient
     private BiologicalClassification biologicalClassification;
 
+    @Column(name = "localization_param")
+    private String localizationParam;
+
     /**
      * User who created this task (LAZY-loaded for performance)
      */

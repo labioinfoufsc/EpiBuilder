@@ -123,17 +123,17 @@ public class PipelineService {
                         if (classification.getBacterialType() != null) {
                             switch (classification.getBacterialType()) {
                                 case GRAM_POSITIVE:
-                                    locParam = "gram_pos"; 
+                                    locParam = "gram_pos";
                                     break;
                                 case GRAM_NEGATIVE:
-                                    locParam = "gram_neg"; 
+                                    locParam = "gram_neg";
                                     break;
                             }
                         }
                         break;
 
                     case ARCHAEA:
-                        locParam = "arch"; 
+                        locParam = "arch";
                         break;
                 }
             }
@@ -312,7 +312,8 @@ public class PipelineService {
 
             log.info("Checking for result files in {}", completePath);
 
-            if (!Files.exists(topologyPath) || !Files.exists(epitopePath) || !Files.exists(proteinSummary)|| !Files.exists(localizationPath)) {
+            if (!Files.exists(topologyPath) || !Files.exists(epitopePath) || !Files.exists(proteinSummary)
+                    || !Files.exists(localizationPath)) {
                 log.error("Required result files missing in {} for task {}", completePath, task.getId());
                 task.getTaskStatus().setStatus(Status.FAILED);
                 epitopeTaskDataService.save(task);
@@ -334,6 +335,21 @@ public class PipelineService {
             log.info("Converting localization file for task...");
             List<Protein> proteins = convertTsvToProteins(localizationPath.toString());
             log.info("Proteins converted: {}", proteins.size());
+
+            log.info("Associating localization with epitope proteins...");
+            Map<String, String> localizationMap = proteins.stream()
+                    .collect(Collectors.toMap(Protein::getProteinId, Protein::getLocalization));
+
+            for (Epitope epitope : completeEpitopes) {
+                Protein protein = epitope.getProtein();
+                if (protein != null) {
+                    String loc = localizationMap.get(protein.getProteinId());
+                    if (loc != null) {
+                        protein.setLocalization(loc);
+                    }
+                }
+            }
+            log.info("Localization successfully applied to epitope proteins.");
 
             if (task.isDoBlast()) {
                 log.info("Processing BLAST files in {}", completePath);
@@ -395,7 +411,7 @@ public class PipelineService {
             epitopeTaskDataService.save(task);
         }
     }
-    
+
     public List<Protein> convertTsvToProteins(String filePath) {
         List<Protein> proteins = new ArrayList<>();
 
@@ -526,8 +542,8 @@ public class PipelineService {
             Protein protein = new Protein();
             protein.setProteinId(columns[1]);
             protein.setDescription(columns[2]);
+            protein.setEpitope(epitope);
             epitope.setProtein(protein);
-            // TODO set localization
 
             epitope.setEpitope(columns[3]);
             epitope.setStart(Integer.parseInt(columns[4]));

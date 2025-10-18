@@ -238,6 +238,11 @@ public class EpitopeController {
         taskStatus.setStatus(Status.RUNNING);
         taskStatus.setEpitopeTaskData(taskData);
 
+        String locParam = taskData.getBiologicalClassification() != null
+                ? taskData.getBiologicalClassification().toLocParam()
+                : null;
+        taskData.setLocalizationParam(locParam);
+
         taskData.setTaskStatus(taskStatus);
         LocalDateTime now = ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).toLocalDateTime();
         taskData.setExecutionDate(now);
