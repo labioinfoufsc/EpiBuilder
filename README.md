@@ -45,7 +45,7 @@ Run the command below **only once** to create the container. This will also star
 ```bash
   docker run -it --name epibuilder \
   -v /var/run/docker.sock:/var/run/docker.sock \
-  -v epibuilder-data:/data \
+  -v /tmp/epibuilder:/tmp/epibuilder \
   -p 80:80 \
   -p 8080:8080 \
   -p 5435:5432 \
