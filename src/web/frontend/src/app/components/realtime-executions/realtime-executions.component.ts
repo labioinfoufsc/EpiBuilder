@@ -125,13 +125,14 @@ export class RealtimeExecutionsComponent implements OnInit, OnDestroy {
   }
 
   private startTableUpdates(): void {
-    this.cleanUpTableInterval();
+    if (this.tableUpdateTimer) return;
     this.tableUpdateTimer = setInterval(() => {
       this.loadTasks();
     }, this.tableUpdateInterval);
   }
 
   private startElapsedTimeUpdates(): void {
+    if (this.elapsedTimeUpdateTimer) return;
     this.elapsedTimeUpdateTimer = setInterval(() => {
       this.updateElapsedTime();
     }, 1000);
@@ -145,7 +146,7 @@ export class RealtimeExecutionsComponent implements OnInit, OnDestroy {
   }
 
   private startLogUpdates(): void {
-    this.cleanUpLogInterval();
+    if (this.logUpdateTimer || this.currentProcess?.status === 'COMPLETED') return;
     this.logUpdateTimer = setInterval(() => {
       this.updateLogContent();
     }, this.logUpdateInterval);
@@ -208,8 +209,11 @@ export class RealtimeExecutionsComponent implements OnInit, OnDestroy {
             if (typeof taskId === 'number') {
               this.epitopesService.markTaskAsCompleted(taskId).subscribe({
                 next: () => {
-                  this.loadTasks();
                   this.currentProcess!.status = 'COMPLETED';
+                  this.cleanUpLogInterval();
+                  this.loadTasks();
+                  this.startTableUpdates();
+                  this.startElapsedTimeUpdates();
                 },
                 error: (err) => {
                   console.error('Error while notifying backend:', err);

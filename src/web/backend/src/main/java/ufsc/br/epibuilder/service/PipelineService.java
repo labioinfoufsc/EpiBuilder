@@ -528,7 +528,7 @@ public class PipelineService {
 
     public static int countProteins(String pathFile) throws IOException {
         try (BufferedReader br = new BufferedReader(new FileReader(pathFile))) {
-            String line = br.readLine(); // pula o cabeçalho
+            String line = br.readLine(); 
 
             int countProtein = 0;
             while ((line = br.readLine()) != null) {

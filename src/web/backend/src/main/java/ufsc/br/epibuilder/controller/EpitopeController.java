@@ -21,6 +21,7 @@ import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.config.Task;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -379,6 +380,11 @@ public class EpitopeController {
 
         try {
             String logContent = Files.readString(logFile);
+
+            if (logContent.contains("Your results are")) {
+                this.monitorRunningTasksAsync();
+            }
+
             return ResponseEntity.ok()
                     .contentType(MediaType.TEXT_PLAIN)
                     .body(logContent);
@@ -386,6 +392,11 @@ public class EpitopeController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error reading log file: " + e.getMessage());
         }
+    }
+
+    @Async
+    public void monitorRunningTasksAsync() {
+        pipelineService.monitorRunningTasks();
     }
 
     @GetMapping("/tasks/user/{userId}")
