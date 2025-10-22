@@ -78,7 +78,8 @@ log "Starting NGINX..."
 nginx
 
 if [ ! -d "/tmp/epibuilder/db" ]; then
-    mv /db /tmp/epibuilder/db
+    mkdir -p /tmp/epibuilder/db
+    cp -r /db/* /tmp/epibuilder/db/
 fi
 
 log "Starting Spring Boot backend..."
