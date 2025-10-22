@@ -146,7 +146,7 @@ export class NewComponent {
       proteomes: this.fb.array([]),
       biologicalClassification: this.fb.group({
         cellType: ['EUKARYOTE', Validators.required],
-        organism: [null],
+        organism: ['ANIMAL'],
         bacterialType: ['GRAM_POSITIVE', Validators.required],
       }),
     });
