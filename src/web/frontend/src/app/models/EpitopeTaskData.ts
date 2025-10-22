@@ -21,6 +21,7 @@ export class EpitopeTaskData {
   maxIdentityCutoff?: number;
   wordSize?: number;
   status?: string;
+  localizationParam?: string;
   biologicalClassification!: {
     cellType: 'Eukaryote' | 'Bacteria' | 'Archaea';
     organism?: 'Animal' | 'Plant' | 'Fungi';

@@ -20,6 +20,9 @@
             <p><strong>FASTA File:</strong> {{ selectedTask.file }}</p>
           </div>
 
+          <div class="col-md-6 mb-3">
+            <p><strong>Localization param:</strong> {{ selectedTask.localizationParam}}</p>
+          </div>
 
           <div class="col-md-6 mb-3">
             <p><strong>BepiPred Threshold:</strong> {{ selectedTask.bepipredThreshold === null ? '0.1512' :
@@ -89,7 +92,7 @@
               <td class="text-center">{{ epitope.n }}</td>
               <td class="text-center">{{ epitope.protein?.proteinId }}</td>
               <td class="text-center">{{ epitope.protein?.description }}</td>
-              <td class="text-center">{{ epitope.protein?.localization }}</td>
+              <td class="text-center">{{ epitope.protein?.localization || '-' }}</td>
               <td class="text-center" style="font-family: 'Courier New', Courier, monospace;">
                 {{epitope.epitope}}
               </td>
