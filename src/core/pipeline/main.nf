@@ -22,9 +22,9 @@ process predict_localization {
     val(true)
 
     script:
-    def fasta_file = "${params.basename}proteins.fasta"
-    def output_file = "${params.basename}raw_subcell.txt"
-    def output_file_tsv = "${params.basename}localization.tsv"
+    def fasta_file = "${params.basename}/proteins.fasta"
+    def output_file = "${params.basename}/raw_subcell.txt"
+    def output_file_tsv = "${params.basename}/localization.tsv"
 
     if (!params.loc) {
         error "Parameter 'loc' not provided. Please set --loc to one of: animal, fungi, plant, arch, gram_pos, gram_neg"
@@ -67,8 +67,8 @@ process postprocess_localization {
     val trigger
 
     script:
-    def input_file = "${params.basename}raw_subcell.txt"
-    def output_file = "${params.basename}localization.tsv"
+    def input_file = "${params.basename}/raw_subcell.txt"
+    def output_file = "${params.basename}/localization.tsv"
 
     """
     python3 ${projectDir}/process_localization.py $input_file $output_file
