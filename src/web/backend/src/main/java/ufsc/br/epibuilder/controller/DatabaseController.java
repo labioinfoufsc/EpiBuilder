@@ -57,6 +57,8 @@ public class DatabaseController {
 
     private final DatabaseService databaseService;
 
+    private final String DB_DIRECTORY = System.getenv().getOrDefault("EPIBUILDER_DB", "/tmp/epibuilder/db");
+
     public DatabaseController(DatabaseService databaseService) {
         this.databaseService = databaseService;
     }
@@ -82,7 +84,8 @@ public class DatabaseController {
     @GetMapping("/download/{fileName}")
     public ResponseEntity<byte[]> downloadFile(@PathVariable String fileName) {
         try {
-            Path filePath = Paths.get("/pipeline/db", fileName); // caminho fixo atualizado
+            Path filePath = Paths.get(DB_DIRECTORY, fileName);
+
             if (!Files.exists(filePath)) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
             }
@@ -119,7 +122,7 @@ public class DatabaseController {
         try {
             log.info("Attempting to create a new database with name: {}", database.getFileName());
 
-            Path databasesDir = Paths.get(System.getProperty("user.dir"), "databases");
+            Path databasesDir = Paths.get(DB_DIRECTORY);
             if (Files.notExists(databasesDir)) {
                 Files.createDirectories(databasesDir);
             }
@@ -138,7 +141,15 @@ public class DatabaseController {
             int sequenceCount = countSequences(destinationFile);
             database.setAmountSequences(sequenceCount);
 
+            log.info("Saving database {}", database.getAlias());
             Database createdDatabase = databaseService.save(database);
+            log.info("Database saved!");
+
+            log.info("Creating BLAST database for file: {}", destinationFile);
+            ProcessBuilder pb = new ProcessBuilder("makeblastdb", "-in", destinationFile.toString(), "-dbtype", "prot",
+                    "-out", destinationFile.toString());
+            Process process = pb.start();
+            log.info("BLAST database process started with PID: {}", process.pid());
 
             return ResponseEntity.status(HttpStatus.CREATED).body(createdDatabase);
         } catch (Exception e) {

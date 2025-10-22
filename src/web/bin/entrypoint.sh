@@ -80,6 +80,8 @@ nginx
 if [ ! -d "/tmp/epibuilder/db" ]; then
     mkdir -p /tmp/epibuilder/db
     cp -r /db/* /tmp/epibuilder/db/
+    export EPIBUILDER_DB="/tmp/epibuilder/db"
+    log "Database files copied to /tmp/epibuilder/db"
 fi
 
 log "Starting Spring Boot backend..."
