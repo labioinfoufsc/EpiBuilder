@@ -25,18 +25,18 @@ export class ResultsComponent implements OnInit {
 
   columns = [
     { key: "n", label: "N" },
-    { key: "id", label: "Protein ID" },
-    { key: "description", label: "Description" },
-    { key: "localization", label: "Localization" },
+    { key: "protein.proteinId", label: "Protein ID" },
+    { key: "protein.description", label: "Description" },
+    { key: "protein.localization", label: "Localization" },
     { key: "epitope", label: "Epitope" },
     { key: "avgCover", label: "EpiBuilder Score" },
     { key: "start", label: "Start" },
-    { key: "end", label: "End" },
+    { key: "endEpitope", label: "End" },
     { key: "length", label: "Length" },
-    { key: "mwKDa", label: "MW (kDa)" },
-    { key: "nGlyc", label: "nGlyc" },
-    { key: "nGlycCount", label: "nGlyc Count" },
-    { key: "iP", label: "I.P" },
+    { key: "molecularWeight", label: "MW (kDa)" },
+    { key: "nglyc", label: "nGlyc" },
+    { key: "nglycCount", label: "nGlyc Count" },
+    { key: "isoelectricPoint", label: "I.P" },
     { key: "hydropathy", label: "Hydropathy" },
     { key: "bepiPred3", label: "BepiPred3" },
     { key: "emini", label: "Emini" },
@@ -46,6 +46,7 @@ export class ResultsComponent implements OnInit {
     { key: "parker", label: "Parker" },
     { key: "blasts", label: "Blast hit" },
   ];
+
 
   constructor(
     private epitopeService: EpitopesService,
@@ -98,13 +99,28 @@ export class ResultsComponent implements OnInit {
     }
 
     if (!Array.isArray(this.selectedTask) && this.selectedTask?.epitopes) {
-      this.epitopes = this.selectedTask.epitopes.filter((epitope) =>
-        Object.values(epitope).some((value) =>
-          value?.toString().toLowerCase().includes(search)
-        )
-      );
+      this.epitopes = this.selectedTask.epitopes.filter((epitope) => {
+        const matchInEpitope = Object.entries(epitope).some(([key, value]) => {
+          if (typeof value === 'string' || typeof value === 'number') {
+            return value.toString().toLowerCase().includes(search);
+          }
+          return false;
+        });
+
+        const matchInProtein = epitope.protein &&
+          Object.entries(epitope.protein).some(([key, value]) => {
+            if (typeof value === 'string') {
+              return value.toLowerCase().includes(search);
+            }
+            return false;
+          });
+
+        return matchInEpitope || matchInProtein;
+      });
     }
   }
+
+
 
   sort(columnKey: string) {
     if (this.sortColumn === columnKey) {
@@ -114,24 +130,25 @@ export class ResultsComponent implements OnInit {
       this.sortDirection = "asc";
     }
 
-    this.epitopes.sort((a, b) => {
-      const valueA = (a as any)[columnKey];
-      const valueB = (b as any)[columnKey];
+    const getNestedValue = (obj: any, path: string): any => {
+      return path.split('.').reduce((acc, part) => acc?.[part], obj);
+    };
 
-      const aVal = isNaN(valueA) ? valueA : +valueA;
-      const bVal = isNaN(valueB) ? valueB : +valueB;
+    this.epitopes.sort((a, b) => {
+      const valueA = getNestedValue(a, columnKey);
+      const valueB = getNestedValue(b, columnKey);
+
+      const aVal = isNaN(valueA) || valueA === null ? valueA : +valueA;
+      const bVal = isNaN(valueB) || valueB === null ? valueB : +valueB;
 
       return aVal < bVal
-        ? this.sortDirection === "asc"
-          ? -1
-          : 1
+        ? this.sortDirection === "asc" ? -1 : 1
         : aVal > bVal
-          ? this.sortDirection === "asc"
-            ? 1
-            : -1
+          ? this.sortDirection === "asc" ? 1 : -1
           : 0;
     });
   }
+
 
   selectEpitope(epitope: Epitope | null) {
     this.epitopeService.selectEpitope(epitope);

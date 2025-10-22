@@ -203,6 +203,7 @@ export class RealtimeExecutionsComponent implements OnInit, OnDestroy {
             logText.includes('Your results are in') &&
             this.currentProcess.status !== 'COMPLETED'
           ) {
+
             const taskId = this.currentProcess.id;
             if (typeof taskId === 'number') {
               this.epitopesService.markTaskAsCompleted(taskId).subscribe({
@@ -211,7 +212,7 @@ export class RealtimeExecutionsComponent implements OnInit, OnDestroy {
                   this.currentProcess!.status = 'COMPLETED';
                 },
                 error: (err) => {
-                  console.error('Erro ao notificar backend:', err);
+                  console.error('Error while notifying backend:', err);
                 }
               });
             }
