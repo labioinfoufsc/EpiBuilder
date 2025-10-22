@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
@@ -249,7 +250,7 @@ public class EpitopeController {
 
         return epitopeTaskDataService.save(taskData);
     }
-    
+
     @PostMapping("/tasks/stop/{id}")
     public ResponseEntity<Map<String, Object>> stopTask(@PathVariable Long id) {
         try {
@@ -417,6 +418,18 @@ public class EpitopeController {
         }
     }
 
+    @PutMapping("/tasks/{id}/complete")
+    public ResponseEntity<Void> markTaskAsCompleted(@PathVariable Long id) {
+
+        EpitopeTaskData task = epitopeTaskDataService.findById(id);
+        if (task.getTaskStatus() != null && task.getTaskStatus().getStatus() != Status.COMPLETED) {
+            pipelineService.monitorRunningTasks();
+            return ResponseEntity.ok().build();
+        }
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).build();
+    }
+
     private void deleteTaskFiles(String completeBasename) throws IOException {
         if (completeBasename == null || completeBasename.isEmpty()) {
             return;
@@ -448,11 +461,8 @@ public class EpitopeController {
 
     @GetMapping("/tasks/user/{userId}/status")
     public ResponseEntity<List<EpitopeTaskData>> findTasksByTaskStatusStatus(@PathVariable Long userId) {
-        List<EpitopeTaskData> tasks = epitopeTaskDataService.findTasksByTaskStatusStatus(Status.RUNNING);
-        if (tasks.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(tasks);
+        List<EpitopeTaskData> tasks = epitopeTaskDataService.findTasksByUserIdAndStatus(userId, Status.RUNNING);
+        return ResponseEntity.ok(tasks); // sempre retorna 200, mesmo que vazio
     }
 
 }

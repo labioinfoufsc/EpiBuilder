@@ -55,6 +55,10 @@ public class EpitopeTaskDataService {
         return epitopeTaskDataRepository.findTasksByTaskStatusStatus(status);
     }
 
+    public List<EpitopeTaskData> findTasksByUserIdAndStatus(Long userId, Status status) {
+        return epitopeTaskDataRepository.findByUserIdAndTaskStatusStatus(userId, status);
+    }
+
     @Transactional
     public void deleteEpitopeTaskDataWithAssociations(Long id) {
         epitopeTaskDataRepository.deleteTopologiesByTaskId(id);

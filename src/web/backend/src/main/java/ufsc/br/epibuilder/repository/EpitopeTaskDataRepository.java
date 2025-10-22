@@ -18,21 +18,23 @@ public interface EpitopeTaskDataRepository extends JpaRepository<EpitopeTaskData
 
     @Modifying
     @Query("DELETE FROM EpitopeTopology et WHERE et.epitope IN (SELECT e FROM Epitope e WHERE e.epitopeTaskData.id = :taskId)")
-    void deleteTopologiesByTaskId(@Param("taskId") Long taskId);
+    public void deleteTopologiesByTaskId(@Param("taskId") Long taskId);
 
     @Modifying
     @Query("DELETE FROM Blast b WHERE b.epitope IN (SELECT e FROM Epitope e WHERE e.epitopeTaskData.id = :taskId)")
-    void deleteBlastsByTaskId(@Param("taskId") Long taskId);
+    public void deleteBlastsByTaskId(@Param("taskId") Long taskId);
 
     @Modifying
     @Query("DELETE FROM Epitope e WHERE e.epitopeTaskData.id = :taskId")
-    void deleteEpitopesByTaskId(@Param("taskId") Long taskId);
+    public void deleteEpitopesByTaskId(@Param("taskId") Long taskId);
 
     @Modifying
     @Query("DELETE FROM EpitopeTaskData etd WHERE etd.id = :taskId")
-    void deleteTaskById(@Param("taskId") Long taskId);
+    public void deleteTaskById(@Param("taskId") Long taskId);
 
     public EpitopeTaskData findById(Long id);
+
+    public List<EpitopeTaskData> findByUserIdAndTaskStatusStatus(Long userId, Status status);
 
     public List<EpitopeTaskData> findTasksByTaskStatusStatus(Status status);
 

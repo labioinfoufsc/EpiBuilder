@@ -103,9 +103,9 @@ public class PipelineService {
             log.info("Adding parameters to command: {}", taskData.getActionType().getDesc());
 
             if (ActionType.DEFAULT.toString().equalsIgnoreCase(taskData.getActionType().getDesc())) {
-                taskData.setBepipredThreshold(null);
-                taskData.setMinEpitopeLength(null);
-                taskData.setMaxEpitopeLength(null);
+                taskData.setBepipredThreshold(0.1512);
+                taskData.setMinEpitopeLength(10);
+                taskData.setMaxEpitopeLength(30);
             }
 
             String locParam = null;
@@ -281,19 +281,6 @@ public class PipelineService {
         }
     }
 
-    @PutMapping("/tasks/{id}/complete")
-    public ResponseEntity<Void> markTaskAsCompleted(@PathVariable Long id) {
-
-        EpitopeTaskData task = epitopeTaskDataService.findById(id);
-        if (task.getTaskStatus() != null && task.getTaskStatus().getStatus() != Status.COMPLETED) {
-            task.getTaskStatus().setStatus(Status.COMPLETED);
-            epitopeTaskDataService.save(task);
-            return ResponseEntity.ok().build();
-        }
-
-        return ResponseEntity.status(HttpStatus.CONFLICT).build();
-    }
-
     private void processCompletedTask(EpitopeTaskData task) {
         Path completePath = Paths.get(task.getCompleteBasename());
 
@@ -305,19 +292,44 @@ public class PipelineService {
         }
 
         try {
-            Path topologyPath = completePath.resolve("topology.tsv");
-            Path epitopePath = completePath.resolve("epitope-detail.tsv");
-            Path proteinSummary = completePath.resolve("protein-summary.tsv");
-            Path localizationPath = completePath.resolve("localization.tsv");
 
             log.info("Checking for result files in {}", completePath);
 
-            if (!Files.exists(topologyPath) || !Files.exists(epitopePath) || !Files.exists(proteinSummary)
-                    || !Files.exists(localizationPath)) {
-                log.error("Required result files missing in {} for task {}", completePath, task.getId());
+            Path topologyPath = completePath.resolve("topology.tsv");
+            Path epitopePath = completePath.resolve("epitope-detail.tsv");
+            Path proteinSummary = completePath.resolve("protein-summary.tsv");
+
+            log.info("Localization param: {}", task.getLocalizationParam());
+            Path localizationPath = null;
+            if (task.getLocalizationParam() != null) {
+                localizationPath = completePath.resolve("localization.tsv");
+            }
+
+            log.info("Verifying existence of required files...");
+            List<String> missingFiles = new ArrayList<>();
+            if (!Files.exists(topologyPath)) {
+                missingFiles.add("topologyPath");
+            }
+            if (!Files.exists(epitopePath)) {
+                missingFiles.add("epitopePath");
+            }
+            if (!Files.exists(proteinSummary)) {
+                missingFiles.add("proteinSummary");
+            }
+            if (localizationPath != null) {
+                if (!Files.exists(localizationPath) && task.getLocalizationParam() != null) {
+                    missingFiles.add("localizationPath");
+                }
+            }
+
+            if (!missingFiles.isEmpty()) {
+                log.error("Missing result files in {} for task {}: {}", completePath, task.getId(),
+                        String.join(", ", missingFiles));
                 task.getTaskStatus().setStatus(Status.FAILED);
                 epitopeTaskDataService.save(task);
                 return;
+            } else {
+                log.info("All required files are present for task {}", task.getId());
             }
 
             log.info("Converting epitope file for task...");
@@ -332,24 +344,27 @@ public class PipelineService {
             List<Epitope> completeEpitopes = associateTopologies(epitopes, topologies);
             log.info("Topologies associated with epitopes: {}", completeEpitopes.size());
 
-            log.info("Converting localization file for task...");
-            List<Protein> proteins = convertTsvToProteins(localizationPath.toString());
-            log.info("Proteins converted: {}", proteins.size());
+            if (task.getLocalizationParam() != null) {
+                log.info("Converting localization file for task...");
+                List<Protein> proteins = convertTsvToProteins(localizationPath.toString());
+                log.info("Proteins converted: {}", proteins.size());
 
-            log.info("Associating localization with epitope proteins...");
-            Map<String, String> localizationMap = proteins.stream()
-                    .collect(Collectors.toMap(Protein::getProteinId, Protein::getLocalization));
+                log.info("Associating localization with epitope proteins...");
+                Map<String, String> localizationMap = proteins.stream()
+                        .collect(Collectors.toMap(Protein::getProteinId, Protein::getLocalization));
 
-            for (Epitope epitope : completeEpitopes) {
-                Protein protein = epitope.getProtein();
-                if (protein != null) {
-                    String loc = localizationMap.get(protein.getProteinId());
-                    if (loc != null) {
-                        protein.setLocalization(loc);
+                for (Epitope epitope : completeEpitopes) {
+                    Protein protein = epitope.getProtein();
+                    if (protein != null) {
+                        String loc = localizationMap.get(protein.getProteinId());
+                        if (loc != null) {
+                            protein.setLocalization(loc);
+                        }
                     }
                 }
+                log.info("Localization successfully applied to epitope proteins.");
+
             }
-            log.info("Localization successfully applied to epitope proteins.");
 
             if (task.isDoBlast()) {
                 log.info("Processing BLAST files in {}", completePath);
@@ -513,10 +528,10 @@ public class PipelineService {
 
     public static int countProteins(String pathFile) throws IOException {
         try (BufferedReader br = new BufferedReader(new FileReader(pathFile))) {
-            br.readLine();
+            String line = br.readLine(); // pula o cabeçalho
 
             int countProtein = 0;
-            while (br.readLine() != null) {
+            while ((line = br.readLine()) != null) {
                 countProtein++;
             }
             return countProtein;
