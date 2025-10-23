@@ -2,6 +2,8 @@
 
 # EpiBuilder
 
+![logo](https://github.com/labioinfoufsc/EpiBuilder/blob/main/src/web/frontend/src/assets/epibuilder-logo.png)
+
 ## ¿Qué es EpiBuilder?
 
 EpiBuilder es un software científico para el ensamblaje, la búsqueda y la clasificación de epítopos lineales de células B, para investigaciones que utilizan enfoques con proteomas parciales o completos.
@@ -43,31 +45,17 @@ Ejecute el siguiente comando **solo una vez** para crear el contenedor. Esto tam
 ### (CPU)
 
 ```bash
-docker run -it --name epibuilder \
+  docker run -it --name epibuilder \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v epibuilder-data:/tmp/epibuilder \
   -p 80:80 \
   -p 8080:8080 \
   -p 5435:5432 \
+  -p 5005:5005 \
   bioinfoufsc/epibuilder:latest
 ```
 
-O
-
-### (GPU)
-
-```bash
-docker run --gpus all -it --name epibuilder \
-  -p 80:80 \
-  -p 8080:8080 \
-  -p 5432:5432 \
-  bioinfoufsc/epibuilder:latest
-```
-
-> **Nota:** Es necesario tener los controladores de GPU NVIDIA instalados para ejecutar este contenedor con soporte GPU.
-> Si está usando Linux y quiere usar EpiBuilder con soporte GPU, asegúrese de tener CUDA instalado:
-> [https://docs.nvidia.com/cuda/cuda-installation-guide-linux](https://docs.nvidia.com/cuda/cuda-installation-guide-linux)
-
-> **Consejo 1:** En caso de duda, use la versión para CPU.
-> **Consejo 2:** La opción `--name epibuilder` permite reutilizar el contenedor.
+> **Consejo 1:** La opción `--name epibuilder` permite reutilizar el contenedor.
 
 ## Paso 3: Acceder a la Interfaz Web
 
