@@ -27,6 +27,7 @@ public class Blast {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    private String db;
     private Long N;
     private String sacc;
     private Double pident;

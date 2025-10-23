@@ -77,12 +77,7 @@ sed -i "s|proxy_pass http://localhost:[0-9]\+/|proxy_pass http://localhost:${BAC
 log "Starting NGINX..."
 nginx
 
-if [ ! -d "/tmp/epibuilder/db" ]; then
-    mkdir -p /tmp/epibuilder/db
-    cp -r /db/* /tmp/epibuilder/db/
-    export EPIBUILDER_DB="/tmp/epibuilder/db"
-    log "Database files copied to /tmp/epibuilder/db"
-fi
+export EPIBUILDER_DB="/tmp/epibuilder/db"
 
 log "Starting Spring Boot backend..."
 exec java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005 -jar /epibuilder/epibuilder-backend.jar \

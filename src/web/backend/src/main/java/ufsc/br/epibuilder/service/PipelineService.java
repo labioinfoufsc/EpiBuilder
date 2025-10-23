@@ -17,6 +17,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
@@ -95,7 +97,7 @@ public class PipelineService {
 
             fullCommand.append("docker run --rm ");
             fullCommand.append("-v /var/run/docker.sock:/var/run/docker.sock ");
-            fullCommand.append("-v /tmp/epibuilder:/tmp/epibuilder ");
+            fullCommand.append("-v epibuilder-data:/tmp/epibuilder ");
             fullCommand.append("bioinfoufsc/epibuilder-core:latest epibuilder ");
             fullCommand.append("--input_file ").append(taskData.getFile().getAbsolutePath()).append(" ");
             fullCommand.append("--basename ").append(taskData.getCompleteBasename()).append(" ");
@@ -370,29 +372,29 @@ public class PipelineService {
                 log.info("Processing BLAST files in {}", completePath);
                 try {
                     List<Path> blastFiles = Files.list(completePath)
-                            .filter(path -> path.getFileName().toString().startsWith("blast-")
+                            .filter(path -> path.getFileName().toString().startsWith("diamond-")
                                     && path.getFileName().toString().endsWith(".csv"))
                             .collect(Collectors.toList());
 
-                    log.info("Found {} BLAST files", blastFiles.size());
+                    log.info("Found {} DIAMOND files", blastFiles.size());
 
                     if (!blastFiles.isEmpty()) {
-                        for (Path blastPath : blastFiles) {
-                            log.info("Processing BLAST file: {}", blastPath.getFileName());
+                        for (Path searchPath : blastFiles) {
+                            log.info("Processing DIAMOND file: {}", searchPath.getFileName());
 
-                            List<Blast> convertedBlasts = parseBlastCsv(blastPath.toString());
-                            log.info("BLASTs converted: {}", convertedBlasts.size());
+                            List<Blast> convertedBlasts = parseBlastCsv(searchPath.toString());
+                            log.info("DIAMOND converted: {}", convertedBlasts.size());
 
                             List<Epitope> updatedEpitopes = associateBlasts(completeEpitopes, convertedBlasts);
 
-                            log.info("BLAST completed for file {}", blastPath.getFileName());
+                            log.info("DIAMOND completed for file {}", searchPath.getFileName());
                         }
                     } else {
-                        log.warn("No BLAST files found in directory: {}", completePath);
+                        log.warn("No DIAMOND files found in directory: {}", completePath);
                     }
                 } catch (IOException e) {
-                    log.error("Error while processing BLAST files: {}", e.getMessage(), e);
-                    throw new RuntimeException("Failed to process BLAST files", e);
+                    log.error("Error while processing DIAMOND files: {}", e.getMessage(), e);
+                    throw new RuntimeException("Failed to process DIAMOND files", e);
                 }
             }
 
@@ -461,8 +463,23 @@ public class PipelineService {
         return proteins;
     }
 
+    public static String extractDBName(String path) {
+        String regex = "diamond-(.*?)\\.csv";
+
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(path);
+
+        if (matcher.find()) {
+            return matcher.group(1);
+        } else {
+            return "DB name not found";
+        }
+    }
+
     public List<Blast> parseBlastCsv(String filePath) throws IOException {
         List<Blast> blastList = new ArrayList<>();
+
+        String dbName= extractDBName(filePath);
 
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             String line;
@@ -518,7 +535,7 @@ public class PipelineService {
                 Path path = Paths.get(filePath);
                 String fileName = path.getFileName().toString();
                 blast.setDatabase(fileName);
-
+                blast.setDb(extractDBName(fileName));
                 blastList.add(blast);
             }
         }
