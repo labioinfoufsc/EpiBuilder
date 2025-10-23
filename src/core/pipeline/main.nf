@@ -11,67 +11,95 @@ params.basename    = params.basename    ?: null
 params.search      = params.search      ?: 'none'
 params.proteomes   = params.proteomes   ?: null
 
-process predict_localization {
-    tag "localization-${params.loc ?: 'unknown'}"
-    errorStrategy 'ignore'
+process run_diamond {
+    tag 'diamond'
 
     input:
-    path epibuilder_results
-
-    output:
-    val(true)
+    path epitope_fasta   // vem do run_epibuilder
 
     script:
-    def fasta_file = "${params.basename}/proteins.fasta"
-    def output_file = "${params.basename}/raw_subcell.txt"
-    def output_file_tsv = "${params.basename}/localization.tsv"
-
-    if (!params.loc) {
-        error "Parameter 'loc' not provided. Please set --loc to one of: animal, fungi, plant, arch, gram_pos, gram_neg"
-    }
-
-    // Definir comando de acordo com o tipo
-    def cmd = ""
-    if (params.loc in ['animal', 'fungi', 'plant']) {
-        // WolfPsort
-        cmd = """
-        echo "Running WolfPsort for ${params.loc}..."
-        docker run --rm -v /tmp/epibuilder:/tmp/epibuilder bioinfoufsc/wolfpsort \\
-            -i ${fasta_file} -s ${params.loc} -o ${output_file}
-        """
-    } else {
-        // PSORTb (arch, gram_pos, gram_neg)
-        def psort_flags = [
-            'arch'     : '-a',
-            'gram_pos' : '-p',
-            'gram_neg' : '-n'
-        ]
-
-        def flag = psort_flags[params.loc]
-        if (!flag) error "Invalid 'loc' for PSORTb. Use arch, gram_pos, or gram_neg."
-
-        cmd = """
-        echo "Running PSORTb for ${params.loc} (${flag})..."
-        docker run --rm -v /tmp/epibuilder:/tmp/epibuilder bioinfoufsc/psortb \\
-            -i ${fasta_file} ${flag} -o terse -r ${output_file_tsv}
-        """
-    }
-
     """
-    ${cmd}
+    #!/bin/bash
+    set -e
+    input_path="\$(realpath ${epitope_fasta})"
+
+    # Diretório de saída dentro do workDir
+    out_dir="\$(realpath ${params.basename})"
+    mkdir -p "\$out_dir"
+
+    echo "[INFO] Epitope FASTA: ${epitope_fasta}"
+    echo "[INFO] Output directory: \$out_dir"
+
+    proteomes="${params.proteomes ?: ''}"
+
+    if [ -n "\$proteomes" ]; then
+        IFS=':' read -ra pairs <<< "\$proteomes"
+        for pair in "\${pairs[@]}"; do
+            alias="\$(echo \$pair | cut -d'=' -f1)"
+            db="\$(echo \$pair | cut -d'=' -f2)"
+            out_file="\$out_dir/diamond-\${alias}.csv"
+
+            echo "[INFO] Running DIAMOND for alias '\$alias' and DB '\$db'"
+            "${projectDir}/diamond.sh" "\$input_path" "\$db" "\$out_file"
+        done
+    fi
     """
 }
 
-process postprocess_localization {
+
+
+process run_localization {
+    tag 'localization'
+
+    publishDir "${params.basename}", mode: 'copy', overwrite: true
+
     input:
-    val trigger
+    path input_file
+
+    output:
+    path 'localization.tsv', emit: output
 
     script:
-    def input_file = "${params.basename}/raw_subcell.txt"
-    def output_file = "${params.basename}/localization.tsv"
-
     """
-    python3 ${projectDir}/process_localization.py $input_file $output_file
+    # Absolute path of input_file
+    INPUT_PATH="\$(realpath ${input_file})"
+
+    # Run localization
+    ${projectDir}/localization.sh "\$INPUT_PATH" ${params.loc}
+
+    # Ensure file is in workdir
+    cp \$(dirname "\$INPUT_PATH")/localization.tsv ./
+    """
+}
+
+process extract_fasta {
+
+    tag "extract_fasta"
+
+    input:
+    path input_file
+
+    output:
+    path 'valid_proteins.fasta', emit: fasta
+
+    script:
+    """
+    echo "[INFO] Extracting FASTA from ${input_file} ..."
+
+    # Cabe  alho
+    echo "" > valid_proteins.fasta
+
+    # Usa awk para agrupar por Accession e concatenar Residue
+    awk -F',' 'NR>1 {
+        gsub(/ /,"",\$2);  # remove espa  os extras
+        seq[\$1] = seq[\$1] \$2
+    } END {
+        for (id in seq) {
+            print ">" id "\\n" seq[id]
+        }
+    }' $input_file > valid_proteins.fasta
+
+    echo "[INFO] FASTA file created: valid_proteins.fasta"
     """
 }
 
@@ -215,6 +243,7 @@ process run_epibuilder {
 
     output:
     path 'epibuilder-results', emit: out
+    path "epibuilder-results/epibuilder-results-epibuilder-epitopes-fasta.fasta", emit: epitopes_fasta
 
     script:
     def args = []
@@ -227,12 +256,14 @@ process run_epibuilder {
     if (params.threshold) {
         args << "--threshold ${params.threshold}"
     }
+    /**
     if (params.search && params.search != 'none') {
         args << "--search ${params.search}"
     }
+
     if (params.proteomes) {
         args << "--proteomes '${params.proteomes}'"
-    }
+    }**/
 
     def descArg = desc_file ? "-d ${desc_file}" : ""
 
@@ -373,22 +404,24 @@ workflow {
             run_bepipred(result.valid_proteins)
             def epibuilder = run_epibuilder(run_bepipred.out, desc.tsv, jar_path)
             if (params.loc) {
-                def loc_file = predict_localization(epibuilder.out)
-                if (params.loc in ['animal', 'fungi', 'plant']) {
-                    postprocess_localization(loc_file)
-                }
+                run_localization(result.valid_proteins)
+            }
+            if (params.proteomes) {
+                run_diamond(epibuilder.epitopes_fasta)
             }
             copy_results(epibuilder.out).view()
         }else {
             error "Review the fasta file, ${result.invalid_proteins} invalid proteins "
         }
     } else if (params.input_file.endsWith('.csv')) {
-        def epibuilder = run_epibuilder(input_file_path,file("/dev/null"), jar_path)
+        input_ch = Channel.fromPath(params.input_file)
+        def epibuilder = run_epibuilder(input_ch,file("/dev/null"), jar_path)
         if (params.loc) {
-            def loc_file = predict_localization(epibuilder.out)
-            if (params.loc in ['animal', 'fungi', 'plant']) {
-                postprocess_localization(loc_file)
-            }
+            extract_fasta_out = extract_fasta(input_ch)
+            run_localization(extract_fasta_out)
+        }
+        if (params.proteomes) {
+            run_diamond(epibuilder.epitopes_fasta)
         }
         copy_results(epibuilder.out).view()
     } else {
