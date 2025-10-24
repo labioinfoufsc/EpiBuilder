@@ -6,4 +6,5 @@ export class Blast {
     sseq?: string;
     qacc?: string;
     database?: string;
+    db?: string;
 }

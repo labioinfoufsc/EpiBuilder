@@ -165,18 +165,6 @@ public class PipelineService {
                         .collect(Collectors.toList());
 
                 fullCommand.append("--proteomes ").append(String.join(":", proteomes)).append(" ");
-
-                if (taskData.getBlastMinCoverCutoff() != 90) {
-                    fullCommand.append("--cover ").append(taskData.getBlastMinCoverCutoff()).append(" ");
-                }
-
-                if (taskData.getBlastMinIdentityCutoff() != 90) {
-                    fullCommand.append("--identity ").append(taskData.getBlastMinIdentityCutoff()).append(" ");
-                }
-
-                if (taskData.getBlastWordSize() != 4) {
-                    fullCommand.append("--word-size ").append(taskData.getBlastWordSize()).append(" ");
-                }
             }
 
             command.add(fullCommand.toString().trim());

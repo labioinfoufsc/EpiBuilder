@@ -253,20 +253,10 @@
                       <div class="form-check">
                         <input type="radio" class="form-check-input" formControlName="doBlast" value="BLAST_search"
                           id="BLASTSearch" />
-                        <label class="form-check-label" for="BLASTSearch">BLAST search</label>
+                        <label class="form-check-label" for="BLASTSearch">Search (<a href="https://github.com/bbuchfink/diamond" target="_blank">Diamond 2.1.13</a>)</label>
                       </div>
 
                       <div *ngIf="myForm.get('doBlast')?.value === 'BLAST_search'" class="mt-3">
-                        <label class="form-label fw-bold">Minimum identity cutoff</label>
-                        <input type="number" class="form-control" formControlName="minIdentityCutoff"
-                          placeholder="90" />
-
-                        <label class="form-label fw-bold mt-2">Minimum cover cutoff</label>
-                        <input type="number" class="form-control" formControlName="minCoverCutoff" placeholder="90" />
-
-                        <label class="form-label fw-bold mt-2">-word_size</label>
-                        <input type="number" class="form-control" formControlName="wordSize" placeholder="4" />
-
                         <!-- Proteomes start -->
                         <div>
                           <div *ngFor="let proteome of proteomes.controls; let i = index; trackBy: trackByIndex"
