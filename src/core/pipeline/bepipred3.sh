@@ -34,13 +34,29 @@ cp "$INPUT_PATH" "$TMP_DIR/$FILENAME"
 
 echo "[INFO] Copied $INPUT_PATH to $TMP_DIR/$FILENAME"
 
-# Executa o container com o volume montado
-docker run --rm \
-    -v /tmp/epibuilder:/tmp/epibuilder \
+echo "Checking for GPU support..."
+
+# Desativa falha temporariamente só para o teste da GPU
+set +e
+docker run --rm --runtime=nvidia --gpus all ubuntu nvidia-smi > /dev/null 2>&1
+GPU_STATUS=$?
+set -e  # Reativa modo estrito para o restante do script
+
+if [ $GPU_STATUS -eq 0 ]; then
+    echo "✅ GPU detected, running with GPU support..."
+    GPU_OPTS="--runtime=nvidia --gpus all"
+else
+    echo "⚠️ No GPU available or error occurred, running on CPU..."
+    GPU_OPTS=""
+fi
+
+# Executa o contêiner normalmente
+docker run --rm $GPU_OPTS \
+    -v epibuilder-data:/tmp/epibuilder \
     bioinfoufsc/bepipred3 \
     python3 -u ./bepipred3_custom.py \
-    -i "$TMP_DIR/$FILENAME" \
-    -o "$TMP_DIR" 2>&1 | tee -a "$ORIG_DIR/pipeline.log"
+    -i "$TMP_DIR/$FILENAME" -o "$TMP_DIR" \
+    2>&1 | tee -a "$ORIG_DIR/pipeline.log"
 
 echo "[INFO] Analysis completed inside container."
 

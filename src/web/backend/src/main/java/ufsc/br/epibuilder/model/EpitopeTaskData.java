@@ -119,15 +119,6 @@ public class EpitopeTaskData {
     private ActionType actionType;
 
     @Column
-    private Integer blastMinIdentityCutoff;
-
-    @Column
-    private Integer blastMinCoverCutoff;
-
-    @Column
-    private Integer blastWordSize;
-
-    @Column
     private boolean doBlast;
 
     @Transient

@@ -15,15 +15,36 @@ export class TopologyComponent {
   proteinId?: string;
   database?: string;
 
-  blastColumns: string[] = ["Epitope ID", "Identity", "Cover", "Query subject", "Search subject"];
+  blastColumns: string[] = ["Epitope ID", "DB", "Identity", "Cover", "Query subject", "Search subject"];
   blastsOriginal: any[] = [];
   blasts: any[] = [];
   filters: { [key: string]: string } = {};
   sortColumn: string = '';
   sortDirection: 'asc' | 'desc' = 'asc';
+  tooltipMap: { [key: string]: string } = {
+    BEPIPRED: 'Usage: B-cell epitope | Reference: BepiPred-3.0: Improved B-cell epitope prediction using protein language models',
+    CHOU_FASMAN: 'Usage: Beta-Turn | Reference: Prediction of the Secondary Structure of Proteins from their Amino Acid Sequence',
+    EMINI: 'Usage: Surface Accessibility | Reference: Induction of hepatitis A virus-neutralizing antibody by a virus-specific synthetic peptide',
+    KARPLUS_SCHULZ: 'Usage: Chain flexibility | Reference: Prediction of chain flexibility in proteins',
+    KOLASKAR: 'Usage: Antigenicity | Reference: A semi-empirical method for prediction of antigenic determinants on protein antigens',
+    PARKER: 'Usage: Hydrophilicity | Reference: New hydrophilicity scale derived from high-performance liquid chromatography peptide retention data: correlation of predicted surface residues with antigenicity and x-ray-derived accessible sites',
+    ALL_MATCHES: 'If the amino acid is above the cutoff point in all methods',
+    N_GLYC: 'N-glycosylation sites',
+    HYDROPATHY: 'Hydropathy + or -'
+  };
+
+  getTooltip(method?: string): string {
+     if (!method) return '';
+        return this.tooltipMap[method] ?? '';
+  }
+
+  getCellClass(char: string, i: number): string {
+      if (i === 0) return 'text-dark fw-bold p-2';
+      if (char === '.' || char === '-') return 'bg-danger text-danger fw-bold p-2';
+        return 'bg-primary text-primary fw-bold p-2';
+  }
 
   constructor(private epitopeService: EpitopesService) { }
-
   ngOnInit() {
     this.loadTable();
   }

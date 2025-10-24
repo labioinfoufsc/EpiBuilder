@@ -33,18 +33,13 @@ export class ResultsComponent implements OnInit {
     { key: "start", label: "Start" },
     { key: "endEpitope", label: "End" },
     { key: "length", label: "Length" },
-    { key: "molecularWeight", label: "MW (kDa)" },
+    { key: "molecularWeight", label: "kDa" },
+    { key: "isoelectricPoint", label: "pH(I)" },
     { key: "nglyc", label: "nGlyc" },
-    { key: "nglycCount", label: "nGlyc Count" },
-    { key: "isoelectricPoint", label: "I.P" },
     { key: "hydropathy", label: "Hydropathy" },
     { key: "bepiPred3", label: "BepiPred3" },
-    { key: "emini", label: "Emini" },
     { key: "kolaskar", label: "Kolaskar" },
-    { key: "chouFosman", label: "Chou Fosman" },
-    { key: "karplusSchulz", label: "Karplus Schulz" },
-    { key: "parker", label: "Parker" },
-    { key: "blasts", label: "Blast hit" },
+    { key: "blasts", label: "Search Hit" },
   ];
 
 

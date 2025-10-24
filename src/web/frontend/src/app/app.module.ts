@@ -15,6 +15,8 @@ import { NewComponent } from "./pages/new/new.component";
 import { ProfileComponent } from "./pages/profile/profile.component";
 import { ResultsComponent } from './pages/results/results.component';
 import { UsersComponent } from "./pages/users/users.component";
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 
 @NgModule({
   declarations: [
@@ -31,7 +33,7 @@ import { UsersComponent } from "./pages/users/users.component";
     TopologyComponent,
     ResultsComponent
   ],
-  imports: [BrowserModule, AppRoutingModule, FormsModule, ReactiveFormsModule],
+  imports: [BrowserModule, BrowserAnimationsModule, AppRoutingModule, FormsModule, ReactiveFormsModule,MatTooltipModule],
   providers: [provideHttpClient()],
   bootstrap: [AppComponent],
 })

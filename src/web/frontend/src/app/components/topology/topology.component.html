@@ -20,16 +20,21 @@
           <td class="text-muted text-center" [attr.colspan]="4 + getMaxTopologyLength()">No data available</td>
         </tr>
         <tr *ngFor="let row of epitopeTopologies; let i = index" [ngClass]="{ 'bg-transparent text-dark': i === 0 }">
-          <td>{{ row.method }}</td>
-          <td>{{ row.threshold ?? '-' }}</td>
+            <td [matTooltip]="getTooltip(row.method)" matTooltipPosition="above">
+                {{ row.method }}
+            </td>
+            <td>{{ row.threshold ?? '-' }}</td>
           <td>{{ row.avgScore ?? '-' }}</td>
           <td>{{ row.cover === undefined ? '-' : (row.cover | number:'1.2-2') }}</td>
           <ng-container *ngFor="let char of getValidTopologyChars(row.topologyData)">
-            <td *ngIf="char !== ''" [class.bg-danger]="char === '.' && i !== 0"
-              [class.text-danger]="char === '.' && i !== 0" [class.bg-primary]="char !== '.' && i !== 0"
-              [class.text-primary]="char !== '.' && i !== 0" [class.text-dark]="i === 0" class="fw-bold p-2">
-              {{ char }}
-            </td>
+              <td *ngIf="char !== ''"
+                  [ngClass]="getCellClass(char, i)"
+                  [style.width.px]="35"
+                  [style.minWidth.px]="35"
+                  [style.maxWidth.px]="35"
+                  style="text-align: center;">
+                  {{ row.method === 'BEPIPRED' ? char : '' }}
+              </td>
           </ng-container>
         </tr>
       </tbody>
@@ -89,6 +94,8 @@
             </ng-container>
             <ng-template #plainText>{{ row.sacc }}</ng-template>
           </td>
+
+          <td>{{ row.db === undefined ? '-' : row.db }}</td>
           <td>{{ row.pident === undefined ? '-' : (row.pident | number:'1.2-2') }}</td>
           <td>{{ row.qcovs === undefined ? '-' : (row.qcovs | number:'1.2-2') }}</td>
           <td>{{ row.qseq }}</td>
