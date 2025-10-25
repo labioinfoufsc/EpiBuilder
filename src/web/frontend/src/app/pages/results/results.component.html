@@ -43,6 +43,19 @@
           <div class="col-md-6 mb-3">
                  <p><strong>BLAST max cover cutoff:</strong> {{ selectedTask.blastMinCoverCutoff }}</p>
           </div>
+
+          <div class="col-md-6 mb-3">
+            <p><strong>BLAST min identity cutoff:</strong> {{ selectedTask.minIdentityCutoff === undefined ? 90 :
+              selectedTask.minIdentityCutoff}}</p>
+          </div>
+          <div class="col-md-6 mb-3">
+            <p><strong>BLAST max cover cutoff:</strong> {{ selectedTask.maxIdentityCutoff === undefined ? 90 :
+              selectedTask.maxIdentityCutoff }}</p>
+          </div>
+          <div class="col-md-6 mb-3">
+            <p><strong>BLAST word size:</strong> {{ selectedTask.wordSize === undefined ? 4 :
+              selectedTask.maxIdentityCutoff }}</p>
+          </div>
         </div>
 
         <!-- Epitopes Summary and Search -->
