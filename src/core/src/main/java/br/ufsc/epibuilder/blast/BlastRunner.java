@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package br.udesc.epibuilder.blast;
+package br.ufsc.epibuilder.blast;
 
 import br.ufsc.epibuilder.Parameters;
 import br.ufsc.epibuilder.converter.FileHelper;
@@ -70,7 +70,7 @@ public class BlastRunner {
     public static void addHeader(File file) throws Exception {
         String res = FileHelper.readFile(file);
         FileWriter fw = new FileWriter(file);
-        fw.write("qacc\tsacc\tpident\tqcovs\tqseq\tsseq\tqacc\n" + res);
+        fw.write("qacc\tsacc\tpident\tqcovs\tqseq\tsseq\n" + res);
         fw.close();
     }
 
@@ -94,15 +94,18 @@ public class BlastRunner {
                     "-dbtype", "prot",
                     "-in", proteome.getFile().getAbsolutePath(),
                     "-out", db};
+
         String[] blastp = {Parameters.BLASTP_PATH,
-                "-query", epiBuilderFastaEpitopesFile,
-                "-db", db,
-                "-outfmt", "6 qacc sacc pident qcovs qseq sseq qacc",
-                "-task", Parameters.BLAST_TASK,
-                "-word_size", Parameters.BLAST_WORD_SIZE + "",
-                "-out", blastOutput};
+                epiBuilderFastaEpitopesFile,
+                db,
+                Parameters.BLAST_TASK,
+                Parameters.BLAST_WORD_SIZE+"",
+                Parameters.BLAST_IDENTITY+"",
+                Parameters.BLAST_COVER+"",
+                blastOutput};
+
         String[] removeDb = {
-            "/bin/bash", "-c", String.format("rm %s.*", db)
+                "/bin/bash", "-c", String.format("rm %s.*", db)
         };
 
         if(proteome.getFile().getAbsolutePath().endsWith(".fasta")){
@@ -116,7 +119,6 @@ public class BlastRunner {
         }else{
             cmds.add(blastp);
         }
-
         try {
             for (String[] cmd : cmds) {
                 System.out.print("Running command[: ");
@@ -157,6 +159,7 @@ public class BlastRunner {
 
             }
             File blastfile = new File(blastOutput);
+
             addHeader(blastfile);
 
             return blastfile;

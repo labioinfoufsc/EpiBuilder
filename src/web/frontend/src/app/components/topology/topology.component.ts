@@ -15,7 +15,7 @@ export class TopologyComponent {
   proteinId?: string;
   database?: string;
 
-  blastColumns: string[] = ["Epitope ID", "DB", "Identity", "Cover", "Query subject", "Search subject"];
+  blastColumns: string[] = ["Subject ID", "DB", "Identity", "Cover", "Alignment (Epitope/Subject)",];
   blastsOriginal: any[] = [];
   blasts: any[] = [];
   filters: { [key: string]: string } = {};
@@ -32,8 +32,69 @@ export class TopologyComponent {
     N_GLYC: 'N-glycosylation sites',
     HYDROPATHY: 'Hydropathy + or -'
   };
+    getEpitope(): string {
+        return this.epitopeTopologies.find(t => t.method === 'BEPIPRED')?.topologyData ?? '';
+    }
 
-  getTooltip(method?: string): string {
+    /**
+     * Global alignment method - Needle Wunsch
+     *
+     * @param seq
+     * @param matchScore
+     * @param mismatchScore
+     * @param gapScore
+     */
+    globalAlignNeedlemanWunsch(seq: string, matchScore = 1, mismatchScore = -1, gapScore = -1): [string, string] {
+        const a = this.getEpitope();
+        const b = seq.replace(/-/g, '');;
+
+        const n = a.length;
+        const m = b.length;
+
+        // 1️⃣ Cria matriz de pontuação
+        const score: number[][] = Array.from({ length: n + 1 }, () => Array(m + 1).fill(0));
+
+        // 2️⃣ Inicializa primeira linha e coluna com gaps
+        for (let i = 0; i <= n; i++) score[i][0] = i * gapScore;
+        for (let j = 0; j <= m; j++) score[0][j] = j * gapScore;
+
+        // 3️⃣ Preenche matriz
+        for (let i = 1; i <= n; i++) {
+            for (let j = 1; j <= m; j++) {
+                const diag = score[i-1][j-1] + (a[i-1] === b[j-1] ? matchScore : mismatchScore);
+                const up = score[i-1][j] + gapScore;
+                const left = score[i][j-1] + gapScore;
+                score[i][j] = Math.max(diag, up, left);
+            }
+        }
+
+        // 4️⃣ Reconstrução do alinhamento
+        let alignedA = '';
+        let alignedB = '';
+        let i = n;
+        let j = m;
+
+        while (i > 0 || j > 0) {
+            if (i > 0 && j > 0 && score[i][j] === score[i-1][j-1] + (a[i-1] === b[j-1] ? matchScore : mismatchScore)) {
+                alignedA = a[i-1] + alignedA;
+                alignedB = b[j-1] + alignedB;
+                i--; j--;
+            } else if (i > 0 && score[i][j] === score[i-1][j] + gapScore) {
+                alignedA = a[i-1] + alignedA;
+                alignedB = '-' + alignedB;
+                i--;
+            } else {
+                alignedA = '-' + alignedA;
+                alignedB = b[j-1] + alignedB;
+                j--;
+            }
+        }
+
+        return [alignedA, alignedB];
+    }
+
+
+    getTooltip(method?: string): string {
      if (!method) return '';
         return this.tooltipMap[method] ?? '';
   }
@@ -146,4 +207,5 @@ export class TopologyComponent {
     this.expandedEpitopeIndex =
       this.expandedEpitopeIndex === index ? null : index;
   }
+
 }

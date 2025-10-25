@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package br.udesc.epibuilder.blast;
+package br.ufsc.epibuilder.blast;
 
 import br.ufsc.epibuilder.Parameters;
 import com.google.common.base.Joiner;

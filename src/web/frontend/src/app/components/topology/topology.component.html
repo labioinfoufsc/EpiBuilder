@@ -83,7 +83,7 @@
         </tr>
         <tr *ngFor="let row of blasts">
           <td>
-            <ng-container *ngIf="database === 'iedb'; else plainText">
+            <ng-container *ngIf="row.db === 'iedb'; else plainText">
               <div class="d-flex align-items-center justify-content-center">
                 <span class="me-2">{{ row.sacc }}</span>
                 <a [href]="'https://www.iedb.org/epitope/' + row.sacc.split('-').pop()" target="_blank"
@@ -98,8 +98,11 @@
           <td>{{ row.db === undefined ? '-' : row.db }}</td>
           <td>{{ row.pident === undefined ? '-' : (row.pident | number:'1.2-2') }}</td>
           <td>{{ row.qcovs === undefined ? '-' : (row.qcovs | number:'1.2-2') }}</td>
-          <td>{{ row.qseq }}</td>
-          <td>{{ row.sseq }}</td>
+          <td style="font-family: courier">
+              {{ globalAlignNeedlemanWunsch(row.sseq)[0] }}
+              <br/>
+              {{ globalAlignNeedlemanWunsch(row.sseq)[1] }}
+          </td>
         </tr>
       </tbody>
     </table>

@@ -111,6 +111,11 @@ public class EpitopeTaskData {
     @Column
     private int proteomeSize;
 
+    @Column
+    private Integer blastMinIdentityCutoff;
+
+    @Column
+    private Integer blastMinCoverCutoff;
     /**
      * Type of analysis to perform (PREDICT, ANALYZE, or PREDICT_AND_ANALYZE)
      */

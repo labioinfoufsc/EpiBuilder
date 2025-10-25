@@ -2,13 +2,15 @@
 
 nextflow.enable.dsl = 2
 
-params.input_file = params.input_file ?: null
-params.loc   = params.loc   ?: null
+params.input_file  = params.input_file  ?: null
+params.loc         = params.loc         ?: null
 params.minLength   = params.minLength   ?: null
 params.maxLength   = params.maxLength   ?: null
 params.threshold   = params.threshold   ?: null
 params.basename    = params.basename    ?: null
 params.search      = params.search      ?: 'none'
+params.identity    = params.identity    ?: 90
+params.cover       = params.cover       ?: 90
 params.proteomes   = params.proteomes   ?: null
 
 process run_diamond {
@@ -40,7 +42,7 @@ process run_diamond {
             out_file="\$out_dir/diamond-\${alias}.csv"
 
             echo "[INFO] Running DIAMOND for alias '\$alias' and DB '\$db'"
-            "${projectDir}/diamond.sh" "\$input_path" "\$db" "\$out_file"
+            "${projectDir}/diamond.sh" "\$input_path" "\$db" "\$out_file" "\$params.id" "\$params.cov"
         done
     fi
     """
@@ -141,9 +143,9 @@ process copy_results {
 
     script:
     """
-    echo "Starting copy"
-    echo "Basename: ${params.basename}"
-    echo "Current dir: \${PWD}"
+    #echo "Starting copy"
+    #echo "Basename: ${params.basename}"
+    #echo "Current dir: \${PWD}"
 
     # Define temporary path
     final_path="\${PWD}/${params.basename}/temp"
@@ -175,7 +177,6 @@ process copy_results {
     fi
 
     # Move all contents from temp to final output directory
-    echo "Moving results from temp to ${params.basename}"
     mv \$final_path/* "${params.basename}/"
 
     # Optionally remove empty temp dir
@@ -256,14 +257,20 @@ process run_epibuilder {
     if (params.threshold) {
         args << "--threshold ${params.threshold}"
     }
-    /**
+
     if (params.search && params.search != 'none') {
         args << "--search ${params.search}"
+        if (params.identity) {
+             args << "--ident ${params.identity}"
+        }
+        if (params.cover) {
+             args << "--cover ${params.cover}"
+        }
     }
 
     if (params.proteomes) {
         args << "--proteomes '${params.proteomes}'"
-    }**/
+    }
 
     def descArg = desc_file ? "-d ${desc_file}" : ""
 
@@ -406,9 +413,11 @@ workflow {
             if (params.loc) {
                 run_localization(result.valid_proteins)
             }
-            if (params.proteomes) {
-                run_diamond(epibuilder.epitopes_fasta)
-            }
+            /**
+                For next versions
+                if (params.proteomes) {
+                   run_diamond(epibuilder.epitopes_fasta)
+            }**/
             copy_results(epibuilder.out).view()
         }else {
             error "Review the fasta file, ${result.invalid_proteins} invalid proteins "
@@ -420,9 +429,11 @@ workflow {
             extract_fasta_out = extract_fasta(input_ch)
             run_localization(extract_fasta_out)
         }
-        if (params.proteomes) {
-            run_diamond(epibuilder.epitopes_fasta)
-        }
+        /**
+            For next versions
+            if (params.proteomes) {
+               run_diamond(epibuilder.epitopes_fasta)
+        }**/
         copy_results(epibuilder.out).view()
     } else {
         error 'Unsupported file type. Use .fasta or .csv'

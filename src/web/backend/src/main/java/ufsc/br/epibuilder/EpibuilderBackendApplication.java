@@ -18,6 +18,7 @@ public class EpibuilderBackendApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(EpibuilderBackendApplication.class, args);
+        System.out.println("Epibuilder volume-data: " + System.getenv("EPIBUILDER_VOLUME"));
 	}
 
 }

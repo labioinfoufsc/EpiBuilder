@@ -17,8 +17,8 @@ export class EpitopeTaskData {
   executionDate!: Date;
   finishedDate?: Date;
   epitopes?: Epitope[];
-  minIdentityCutoff?: number;
-  maxIdentityCutoff?: number;
+  blastMinIdentityCutoff?: number;
+  blastMinCoverCutoff?: number;
   wordSize?: number;
   status?: string;
   localizationParam?: string;

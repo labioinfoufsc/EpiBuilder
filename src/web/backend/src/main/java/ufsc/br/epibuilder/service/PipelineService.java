@@ -92,12 +92,16 @@ public class PipelineService {
             List<String> command = new ArrayList<>();
             command.add("bash");
             command.add("-c");
+            String epibuilderVolume = System.getenv("EPIBUILDER_VOLUME");
+            if (epibuilderVolume == null || epibuilderVolume.isEmpty()) {
+                epibuilderVolume = "epibuilder-data"; // valor padrão
+            }
 
             StringBuilder fullCommand = new StringBuilder();
-
             fullCommand.append("docker run --rm ");
             fullCommand.append("-v /var/run/docker.sock:/var/run/docker.sock ");
-            fullCommand.append("-v epibuilder-data:/tmp/epibuilder ");
+            fullCommand.append(String.format("-v %s:/tmp/epibuilder ",epibuilderVolume));
+            fullCommand.append(String.format("-e EPIBUILDER_VOLUME=%s ",epibuilderVolume));
             fullCommand.append("bioinfoufsc/epibuilder-core:latest epibuilder ");
             fullCommand.append("--input_file ").append(taskData.getFile().getAbsolutePath()).append(" ");
             fullCommand.append("--basename ").append(taskData.getCompleteBasename()).append(" ");
@@ -165,6 +169,14 @@ public class PipelineService {
                         .collect(Collectors.toList());
 
                 fullCommand.append("--proteomes ").append(String.join(":", proteomes)).append(" ");
+
+                if (taskData.getBlastMinCoverCutoff() != 90) {
+                    fullCommand.append("--cover ").append(taskData.getBlastMinCoverCutoff()).append(" ");
+                }
+
+                if (taskData.getBlastMinIdentityCutoff() != 90) {
+                    fullCommand.append("--identity ").append(taskData.getBlastMinIdentityCutoff()).append(" ");
+                }
             }
 
             command.add(fullCommand.toString().trim());
@@ -360,29 +372,29 @@ public class PipelineService {
                 log.info("Processing BLAST files in {}", completePath);
                 try {
                     List<Path> blastFiles = Files.list(completePath)
-                            .filter(path -> path.getFileName().toString().startsWith("diamond-")
+                            .filter(path -> path.getFileName().toString().startsWith("blast-")
                                     && path.getFileName().toString().endsWith(".csv"))
                             .collect(Collectors.toList());
 
-                    log.info("Found {} DIAMOND files", blastFiles.size());
+                    log.info("Found {} BLAST files", blastFiles.size());
 
                     if (!blastFiles.isEmpty()) {
                         for (Path searchPath : blastFiles) {
-                            log.info("Processing DIAMOND file: {}", searchPath.getFileName());
+                            log.info("Processing BLAST file: {}", searchPath.getFileName());
 
                             List<Blast> convertedBlasts = parseBlastCsv(searchPath.toString());
-                            log.info("DIAMOND converted: {}", convertedBlasts.size());
+                            log.info("BLAST converted: {}", convertedBlasts.size());
 
                             List<Epitope> updatedEpitopes = associateBlasts(completeEpitopes, convertedBlasts);
 
-                            log.info("DIAMOND completed for file {}", searchPath.getFileName());
+                            log.info("BLAST completed for file {}", searchPath.getFileName());
                         }
                     } else {
-                        log.warn("No DIAMOND files found in directory: {}", completePath);
+                        log.warn("No BLAST files found in directory: {}", completePath);
                     }
                 } catch (IOException e) {
-                    log.error("Error while processing DIAMOND files: {}", e.getMessage(), e);
-                    throw new RuntimeException("Failed to process DIAMOND files", e);
+                    log.error("Error while processing BLAST files: {}", e.getMessage(), e);
+                    throw new RuntimeException("Failed to process BLAST files", e);
                 }
             }
 
@@ -452,7 +464,7 @@ public class PipelineService {
     }
 
     public static String extractDBName(String path) {
-        String regex = "diamond-(.*?)\\.csv";
+        String regex = "blast-(.*?)\\_blast.csv";
 
         Pattern pattern = Pattern.compile(regex);
         Matcher matcher = pattern.matcher(path);

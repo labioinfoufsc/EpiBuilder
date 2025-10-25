@@ -39,7 +39,7 @@ public class Parameters {
     public static int BLAST_WORD_SIZE = 4;
     public static boolean SEARCH_BLAST = false;
     public static String MAKEBLASTDB_PATH = "makeblastdb";
-    public static String BLASTP_PATH = "blastp";
+    public static String BLASTP_PATH = "blastp_custom";
     public static File FASTA;
     public static HashMap<String, String> MAP_PROTEIN_DESCRIPTION = new HashMap<>();
 

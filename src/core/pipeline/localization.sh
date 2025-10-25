@@ -44,9 +44,11 @@ echo "[INFO] Copied $INPUT_PATH to $TMP_DIR/$FILENAME"
 if [[ "$LOC" =~ ^(animal|fungi|plant)$ ]]; then
     RAW_FILE="$TMP_DIR/raw_subcell.txt"
     TSV_FILE="$TMP_DIR/localization.tsv"
-
+    EPIBUILDER_VOLUME="${EPIBUILDER_VOLUME:-epibuilder-data}"
     echo "[INFO] Running WolfPsort for $LOC..."
-    docker run --rm -v epibuilder-data:/tmp/epibuilder bioinfoufsc/wolfpsort \
+    docker run --rm \
+        -v "$EPIBUILDER_VOLUME:/tmp/epibuilder" \
+        bioinfoufsc/wolfpsort \
         -i "$TMP_DIR/$FILENAME" -s "$LOC" -o "$RAW_FILE" \
         2>&1 | tee -a "$ORIG_DIR/pipeline.log"
 
@@ -94,9 +96,12 @@ else
         echo "Error: Invalid 'loc' for PSORTb. Use arch, gram_pos, or gram_neg."
         exit 1
     fi
+    EPIBUILDER_VOLUME="${EPIBUILDER_VOLUME:-epibuilder-data}"
 
     echo "[INFO] Running PSORTb for $LOC ($FLAG)..."
-    docker run --rm -v epibuilder-data:/tmp/epibuilder bioinfoufsc/psortb \
+    docker run --rm \
+        -v "$EPIBUILDER_VOLUME:/tmp/epibuilder" \
+         bioinfoufsc/psortb \
         -i "$TMP_DIR/$FILENAME" $FLAG -o terse -r "$TMP_DIR/localization.tsv" \
         2>&1 | tee -a "$ORIG_DIR/pipeline.log"
 fi

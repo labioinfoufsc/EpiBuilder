@@ -44,7 +44,7 @@ public class Main implements Callable<Integer> {
     String basename;
     @Option(names = { "-search",
             "--search" }, description = "Method of search in the given proteome(s): ${COMPLETION-CANDIDATES}. " +
-                    "\nblast - perform search with blast (at least one proteome is mandatory, use option -p1 to p6 or -proteomes to set them)"
+                    "\nblast - perform search with blast (at least one proteome is mandatory, -proteomes to set them)"
                     +
                     "\nnone - don't search (default)", defaultValue = "none")
     Search search;
@@ -56,36 +56,6 @@ public class Main implements Callable<Integer> {
     Integer blastCover;
     @Option(names = { "-ws", "--word-size" }, description = "Word-size. Default: ${DEFAULT-VALUE}", defaultValue = "4")
     Integer blastWordsize;
-    @Option(names = { "-p1", "--proteome1" }, description = "Proteome 1 file", defaultValue = "null")
-    String proteome1;
-    @Option(names = { "-p1a",
-            "--proteome1-alias" }, description = "Proteome 1 alias - appears in the report file", defaultValue = "proteome1")
-    String proteome1Alias;
-    @Option(names = { "-p2", "--proteome2" }, description = "Proteome 2 file", defaultValue = "null")
-    String proteome2;
-    @Option(names = { "-p2a",
-            "--proteome2-alias" }, description = "Proteome 2 alias - appears in the report file", defaultValue = "proteome2")
-    String proteome2Alias;
-    @Option(names = { "-p3", "--proteome3" }, description = "Proteome 3 file", defaultValue = "null")
-    String proteome3;
-    @Option(names = { "-p3a",
-            "--proteome3-alias" }, description = "Proteome 3 alias - appears in the report file", defaultValue = "proteome3")
-    String proteome3Alias;
-    @Option(names = { "-p4", "--proteome4" }, description = "Proteome 4 file", defaultValue = "null")
-    String proteome4;
-    @Option(names = { "-p4a",
-            "--proteome4-alias" }, description = "Proteome 4 alias - appears in the report file", defaultValue = "proteome4")
-    String proteome4Alias;
-    @Option(names = { "-p5", "--proteome5" }, description = "Proteome 5 file", defaultValue = "null")
-    String proteome5;
-    @Option(names = { "-p5a",
-            "--proteome5-alias" }, description = "Proteome 5 alias - appears in the report file", defaultValue = "proteome5")
-    String proteome5Alias;
-    @Option(names = { "-p6", "--proteome6" }, description = "Proteome 6 file", defaultValue = "null")
-    String proteome6;
-    @Option(names = { "-p6a",
-            "--proteome6-alias" }, description = "Proteome 6 alias - appears in the report file", defaultValue = "proteome6")
-    String proteome6Alias;
 
     @Option(names = { "-proteomes",
             "--proteomes" }, required = false, description = "Input proteome files format (separated by :) <alias1>=<fasta1>:<alias2>=<fasta2>\nUse this option to search in one or more proteomes. This option can be used with the p1-p6 option.")
@@ -128,13 +98,6 @@ public class Main implements Callable<Integer> {
                 Parameters.BLAST_WORD_SIZE = blastWordsize;
             }
             ArrayList<Proteome> proteomeFiles = new ArrayList<>();
-
-            addProteome(proteomeFiles, proteome1, proteome1Alias, 1);
-            addProteome(proteomeFiles, proteome2, proteome2Alias, 2);
-            addProteome(proteomeFiles, proteome3, proteome3Alias, 3);
-            addProteome(proteomeFiles, proteome4, proteome4Alias, 4);
-            addProteome(proteomeFiles, proteome5, proteome5Alias, 5);
-            addProteome(proteomeFiles, proteome6, proteome6Alias, 6);
             int totalProt = proteomeFiles.size();
 
             if (!StringUtils.isBlank(proteomes)) {

@@ -50,9 +50,11 @@ else
     GPU_OPTS=""
 fi
 
+EPIBUILDER_VOLUME="${EPIBUILDER_VOLUME:-epibuilder-data}"
+
 # Executa o contêiner normalmente
 docker run --rm $GPU_OPTS \
-    -v epibuilder-data:/tmp/epibuilder \
+    -v "$EPIBUILDER_VOLUME:/tmp/epibuilder" \
     bioinfoufsc/bepipred3 \
     python3 -u ./bepipred3_custom.py \
     -i "$TMP_DIR/$FILENAME" -o "$TMP_DIR" \

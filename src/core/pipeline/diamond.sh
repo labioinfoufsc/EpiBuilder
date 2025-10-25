@@ -10,6 +10,8 @@ fi
 INPUT_PATH="$1"
 DB_PATH="$2"
 OUTPUT="$3"
+ID="$4"
+COV="$5"
 
 # Verifica existência dos arquivos de entrada
 if [ ! -f "$INPUT_PATH" ]; then
@@ -42,9 +44,10 @@ if [ -f "${DB_PATH}.dmnd" ]; then
 else
     echo "[INFO] No BLAST database found. Linking FASTA and generating..."
     cp "$DB_PATH" "$TMP_DIR/$DB_BASENAME"
+    EPIBUILDER_VOLUME="${EPIBUILDER_VOLUME:-epibuilder-data}"
 
     docker run --rm \
-        -v epibuilder-data:/tmp/epibuilder \
+        -v "$EPIBUILDER_VOLUME:/tmp/epibuilder" \
         staphb/diamond:2.1.13 \
         diamond makedb --in "$TMP_DIR/$DB_BASENAME" -d "$TMP_DIR/$DB_BASENAME.dmnd"
 fi
@@ -56,10 +59,13 @@ echo "[INFO] Copied input file to $TMP_DIR/$FILENAME"
 
 # ============ Executa BLASTP ============
 echo "[INFO] Running BLASTP..."
+
+EPIBUILDER_VOLUME="${EPIBUILDER_VOLUME:-epibuilder-data}"
+
 docker run --rm \
-    -v epibuilder-data:/tmp/epibuilder \
+    -v "$EPIBUILDER_VOLUME:/tmp/epibuilder" \
     staphb/diamond:2.1.13 \
-    diamond blastp -q "$TMP_DIR/$FILENAME" -d "$TMP_DIR/$DB_BASENAME.dmnd" \
+    diamond blastp -q "$TMP_DIR/$FILENAME" -d "$TMP_DIR/$DB_BASENAME.dmnd" --id "$ID" --query-cover "$COV"\
            -o "$TMP_DIR/$(basename "$OUTPUT")" \
            -f 6 qseqid sseqid pident qcovhsp qseq sseq \
     2>&1 | tee -a "$ORIG_DIR/pipeline.log"

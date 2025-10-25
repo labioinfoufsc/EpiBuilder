@@ -38,7 +38,7 @@ export class ResultsComponent implements OnInit {
     { key: "nglyc", label: "nGlyc" },
     { key: "hydropathy", label: "Hydropathy" },
     { key: "bepiPred3", label: "BepiPred3" },
-    { key: "kolaskar", label: "Kolaskar" },
+    { key: "kolaskar", label: "Antigenicity" },
     { key: "blasts", label: "Search Hit" },
   ];
 

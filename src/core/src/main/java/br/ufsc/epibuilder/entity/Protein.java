@@ -1,6 +1,6 @@
 package br.ufsc.epibuilder.entity;
 
-import br.udesc.cav.tese.glycosylation.Motif;
+import br.ufsc.epibuilder.nglyc.Motif;
 import br.ufsc.epibuilder.Parameters;
 import br.ufsc.epibuilder.entity.report.FormatHelper;
 import java.util.ArrayList;

@@ -21,21 +21,27 @@
           </div>
 
           <div class="col-md-6 mb-3" *ngIf="selectedTask.localizationParam">
-            <p><strong>Localization param:</strong> {{ selectedTask.localizationParam}}</p>
+            <p><strong>Localization param:</strong> {{ selectedTask.localizationParam }}</p>
           </div>
 
           <div class="col-md-6 mb-3">
-            <p><strong>BepiPred Threshold:</strong> {{ selectedTask.bepipredThreshold === null ? '0.1512' :
-              selectedTask.bepipredThreshold}}</p>
+            <p><strong>BepiPred Threshold:</strong> {{ selectedTask.bepipredThreshold }}</p>
           </div>
 
           <div class="col-md-6 mb-3">
-            <p><strong>Min Epitope Length:</strong> {{ selectedTask.minEpitopeLength === null? 10 :
-              selectedTask.minEpitopeLength}}</p>
+            <p><strong>Min Epitope Length:</strong> {{ selectedTask.minEpitopeLength }}</p>
           </div>
+
           <div class="col-md-6 mb-3">
-            <p><strong>Max Epitope Length:</strong> {{ selectedTask.maxEpitopeLength === null ? 30:
-              selectedTask.maxEpitopeLength}}</p>
+            <p><strong>Max Epitope Length:</strong> {{ selectedTask.maxEpitopeLength }}</p>
+          </div>
+
+          <div class="col-md-6 mb-3">
+                <p><strong>BLAST min identity cutoff:</strong> {{ selectedTask.blastMinIdentityCutoff}}</p>
+          </div>
+
+          <div class="col-md-6 mb-3">
+                 <p><strong>BLAST max cover cutoff:</strong> {{ selectedTask.blastMinCoverCutoff }}</p>
           </div>
         </div>
 

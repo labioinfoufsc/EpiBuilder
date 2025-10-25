@@ -5,8 +5,8 @@
  */
 package br.ufsc.epibuilder.entity;
 
-import br.udesc.cav.tese.glycosylation.GlycosylationFinder;
-import br.udesc.cav.tese.glycosylation.Motif;
+import br.ufsc.epibuilder.nglyc.GlycosylationFinder;
+import br.ufsc.epibuilder.nglyc.Motif;
 import br.ufsc.epibuilder.entity.report.FormatHelper;
 import br.ufsc.epibuilder.proteomics.ProteomicCalculator;
 import java.util.ArrayList;

@@ -5,7 +5,7 @@
  */
 package br.ufsc.epibuilder.entity.report;
 
-import br.udesc.cav.tese.glycosylation.Motif;
+import br.ufsc.epibuilder.nglyc.Motif;
 import br.ufsc.epibuilder.Parameters;
 import br.ufsc.epibuilder.entity.Topology;
 import java.util.ArrayList;

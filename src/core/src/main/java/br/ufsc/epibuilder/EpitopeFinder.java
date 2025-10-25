@@ -5,10 +5,9 @@ package br.ufsc.epibuilder;
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-import br.udesc.cav.tese.glycosylation.Motif;
-import br.udesc.epibuilder.blast.Blast;
-import static br.udesc.epibuilder.blast.BlastRunner.getBlastResults;
-import br.udesc.epibuilder.blast.ReportBlastJoiner;
+import br.ufsc.epibuilder.blast.Blast;
+import static br.ufsc.epibuilder.blast.BlastRunner.getBlastResults;
+import br.ufsc.epibuilder.blast.ReportBlastJoiner;
 import br.ufsc.epibuilder.entity.Proteome;
 import br.ufsc.epibuilder.converter.IEDBBcellCalculator;
 import br.ufsc.epibuilder.converter.ProteinConverter;
