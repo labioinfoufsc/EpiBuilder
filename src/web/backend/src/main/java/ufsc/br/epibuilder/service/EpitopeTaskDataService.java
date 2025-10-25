@@ -4,10 +4,9 @@ import org.springframework.stereotype.Service;
 import ufsc.br.epibuilder.repository.EpitopeTaskDataRepository;
 import ufsc.br.epibuilder.model.EpitopeTaskData;
 import java.util.List;
-import java.util.Optional;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.RequestBody;
 import ufsc.br.epibuilder.model.Status;
 
 /**
@@ -17,7 +16,6 @@ import ufsc.br.epibuilder.model.Status;
 @Slf4j
 @Transactional
 public class EpitopeTaskDataService {
-
     private final EpitopeTaskDataRepository epitopeTaskDataRepository;
 
     public EpitopeTaskDataService(EpitopeTaskDataRepository epitopeTaskDataRepository) {
@@ -39,6 +37,9 @@ public class EpitopeTaskDataService {
     }
 
     public EpitopeTaskData findById(Long id) {
+
+        System.out.println("Epitope Task: " + id);
+
         return epitopeTaskDataRepository.findById(id);
     }
 
@@ -71,7 +72,9 @@ public class EpitopeTaskDataService {
 
         log.info("Fetching tasks for user ID: {}", userId);
         List<EpitopeTaskData> tasks = epitopeTaskDataRepository.findTasksByUserId(userId);
-
+        for(EpitopeTaskData task : tasks) {
+            findById(task.getId());
+        }
         log.info("Number of tasks found: {}", tasks.size());
         tasks.forEach(task -> log.info("Task ID: {}, User ID: {}",
                 task.getId(),

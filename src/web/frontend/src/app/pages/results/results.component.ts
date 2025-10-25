@@ -23,25 +23,62 @@ export class ResultsComponent implements OnInit {
   selectedEpitope: Epitope | null = null;
   selectedTask: Partial<EpitopeTaskData> = {};
 
-  columns = [
-    { key: "n", label: "N" },
-    { key: "protein.proteinId", label: "Protein ID" },
-    { key: "protein.description", label: "Description" },
-    { key: "protein.localization", label: "Localization" },
-    { key: "epitope", label: "Epitope" },
-    { key: "avgCover", label: "EpiBuilder Score" },
-    { key: "start", label: "Start" },
-    { key: "endEpitope", label: "End" },
-    { key: "length", label: "Length" },
-    { key: "molecularWeight", label: "kDa" },
-    { key: "isoelectricPoint", label: "pH(I)" },
-    { key: "nglyc", label: "nGlyc" },
-    { key: "hydropathy", label: "Hydropathy" },
-    { key: "bepiPred3", label: "BepiPred3" },
-    { key: "kolaskar", label: "Antigenicity" },
-    { key: "blasts", label: "Search Hit" },
-  ];
+  columns: { key: string, label: string }[] = [];
+  dynamicDbs: string[] = [];
+  blastCounts: { [epitopeId: number]: { [dbName: string]: number } } = {}; 
+  hasDescription: boolean = true;
+  hasLocalization: boolean = true;
+  generateColumns() {
+    // Colunas fixas iniciais
+    this.columns = [
+    { key: 'n', label: 'N' },
+    { key: 'protein.proteinId', label: 'Protein ID' },
+    { key: 'protein.description', label: 'Description' },
+    { key: 'protein.localization', label: 'Localization' },
+    { key: 'epitope', label: 'Epitope' },
+    { key: 'avgCover', label: 'Avg Cover' },
+    { key: 'start', label: 'Start' },
+    { key: 'endEpitope', label: 'End' },
+    { key: 'length', label: 'Length' },
+    { key: 'molecularWeight', label: 'Mol. Weight' },
+    { key: 'isoelectricPoint', label: 'Isoelectric Point' },
+    { key: 'nglyc', label: 'N-Glyc' },
+    { key: 'hydropathy', label: 'Hydropathy' },
+    { key: 'bepiPred3', label: 'BepiPred3' },
+    { key: 'kolaskar', label: 'Kolaskar' }
+    ];
 
+    // Remove Description se todos forem vazio ou '-'
+    this.hasDescription = this.epitopes.some(
+      e => e.protein?.description && e.protein.description !== '-'
+    );
+    if (!this.hasDescription) {
+      this.columns = this.columns.filter(c => c.key !== 'protein.description');
+    }
+
+    // Remove Localization se todos forem vazio ou '-'
+    this.hasLocalization = this.epitopes.some(
+      e => e.protein?.localization && e.protein.localization !== '-'
+    );
+    if (!this.hasLocalization) {
+      this.columns = this.columns.filter(c => c.key !== 'protein.localization');
+    }
+
+    const dbSet = new Set<string>();
+      this.epitopes.forEach(e => {
+        e.blasts?.forEach(b => {
+         if (b.db) dbSet.add(b.db);
+        });
+    });
+
+    this.dynamicDbs = Array.from(dbSet);
+    this.epitopes.forEach(e => {
+      this.dynamicDbs.forEach(dbName => {
+      const count = e.blasts?.filter(b => b.db === dbName).length || 0;
+      (e as any)[`blastCount_${dbName}`] = count;
+      });
+    });
+  }
 
   constructor(
     private epitopeService: EpitopesService,
@@ -50,6 +87,9 @@ export class ResultsComponent implements OnInit {
     this.getData();
   }
 
+  getBlastCount(epitope: Epitope, dbName: string): number {
+  return (epitope as any)[`blastCount_${dbName}`] || 0;
+}
   getData() {
     const userId = this.loginService.getUser()?.id;
 
@@ -66,11 +106,13 @@ export class ResultsComponent implements OnInit {
 
   ngOnInit(): void {
     this.resetState();
+    this.generateColumns();
     this.getData();
   }
 
   resetState(): void {
     this.epitopes = [];
+    this.columns = [];
     this.expandedEpitopeIndex = null;
     this.epitopeTaskData = [];
     this.filterText = "";
@@ -115,8 +157,6 @@ export class ResultsComponent implements OnInit {
     }
   }
 
-
-
   sort(columnKey: string) {
     if (this.sortColumn === columnKey) {
       this.sortDirection = this.sortDirection === "asc" ? "desc" : "asc";
@@ -144,7 +184,6 @@ export class ResultsComponent implements OnInit {
     });
   }
 
-
   selectEpitope(epitope: Epitope | null) {
     this.epitopeService.selectEpitope(epitope);
   }
@@ -161,6 +200,7 @@ export class ResultsComponent implements OnInit {
       } else {
         this.epitopes = task.epitopes;
       }
+      this.generateColumns();
     });
   }
 
