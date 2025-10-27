@@ -19,12 +19,11 @@ import java.util.LinkedHashMap;
  */
 public class Parameters {
 
-    public static SO OPERATIONAL_SYSTEM = SO.linux;
+    public static FileType FILE_TYPE = FileType.csv;
     public static double THRESHOLD_BEPIPRED = 0.6;
     public static int MIN_LENGTH_BEPIPRED = 10;
     public static int MAX_LENGTH_BEPIPRED = 30;
     public static int LENGTH_SEQUENCE_EMINI_PARKER = 10;
-    public static File BEPIPRED_FILE = null;
     public static File EMINI_FILE = null;
     public static File PARKER_FILE = null;
     public static boolean NGLYC = false;
@@ -32,40 +31,29 @@ public class Parameters {
     public static double PARKER_TRESHOLD = 1;
     public static ArrayList<Proteome> PROTEOMES = new ArrayList<>();
     public static LinkedHashMap<SoftwareBcellEnum, Double> MAP_SOFTWARES = new LinkedHashMap<>();
-    public static String BASENAME = "";
     public static String BLAST_TASK = "blastp-short";
-    public static double BLAST_IDENTITY = 90;
-    public static double BLAST_COVER = 90;
+    public static Integer BLAST_IDENTITY = 90;
+    public static Integer BLAST_COVER = 90;
     public static int BLAST_WORD_SIZE = 4;
     public static boolean SEARCH_BLAST = false;
     public static String MAKEBLASTDB_PATH = "makeblastdb";
     public static String BLASTP_PATH = "blastp_custom";
-    public static File FASTA;
+    public static File INPUT;
     public static HashMap<String, String> MAP_PROTEIN_DESCRIPTION = new HashMap<>();
-
-    public enum SO {
-        windows, linux, macos
-    }
-
-    public enum BEPIPRED_TYPE {
-        CSV("csv"), FASTA("fasta");
-        private final String name;
-
-        private BEPIPRED_TYPE(String name) {
-            this.name = name;
-        }
-
-        public String getName() {
-            return name;
-        }
-    };
-
-    public static BEPIPRED_TYPE BEPIPRED_INPUT = BEPIPRED_TYPE.FASTA;
-    public static String DESTINATION_FOLDER = ".";
+    public static HashMap<String, String> MAP_PROTEIN_LOCALIZATION = new HashMap<>();
+    public static String DESTINATION_FOLDER = "./epibuilder-results";
     public static boolean OUTPUT_FILE = false;
     public static boolean HIT_ACCESSION = true;
+    public static LocalizationType LOCALIZATION_TYPE = null;
+    public static File LOCALIZATION_FILE;
+    public static File DESCRIPTION_FILE;
 
-    static {
-        Parameters.BASENAME = "run-" + String.format("%1$tF-%1$tH%1$tM%1$tS", Calendar.getInstance().getTime());
+    public enum FileType {
+        csv, fasta
     }
+    public enum LocalizationType{
+        animal, fungi, plant, arch, gram_pos, gram_neg
+    }
+
+
 }

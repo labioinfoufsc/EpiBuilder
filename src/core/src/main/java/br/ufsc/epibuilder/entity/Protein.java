@@ -3,6 +3,8 @@ package br.ufsc.epibuilder.entity;
 import br.ufsc.epibuilder.nglyc.Motif;
 import br.ufsc.epibuilder.Parameters;
 import br.ufsc.epibuilder.entity.report.FormatHelper;
+import org.apache.xmlbeans.impl.tool.Extension;
+
 import java.util.ArrayList;
 
 public class Protein implements Comparable<Protein> {
@@ -13,10 +15,13 @@ public class Protein implements Comparable<Protein> {
     private boolean nglyco = false;
     private ArrayList<Motif> nglycMotifs = new ArrayList<>();
     private ArrayList<Epitopo> epitopes = new ArrayList<>();
-    private String description;
 
     public String getDescription() {
         return Parameters.MAP_PROTEIN_DESCRIPTION.getOrDefault(id, "-");
+    }
+
+    public String getLocalization() {
+        return Parameters.MAP_PROTEIN_LOCALIZATION.getOrDefault(id, "-");
     }
 
     public String getNglycMotifsAsString() {

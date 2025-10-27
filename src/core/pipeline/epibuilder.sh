@@ -18,7 +18,7 @@ show_help() {
     echo "  --min-length INT       Minimum length"
     echo "  --max-length INT       Maximum length"
     echo "  --threshold FLOAT      Threshold value"
-    echo "  --basename NAME        Basename for output files"
+    echo "  --output NAME          Basename for output files"
     echo "  --search MODE          Search mode: 'none', 'blast', etc. (default: 'none')"
     echo "  --proteomes FILE       Path to proteomes file (format: alias1=path1:alias2=path2)"
     echo "  --cover INT            BLAST minimum coverage cutoff (default: 90)"
@@ -27,7 +27,7 @@ show_help() {
     echo "  --help                 Show this help message and exit"
     echo ""
     echo "Example:"
-    echo "  epibuilder --input_file data.fasta --min-length 8 --max-length 30 --threshold 0.8 --basename result --search blast --proteomes human=proteomes/human.fa:virus=proteomes/virus.fa --cover 85 --identity 80 --word-size 3"
+    echo "  epibuilder --input_file data.fasta --min-length 8 --max-length 30 --threshold 0.8 --output result  --proteomes human=proteomes/human.fa:virus=proteomes/virus.fa --cover 85 --identity 80 --word-size 3"
     echo ""
 }
 
@@ -71,8 +71,8 @@ while [[ $# -gt 0 ]]; do
             shift
             shift
             ;;
-        --basename)
-            BASENAME="$2"
+        --output)
+            OUTPUT_DIR="$2"
             shift
             shift
             ;;
@@ -120,16 +120,16 @@ if [[ -z "$INPUT_FILE" ]]; then
     exit 1
 fi
 
-[[ -n "$BASENAME" ]] && mkdir -p "$BASENAME/reports"
+[[ -n "$OUTPUT_DIR" ]] && mkdir -p "$OUTPUT_DIR/reports"
 
 # Build Nextflow command with all parameters
-NF_CMD="nextflow run "$MAIN_NF" --input_file \"$INPUT_FILE\" --search \"$SEARCH\""
+NF_CMD="nextflow run "$MAIN_NF" --with-docker bioinfoufsc/bepipred3 --docker-run-options \"-v /var/run/docker.sock:/var/run/docker.sock\" --input_file \"$INPUT_FILE\" --search \"$SEARCH\""
 
 [[ -n "$LOC" ]] && NF_CMD+=" --loc \"$LOC\""
 [[ -n "$MIN_LENGTH" ]] && NF_CMD+=" --min-length \"$MIN_LENGTH\""
 [[ -n "$MAX_LENGTH" ]] && NF_CMD+=" --max-length \"$MAX_LENGTH\""
 [[ -n "$THRESHOLD" ]] && NF_CMD+=" --threshold \"$THRESHOLD\""
-[[ -n "$BASENAME" ]] && NF_CMD+=" --basename \"$BASENAME\""
+[[ -n "$OUTPUT_DIR" ]] && NF_CMD+=" --output \"$OUTPUT_DIR\""
 [[ -n "$PROTEOMES" ]] && NF_CMD+=" --proteomes \"$PROTEOMES\""
 NF_CMD+=" --cover \"$COVER\""
 NF_CMD+=" --identity \"$IDENTITY\""
@@ -137,12 +137,11 @@ NF_CMD+=" --word-size \"$WORD_SIZE\""
 NF_CMD+=" --jar \"$JAR_PATH\""
 
 # Add Nextflow reports if BASENAME is defined
-[[ -n "$BASENAME" ]] && NF_CMD+=" \
-    -with-report $BASENAME/reports/report.html \
-    -with-trace $BASENAME/reports/trace.txt \
-    -with-timeline $BASENAME/reports/timeline.html \
-    -with-dag $BASENAME/reports/flowchart.png"
+[[ -n "$OUTPUT_DIR" ]] && NF_CMD+=" \
+    -with-report $OUTPUT_DIR/reports/report.html \
+    -with-trace $OUTPUT_DIR/reports/trace.txt \
+    -with-timeline $OUTPUT_DIR/reports/timeline.html \
+    -with-dag $OUTPUT_DIR/reports/flowchart.png"
 
 # Execute
 eval $NF_CMD
-

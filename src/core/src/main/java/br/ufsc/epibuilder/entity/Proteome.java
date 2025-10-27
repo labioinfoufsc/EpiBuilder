@@ -1,67 +1,41 @@
 package br.ufsc.epibuilder.entity;
 
-import br.ufsc.epibuilder.converter.ProteinConverter;
+import br.ufsc.epibuilder.Parameters;
+import lombok.Data;
 
 import java.io.File;
-import java.util.ArrayList;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 /**
  *
  * @author renato
  */
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+
+@Data
 public class Proteome {
-
     private String organism;
-    private ArrayList<ProteinConverter> proteins = new ArrayList<>();
+    private File originalFile;
     private File file;
-    private boolean load = false;
 
-    public Proteome(String organism) {
+    public Proteome(String organism, File originalFile) throws IOException {
         this.organism = organism;
-    }
+        this.originalFile = originalFile;
 
-    public Proteome(String organism, ArrayList<ProteinConverter> proteins) {
-        this.organism = organism;
-        this.proteins = proteins;
-    }
+        File destDir = new File(Parameters.DESTINATION_FOLDER);
+        if (!destDir.exists()) {
+            destDir.mkdirs();
+        }
 
-    public Proteome(String organism, File file) {
-        this.organism = organism;
-        this.file = file;
-    }
+        this.file = new File(destDir, originalFile.getName());
 
-    public File getFile() {
-        return file;
+        Files.copy(originalFile.toPath(), this.file.toPath(), StandardCopyOption.REPLACE_EXISTING);
     }
-
-    public void setFile(File file) {
-        this.file = file;
-    }
-
-    public void setProteins(ArrayList<ProteinConverter> proteins) {
-        this.proteins = proteins;
-    }
-
-    public void setOrganism(String organism) {
-        this.organism = organism;
-    }
-
-    public String getOrganism() {
-        return organism;
-    }
-
-    public ArrayList<ProteinConverter> getProteins() {
-        return proteins;
-    }
-
-    @Override
-    public String toString() {
-        return organism + "=" + file.getAbsolutePath();
-    }
-
 }

@@ -22,6 +22,10 @@ public class ProteinConverter {
     public ProteinConverter(String id, String sequence) {
         this.id = id;
         this.sequence = new StringBuilder(sequence);
+        for (int i = 0; i < sequence.length(); i++) {
+            char c = sequence.charAt(i);
+            addAmino(i,c+"",0);
+        }
     }
 
     public ProteinConverter(String id) {

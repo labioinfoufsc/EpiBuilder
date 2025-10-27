@@ -261,4 +261,9 @@ public class Report {
         String key = proteinId.trim();
         return Parameters.MAP_PROTEIN_DESCRIPTION.getOrDefault(key, "-");
     }
+
+    public String getLocalization() {
+        String key = proteinId.trim();
+        return Parameters.MAP_PROTEIN_LOCALIZATION.getOrDefault(key, "-");
+    }
 }
