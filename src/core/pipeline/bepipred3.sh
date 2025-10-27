@@ -50,7 +50,7 @@ else
     GPU_OPTS=""
 fi
 
-EPIBUILDER_VOLUME="${EPIBUILDER_VOLUME:-epibuilder-data}"
+EPIBUILDER_VOLUME="${EPIBUILDER_VOLUME:-/tmp/epibuilder}"
 
 # Executa o contêiner normalmente
 docker run --rm $GPU_OPTS \

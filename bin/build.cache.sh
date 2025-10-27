@@ -28,8 +28,11 @@ fi
 if [[ -f "$dockerfile" ]]; then
     read -p "Do you want to build the image using Dockerfile (epibuilder-core)? [y/N]: " build
     if [[ "${build,,}" == "y" ]]; then
-        docker build -f "$dockerfile_core" -t "$image_core_name" "$project_core"
-        echo "Image '$image_core_name' built successfully."
+    	cd ../src/core/
+    	docker run --rm -v ${PWD}:/src -w /src -v ${HOME}/.m2/:/.m2/ maven:3.9-eclipse-temurin-21 mvn clean install -Dmaven.repo.local=/.m2/
+	    cd ../../bin
+      docker build -f "$dockerfile_core" -t "$image_core_name" "$project_core"
+      echo "Image '$image_core_name' built successfully."
     fi
 else
     echo "Dockerfile not found at: $dockerfile_core"
@@ -39,8 +42,11 @@ fi
 if [[ -f "$dockerfile" ]]; then
     read -p "Do you want to build the image using Dockerfile (epibuilder)? [y/N]: " build
     if [[ "${build,,}" == "y" ]]; then
-        docker build -f "$dockerfile" -t "$image_name" "$project_root"
-        echo "Image '$image_name' built successfully."
+      cd ../src/web/backend
+      docker run --rm -v ${PWD}:/src -w /src -v ${HOME}/.m2/:/.m2/ maven:3.9-eclipse-temurin-21 mvn clean install -Dmaven.repo.local=/.m2/ -DskipTests
+      cd ../../../bin
+      docker build -f "$dockerfile" -t "$image_name" "$project_root"
+      echo "Image '$image_name' built successfully."
     fi
 else
     echo "Dockerfile not found at: $dockerfile"

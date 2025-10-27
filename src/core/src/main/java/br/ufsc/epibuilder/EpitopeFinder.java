@@ -1,13 +1,10 @@
 package br.ufsc.epibuilder;
 
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
+import br.ufsc.epibuilder.bepipred.BepiPredRunner;
 import br.ufsc.epibuilder.blast.Blast;
 import static br.ufsc.epibuilder.blast.BlastRunner.getBlastResults;
 import br.ufsc.epibuilder.blast.ReportBlastJoiner;
+import br.ufsc.epibuilder.converter.ProteinCSVReader;
 import br.ufsc.epibuilder.entity.Proteome;
 import br.ufsc.epibuilder.converter.IEDBBcellCalculator;
 import br.ufsc.epibuilder.converter.ProteinConverter;
@@ -18,12 +15,15 @@ import br.ufsc.epibuilder.entity.Protein;
 import br.ufsc.epibuilder.entity.ReportBCell;
 import br.ufsc.epibuilder.entity.SoftwareBcellEnum;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 
 import static br.ufsc.epibuilder.Parameters.*;
 
-import br.ufsc.epibuilder.Parameters.BEPIPRED_TYPE;
 import br.ufsc.epibuilder.converter.BepiPred3Converter;
+
 import static br.ufsc.epibuilder.entity.SoftwareBcellEnum.CHOU_FOSMAN;
 import static br.ufsc.epibuilder.entity.SoftwareBcellEnum.EMINI;
 import static br.ufsc.epibuilder.entity.SoftwareBcellEnum.KARPLUS_SCHULZ;
@@ -34,8 +34,8 @@ import br.ufsc.epibuilder.entity.Topology;
 import br.ufsc.epibuilder.entity.report.EpitopeReport;
 import br.ufsc.epibuilder.entity.report.ExcelReport;
 import br.ufsc.epibuilder.entity.report.ExcelTabReport;
-import br.ufsc.epibuilder.entity.report.FormatHelper;
 import br.ufsc.epibuilder.entity.report.Report;
+import br.ufsc.epibuilder.localization.LocalizationRunner;
 import br.ufsc.epibuilder.proteomics.ProteomicCalculator;
 import java.io.File;
 import java.io.FileWriter;
@@ -44,90 +44,17 @@ import java.io.PrintStream;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import br.ufsc.epibuilder.util.FastaUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.biojava.nbio.core.exceptions.CompoundNotFoundException;
+import org.biojava.nbio.core.sequence.ProteinSequence;
+import org.biojava.nbio.core.sequence.io.FastaReaderHelper;
 
 /**
  *
  * @author renato
  */
 public class EpitopeFinder {
-
-    public static EpitopeCount count(String epitopo, Proteome proteome) {
-        int total = 0;
-        int totalProteins = 0;
-        StringBuilder ids = new StringBuilder();
-        for (ProteinConverter protein : proteome.getProteins()) {
-            int count = protein.count(epitopo);
-            total += count;
-            if (count > 0) {
-                totalProteins++;
-                if (Parameters.HIT_ACCESSION) {
-                    ids.append(protein.getId());
-                    ids.append(" ");
-                }
-            }
-        }
-        if (!Parameters.HIT_ACCESSION) {
-            return new EpitopeCount("-", total, totalProteins);
-        }
-        return new EpitopeCount(ids.toString().trim(), total, totalProteins);
-    }
-
-    public static int countByOrganism(String epitopo, Proteome proteome) {
-        int total = 0;
-        for (ProteinConverter protein : proteome.getProteins()) {
-            total += protein.count(epitopo);
-        }
-        return total;
-    }
-
-    public static int countByOrganism(Epitopo epitopo, Proteome proteome) {
-        int total = 0;
-        for (ProteinConverter protein : proteome.getProteins()) {
-            total += protein.count(epitopo.getSequence());
-        }
-        return total;
-    }
-
-    public static String concatIdByOrganism(Epitopo epitopo, Proteome proteome) {
-        String total = "";
-        for (ProteinConverter protein : proteome.getProteins()) {
-            int count = protein.count(epitopo.getSequence());
-            if (count > 0) {
-                total += protein.getId() + " ";
-            }
-        }
-        return total.trim();
-    }
-
-    public static String concatIdByOrganism(String epitopo, Proteome proteome) {
-        ArrayList<String> ids = new ArrayList<>();
-        for (ProteinConverter protein : proteome.getProteins()) {
-            int count = protein.count(epitopo);
-            if (count > 0) {
-                ids.add(protein.getId());
-            }
-        }
-        if (ids.isEmpty()) {
-            return "-";
-        }
-        return FormatHelper.getListAsString(",", ids);
-    }
-
-    public static HashMap<String, Integer> getMapOrganismoCount(Epitopo epitopo, ArrayList<Proteome> proteomes) {
-        HashMap<String, Integer> resultado = new HashMap<>();
-
-        for (Proteome proteome : proteomes) {
-            int total = 0;
-            for (ProteinConverter protein : proteome.getProteins()) {
-                total += protein.count(epitopo.getSequence());
-            }
-            resultado.put(proteome.getOrganism(), total);
-        }
-
-        return resultado;
-    }
 
     public static boolean validateEpitope(Epitopo epitopo, double mediaEmini, double mediaParker, int qtd) {
         int i = 0;
@@ -172,20 +99,62 @@ public class EpitopeFinder {
     public static String process() {
         try {
             setOutput();
-
             sout("Process started: ");
             ArrayList<ProteinConverter> proteins = new ArrayList<>();
-
-            sout("Reading BepiPred-3.0 file");
-            if (Parameters.BEPIPRED_INPUT == BEPIPRED_TYPE.FASTA) {
-                sout("Source file: FASTA");
-                sout("Executing BepiPred-3.0");
-                BepiPred3Runner.execute();
-                sout("BepiPred-3.0 finished");
+            if(Parameters.FILE_TYPE == FileType.fasta){
+                HashMap<String, ProteinSequence> mapProtein = FastaReaderHelper.readFastaProteinSequence(INPUT);
+                Collection<ProteinSequence> proteinsFasta = mapProtein.values();
+                ArrayList<ProteinConverter> validProteins = new ArrayList<>();
+                ArrayList<ProteinConverter> invalidProteins = new ArrayList<>();
+                HashMap<String, String> mapDescription = new HashMap<>();
+                for(ProteinSequence protein : proteinsFasta){
+                    String id = protein.getAccession().getID();
+                    String proteinId = id.split(" ")[0].trim();
+                    String sequence = protein.getSequenceAsString().toUpperCase();
+                    String header = protein.getOriginalHeader();
+                    String description = FastaUtils.extractName(header);
+                    ProteinConverter proteinProcess = new ProteinConverter(proteinId, sequence);
+                    if(FastaUtils.isSequenceValid(protein.getSequenceAsString().toUpperCase())){
+                        validProteins.add(proteinProcess);
+                        mapDescription.put(proteinId, description);
+                    }else{
+                        invalidProteins.add(proteinProcess);
+                    }
+                }
+                StringBuilder descriptions = new StringBuilder();
+                // Header
+                descriptions.append("Id\tDescription\n");
+                // Entries
+                for (Map.Entry<String, String> entry : mapDescription.entrySet()) {
+                    descriptions.append(entry.getKey())
+                            .append("\t")
+                            .append(entry.getValue() == null ? "" : entry.getValue())
+                            .append("\n");
+                }
+                saveRandomFileName(DESTINATION_FOLDER,"description.tsv",descriptions.toString());
+                String fasta = saveRandomFileName(DESTINATION_FOLDER,"proteins_valid.fasta",generateReportFastaProteins(validProteins));
+                saveRandomFileName(DESTINATION_FOLDER,"proteins_invalid.fasta",generateReportFastaProteins(validProteins));
+                sout("Starting BepiPre-3.0");
+                File bepipredOutput = BepiPredRunner.runBepipred(new File(fasta));
+                INPUT = bepipredOutput;
+                sout("Finished BepiPre-3.0");
+                Parameters.MAP_PROTEIN_DESCRIPTION = mapDescription;
             }
+
             sout("Loading BepiPred-3.0 - CSV file");
-            proteins = BepiPred3Converter.getBepipred3FromBiolib(BEPIPRED_FILE);
+            proteins = BepiPred3Converter.getBepipred3FromBiolib(INPUT);
             sout("BepiPred-3.0 - Done");
+
+            sout("\t Proteins FASTA - done\t");
+            String fasta = saveRandomFileName(DESTINATION_FOLDER , "proteins.fasta", generateReportFastaProteins(proteins));
+            sout("\t Proteins FASTA - done\t");
+
+            if(Parameters.LOCALIZATION_TYPE != null){
+                System.out.println("\t Starting Localization: " + LOCALIZATION_TYPE);
+                File localization = LocalizationRunner.runLocalization(new File(fasta));
+                MAP_PROTEIN_LOCALIZATION = ProteinCSVReader.readTsvToMap(localization);
+                System.out.println("\t Localization - done ");
+            }
 
             Map<String, ProteinConverter> bepipredMap = getMap(proteins);
 
@@ -337,10 +306,6 @@ public class EpitopeFinder {
 
             sout("Creating reports");
             String dest = Parameters.DESTINATION_FOLDER;
-            String basename = Parameters.BASENAME;
-            if (basename.trim().length() > 0) {
-                basename += "-";
-            }
 
             sout("\t Parameters\t");
             StringBuilder stParameters = new StringBuilder();
@@ -397,42 +362,34 @@ public class EpitopeFinder {
             stParameters.append("\nIdentified epitopes    : " + totalEpitopes);
             stParameters.append("\nN-Glycosylated epitopes: " + totalEpitopesNglyc);
             stParameters.append("\n");
-            String fileParameters = saveRandomFileName(dest + "/" + basename + "epibuilder-parameters",
-                    stParameters.toString(), "txt");
+            String fileParameters = saveRandomFileName(dest, "parameters.txt",
+                    stParameters.toString());
             sout("\t Parameters - done\t");
 
             StringBuilder stReport = new StringBuilder();
 
             sout("\t Report by Protein\t");
             String reportByProtein = generateReportByProtein(proteinList);
-            String fileEpibuilderProteinSummary = saveRandomFileName(
-                    dest + "/" + basename + "epibuilder-protein-summary", reportByProtein, "tsv");
+            String fileEpibuilderProteinSummary = saveRandomFileName(dest, "protein-summary.tsv", reportByProtein);
             sout("\t Report by Protein - done\t");
 
             sout("\t Report by Topology\t");
             String reportTopology = generateReportByTopology(reportList);
-            String fileEpibuilderTopology = saveRandomFileName(dest + "/" + basename + "epibuilder-topology",
-                    reportTopology, "tsv");
+            String fileEpibuilderTopology = saveRandomFileName(dest ,"topology.tsv", reportTopology);
 
             sout("\t Report by Topology - Done\t");
 
             sout("\t Report Scores\t");
             String reportScores = generateMethodScore(proteinList);
-            String fileEpibuilderScores = saveRandomFileName(dest + "/" + basename + "epibuilder-scores", reportScores,
-                    "tsv");
+            String fileEpibuilderScores = saveRandomFileName(dest , "scores.tsv", reportScores);
 
             sout("\t Report Scores - done\t");
 
             sout("\t Epitopes FASTA\t");
 
-            String fileEpibuilderFastaEpitopo = saveRandomFileName(dest + "/" + basename + "epibuilder-epitopes-fasta",
-                    generateReportFastaEpitope(reportList), "fasta");
+            String fileEpibuilderFastaEpitopo = saveRandomFileName(dest , "epitopes.fasta",
+                    generateReportFastaEpitope(reportList));
             sout("\t Proteins FASTA\t");
-
-            sout("\t Proteins FASTA - done\t");
-            String fasta = saveRandomFileName(dest + "/" + basename + "proteins",
-                    generateReportFastaProteins(proteins), "fasta");
-            sout("\t Proteins FASTA - done\t");
 
             sout("\t Report Detailed\t");
             String reportDetailed = generateReportDetailed(reportList);
@@ -450,8 +407,7 @@ public class EpitopeFinder {
                 }
                 sout("\tBlast - done\t");
             }
-            String fileEpibuilderDetail = saveRandomFileName(dest + "/" + basename + "epibuilder-epitope-detail",
-                    reportDetailed, "tsv");
+            String fileEpibuilderDetail = saveRandomFileName(dest , "epitope-detail.tsv", reportDetailed);
             sout("\t Report Detailed - Done\t");
             // END BLAST
 
@@ -471,7 +427,7 @@ public class EpitopeFinder {
             // excelTab.add(new ExcelTabReport("Scores", reportScores));
 
             boolean excelReport = false;
-            String fileEpibuilderExcel = dest + "/" + basename + "epibuilder.xlsx";
+            String fileEpibuilderExcel = dest + "/" + "epibuilder.xlsx";
             try {
                 ExcelReport.generateExcelXlsx(excelTab, fileEpibuilderExcel);
                 excelReport = true;
@@ -498,7 +454,7 @@ public class EpitopeFinder {
             stReport.append("\n\t");
             stReport.append(fileEpibuilderFastaEpitopo);
 
-            saveRandomFileName(dest + "/" + basename + "epibuilder", stReport.toString(), "txt");
+            saveRandomFileName(dest , "epibuilder.txt", stReport.toString());
             sout("Finish\t");
             return stReport.toString();
         } catch (Exception e) {
@@ -510,7 +466,7 @@ public class EpitopeFinder {
 
     public static String generateReportByProtein(ArrayList<Protein> proteinList) {
         StringBuilder stParameters = new StringBuilder();
-        stParameters.append("Id\tDescription\tEpitopes\tN-Glyc\n");
+        stParameters.append("Id\tDescription\tLocalization\tEpitopes\tN-Glyc\n");
         for (Protein re : proteinList) {
             int nglycLocal = 0;
 
@@ -519,18 +475,16 @@ public class EpitopeFinder {
                     nglycLocal++;
                 }
             }
-            stParameters.append(String.format("%s\t%s\t%s\t%s\n", re.getId(), re.getDescription(), re.getEpitopes().size(), nglycLocal));
+            stParameters.append(String.format("%s\t%s\t%s\t%s\t%s\n", re.getId(), re.getDescription(), re.getLocalization(), re.getEpitopes().size(), nglycLocal));
         }
         return stParameters.toString();
     }
 
-    public static String saveRandomFileName(String name, String content, String ext) throws IOException {
+    public static String saveRandomFileName(String directory, String filename, String content) throws IOException {
 
-        String file = name + "." + ext;
-
-        FileWriter fw = new FileWriter(file);
-        fw.write(content);
-        fw.close();
+        Path filePath = Paths.get(directory, filename);
+        String file = filePath.toString();
+        Files.writeString(filePath, content);
         return file;
 
     }
@@ -565,15 +519,16 @@ public class EpitopeFinder {
 
     public static String generateReportByTopology(ArrayList<Report> reportList) {
         StringBuilder sb = new StringBuilder();
-        sb.append("N\tId\tDescription\t" + StringUtils.leftPad("Method", 15, ' ')
+        sb.append("N\tId\tDescription\tLocalization\t" + StringUtils.leftPad("Method", 15, ' ')
                 + "\tThreshold\tAvg Score\tCover\tEpitope\tStart\tEnd\tN-Glyc\tN-Glyc-Count\tN-Glyc-Motifs\tLength\tkDa\tI.P\tAvg Hydropathy\tAvg Cover");
         sb.append("\n");
         int count = 1;
         for (Report report : reportList) {
-            sb.append(String.format("%s\t%s\t%s\t%s\t%.2f\t%.2f\t-\t%s",
+            sb.append(String.format("%s\t%s\t%s\t%s\t%s\t%.2f\t%.2f\t-\t%s",
                     count++,
                     report.getProteinId(),
                     report.getDescription(),
+                    report.getLocalization(),
                     StringUtils.leftPad(SoftwareBcellEnum.BEPIPRED.description, 15, ' '),
                     Parameters.THRESHOLD_BEPIPRED,
                     report.getAvgBepipredScore(),
@@ -592,7 +547,7 @@ public class EpitopeFinder {
                     report.getAvgCover()));
 
             for (EpitopeReport epitopeReport : report.getEpitopeReports()) {
-                sb.append(String.format("\t\t\t%s\t%.2f\t%.2f\t%.2f\t%s%s\n",
+                sb.append(String.format("\t\t\t\t%s\t%.2f\t%.2f\t%.2f\t%s%s\n",
                         StringUtils.leftPad(epitopeReport.getMethod().description, 15, ' '),
                         epitopeReport.getThreshold(),
                         epitopeReport.getAvgScore(),
@@ -601,18 +556,18 @@ public class EpitopeFinder {
                         StringUtils.leftPad("\t", 10, ' ')));
             }
             if (!report.getEpitopeReports().isEmpty()) {
-                sb.append(String.format("\t\t\t%s\t-\t-\t%.2f\t%s%s\n",
+                sb.append(String.format("\t\t\t\t%s\t-\t-\t%.2f\t%s%s\n",
                         StringUtils.leftPad("All matches", 15, ' '),
                         report.getTopologyCoverValidation(),
                         report.getTopologyValidation(),
                         StringUtils.leftPad("\t", 10, ' ')));
             }
-            sb.append(String.format("\t\t\t%s\t-\t-\t%.2f\t%s%s\n",
+            sb.append(String.format("\t\t\t\t%s\t-\t-\t%.2f\t%s%s\n",
                     StringUtils.leftPad("N-Glyc", 15, ' '),
                     report.getnGlycTopology().getValue(),
                     report.getnGlycTopology().getDescription(),
                     StringUtils.leftPad("\t", 10, ' ')));
-            sb.append(String.format("\t\t\t%s\t-\t%.2f\t-\t%s%s\n",
+            sb.append(String.format("\t\t\t\t%s\t-\t%.2f\t-\t%s%s\n",
                     StringUtils.leftPad("Hydropathy", 15, ' '),
                     report.getAvgHydropathy(),
                     report.getHydropathyTopology().getDescription(),
@@ -636,7 +591,7 @@ public class EpitopeFinder {
 
         StringBuilder sb = new StringBuilder();
         sb.append(
-                "N\tId\tDescription\tEpitope\tStart\tEnd\tN-Glyc\tN-Glyc-Count\tN-Glyc-Motifs\tLength\tMW(kDa)\tI.P\tHydropathy\tAll Matches Cover\tAvg Cover\tBepiPred3"
+                "N\tId\tDescription\tLocalization\tEpitope\tStart\tEnd\tN-Glyc\tN-Glyc-Count\tN-Glyc-Motifs\tLength\tMW(kDa)\tI.P\tHydropathy\tAll Matches Cover\tAvg Cover\tBepiPred3"
                         + stMethod + "\n");
         int count = 1;
         for (Report report : reportList) {
@@ -657,6 +612,7 @@ public class EpitopeFinder {
                             "%s\t" +
                             "%s\t" +
                             "%s\t" +
+                            "%s\t" +
                             "%.2f\t" +
                             "%.2f\t" +
                             "%.2f\t" +
@@ -667,6 +623,7 @@ public class EpitopeFinder {
                     count++,
                     report.getProteinId(),
                     report.getDescription(),
+                    report.getLocalization(),
                     report.getEpitope(),
                     report.getStart(),
                     report.getEndEpitope(),
@@ -720,9 +677,8 @@ public class EpitopeFinder {
                             break;
                     }
                 }
-                String res = String.format("%s\t%s\t%s\t%s\t%.2f%s\t%.2f\t%.2f\t%.2f\n",
+                String res = String.format("%s\t%s\t%s\t%.2f%s\t%.2f\t%.2f\t%.2f\n",
                         proteina.getId(),
-                        proteina.getDescription(),
                         aminoEpitopo.getPosition() + 1,
                         aminoEpitopo.getAmino(),
                         aminoEpitopo.getBepipred2(),
@@ -739,7 +695,7 @@ public class EpitopeFinder {
 
     private static void setOutput() throws Exception {
         if (Parameters.OUTPUT_FILE) {
-            File file = new File(Parameters.DESTINATION_FOLDER + "/" + Parameters.BASENAME + "-epibuilder.log");
+            File file = new File(Parameters.DESTINATION_FOLDER + "/"+"epibuilder.log");
             PrintStream stream = new PrintStream(file);
             System.setOut(stream);
         }

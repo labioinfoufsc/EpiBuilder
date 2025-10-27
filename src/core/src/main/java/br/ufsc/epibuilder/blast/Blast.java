@@ -103,7 +103,7 @@ public class Blast {
 
         sb.append("Peptide\tAccession\tCount\tId\n");
         for (String listId : listIds) {
-            sb.append(String.format("%s\t%s\t%s\n", listId, getCount(listId, map), getIds(listId, map)));
+            sb.append(String.format("%s\t%s\t%s\n", listId, getCount(listId.trim(), map), getIds(listId.trim(), map)));
         }
 
         return sb.toString();

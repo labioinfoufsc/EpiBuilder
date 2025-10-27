@@ -94,7 +94,7 @@ public class PipelineService {
             command.add("-c");
             String epibuilderVolume = System.getenv("EPIBUILDER_VOLUME");
             if (epibuilderVolume == null || epibuilderVolume.isEmpty()) {
-                epibuilderVolume = "epibuilder-data"; // valor padrão
+                epibuilderVolume = "/tmp/epibuilder"; // valor padrão
             }
 
             StringBuilder fullCommand = new StringBuilder();
@@ -104,7 +104,7 @@ public class PipelineService {
             fullCommand.append(String.format("-e EPIBUILDER_VOLUME=%s ",epibuilderVolume));
             fullCommand.append("bioinfoufsc/epibuilder-core:latest epibuilder ");
             fullCommand.append("--input_file ").append(taskData.getFile().getAbsolutePath()).append(" ");
-            fullCommand.append("--basename ").append(taskData.getCompleteBasename()).append(" ");
+            fullCommand.append("--output ").append(taskData.getCompleteBasename()).append(" ");
 
             log.info("Adding parameters to command: {}", taskData.getActionType().getDesc());
 
@@ -162,8 +162,6 @@ public class PipelineService {
 
             // Add BLAST parameters if necessary
             if (taskData.isDoBlast()) {
-                fullCommand.append("--search blast ");
-
                 List<String> proteomes = taskData.getProteomes().stream()
                         .map(Database::toString)
                         .collect(Collectors.toList());
@@ -372,8 +370,7 @@ public class PipelineService {
                 log.info("Processing BLAST files in {}", completePath);
                 try {
                     List<Path> blastFiles = Files.list(completePath)
-                            .filter(path -> path.getFileName().toString().startsWith("blast-")
-                                    && path.getFileName().toString().endsWith(".csv"))
+                            .filter(path -> path.getFileName().toString().endsWith("blast.csv"))
                             .collect(Collectors.toList());
 
                     log.info("Found {} BLAST files", blastFiles.size());
@@ -464,7 +461,7 @@ public class PipelineService {
     }
 
     public static String extractDBName(String path) {
-        String regex = "blast-(.*?)\\_blast.csv";
+        String regex = "(.*?)\\_blast.csv";
 
         Pattern pattern = Pattern.compile(regex);
         Matcher matcher = pattern.matcher(path);
@@ -574,27 +571,28 @@ public class PipelineService {
             Protein protein = new Protein();
             protein.setProteinId(columns[1]);
             protein.setDescription(columns[2]);
+            protein.setLocalization(columns[3]);
             protein.setEpitope(epitope);
             epitope.setProtein(protein);
 
-            epitope.setEpitope(columns[3]);
-            epitope.setStart(Integer.parseInt(columns[4]));
-            epitope.setEndEpitope(Integer.parseInt(columns[5]));
-            epitope.setNGlyc(columns[6]);
-            epitope.setNGlycCount(Integer.parseInt(columns[7]));
-            epitope.setNGlycMotifs(columns[8]);
-            epitope.setLength(Integer.parseInt(columns[9]));
-            epitope.setMolecularWeight(Double.parseDouble(columns[10]));
-            epitope.setIsoelectricPoint(Double.parseDouble(columns[11]));
-            epitope.setHydropathy(Double.parseDouble(columns[12]));
-            epitope.setAllMatchesCover(Double.parseDouble(columns[13]));
-            epitope.setAvgCover(Double.parseDouble(columns[14]));
-            epitope.setBepiPred3(Double.parseDouble(columns[15]));
-            epitope.setEmini(Double.parseDouble(columns[16]));
-            epitope.setKolaskar(Double.parseDouble(columns[17]));
-            epitope.setChouFosman(Double.parseDouble(columns[18]));
-            epitope.setKarplusSchulz(Double.parseDouble(columns[19]));
-            epitope.setParker(Double.parseDouble(columns[20]));
+            epitope.setEpitope(columns[4]);
+            epitope.setStart(Integer.parseInt(columns[5]));
+            epitope.setEndEpitope(Integer.parseInt(columns[6]));
+            epitope.setNGlyc(columns[7]);
+            epitope.setNGlycCount(Integer.parseInt(columns[8]));
+            epitope.setNGlycMotifs(columns[9]);
+            epitope.setLength(Integer.parseInt(columns[10]));
+            epitope.setMolecularWeight(Double.parseDouble(columns[11]));
+            epitope.setIsoelectricPoint(Double.parseDouble(columns[12]));
+            epitope.setHydropathy(Double.parseDouble(columns[13]));
+            epitope.setAllMatchesCover(Double.parseDouble(columns[14]));
+            epitope.setAvgCover(Double.parseDouble(columns[15]));
+            epitope.setBepiPred3(Double.parseDouble(columns[16]));
+            epitope.setEmini(Double.parseDouble(columns[17]));
+            epitope.setKolaskar(Double.parseDouble(columns[18]));
+            epitope.setChouFosman(Double.parseDouble(columns[19]));
+            epitope.setKarplusSchulz(Double.parseDouble(columns[20]));
+            epitope.setParker(Double.parseDouble(columns[21]));
             epitope.setEpitopeTaskData(task);
 
             epitopes.add(epitope);
@@ -626,11 +624,11 @@ public class PipelineService {
 
             if (!parts[0].trim().isEmpty()) {
                 currentN = Long.parseLong(parts[0]);
-                String methodName = parts[3].trim();
+                String methodName = parts[4].trim();
                 EpitopeTopology topology = createTopology(currentN, parts, methodName);
                 topologies.add(topology);
             } else {
-                String methodName = parts[3].trim();
+                String methodName = parts[4].trim();
                 EpitopeTopology topology = createTopology(currentN, parts, methodName);
                 topologies.add(topology);
             }
@@ -653,7 +651,7 @@ public class PipelineService {
 
             // Handle special cases
             if (cleanedMethodName.equals("BepiPred-3.0")) {
-                topology.setDescription(parts[3]);
+                topology.setDescription(parts[4]);
                 cleanedMethodName = "BepiPred";
             }
 
@@ -671,15 +669,15 @@ public class PipelineService {
 
         try {
             // Add array bounds checking
-            if (parts == null || parts.length < 3) {
+            if (parts == null || parts.length < 4) {
                 log.warn("Insufficient data for topology. Parts length: {}", parts == null ? "null" : parts.length);
                 return topology;
             }
 
-            topology.setThreshold(parseDoubleSafe(parts[4]));
-            topology.setAvgScore(parseDoubleSafe(parts[5]));
-            topology.setCover(parts[6].equals("-") ? 0.0 : parseDoubleSafe(parts[6]));
-            topology.setTopologyData(parts[7]);
+            topology.setThreshold(parseDoubleSafe(parts[5]));
+            topology.setAvgScore(parseDoubleSafe(parts[6]));
+            topology.setCover(parts[7].equals("-") ? 0.0 : parseDoubleSafe(parts[7]));
+            topology.setTopologyData(parts[8]);
 
         } catch (Exception e) {
             log.error("Error parsing topology data for method {}: {}", methodName, e.getMessage());

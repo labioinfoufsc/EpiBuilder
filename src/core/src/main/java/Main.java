@@ -7,7 +7,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.concurrent.Callable;
 
-import br.ufsc.epibuilder.converter.ProteinDescriptionReader;
+import br.ufsc.epibuilder.converter.ProteinCSVReader;
 import org.apache.commons.lang3.StringUtils;
 
 import br.ufsc.epibuilder.EpitopeFinder;
@@ -21,58 +21,53 @@ import picocli.CommandLine.Option;
 @Command(name = "EpiBuilder-2.0", requiredOptionMarker = '*', abbreviateSynopsis = true, description = "A Tool for Assembling, Searching, and Classifying B-Cell Epitopes", version = "2.0", sortOptions = false)
 public class Main implements Callable<Integer> {
 
-    @Option(names = { "-i", "--input" }, required = true, description = "Input file")
+    @Option(names = { "-i", "--input" }, required = true, description = "Input file (fasta or csv)")
     File input;
 
-    @Option(names = { "-f",
-            "--format" }, required = true, description = "Input file type: ${COMPLETION-CANDIDATES} \ncsv - BepiPred-3.0 generated file (default)"
-                    +
-                    "\nfasta - FASTA file, use this option only in Epibuilder customized Docker", defaultValue = "csv")
-    FileType type;
+    @Option(names = { "-f", "--format" }, required = true, description = "${COMPLETION-CANDIDATES}", defaultValue = "csv")
+    Parameters.FileType type;
+
     @Option(names = { "-min",
             "--min-length" }, description = "Minimum epitope length. Default: ${DEFAULT-VALUE}", defaultValue = "10")
+
     Integer minLength;
     @Option(names = { "-max",
             "--max-length" }, description = "Max epitope length. Default: ${DEFAULT-VALUE}", defaultValue = "30")
+
     Integer maxLength;
     @Option(names = { "-t",
             "--threshold" }, description = "Threshold default: ${DEFAULT-VALUE}", defaultValue = "0.1512")
     Double threshold;
 
     @Option(names = { "-o",
-            "--output" }, description = "The common base name for the output generated files. Default: ${DEFAULT-VALUE}", defaultValue = "epibuilder-results")
-    String basename;
-    @Option(names = { "-search",
-            "--search" }, description = "Method of search in the given proteome(s): ${COMPLETION-CANDIDATES}. " +
-                    "\nblast - perform search with blast (at least one proteome is mandatory, -proteomes to set them)"
-                    +
-                    "\nnone - don't search (default)", defaultValue = "none")
-    Search search;
-    @Option(names = { "-bi",
-            "--ident" }, description = "Minimum identity cutoff. Default: ${DEFAULT-VALUE}", defaultValue = "90")
+            "--output" }, description = "The common base name for the output generated files. Default: ${DEFAULT-VALUE}", defaultValue = ".")
+    String outputFolder;
+
+    @Option(names = { "--identity" }, description = "Minimum identity cutoff. Default: ${DEFAULT-VALUE}", defaultValue = "90")
     Integer blastIdentity;
-    @Option(names = { "-bc",
-            "--cover" }, description = "Minimum cover cutoff. Default: ${DEFAULT-VALUE}", defaultValue = "90")
+
+    @Option(names = { "--cover" }, description = "Minimum cover cutoff. Default: ${DEFAULT-VALUE}", defaultValue = "90")
     Integer blastCover;
-    @Option(names = { "-ws", "--word-size" }, description = "Word-size. Default: ${DEFAULT-VALUE}", defaultValue = "4")
+
+    @Option(names = { "--word-size" }, description = "Word-size. Default: ${DEFAULT-VALUE}", defaultValue = "4")
     Integer blastWordsize;
 
-    @Option(names = { "-proteomes",
-            "--proteomes" }, required = false, description = "Input proteome files format (separated by :) <alias1>=<fasta1>:<alias2>=<fasta2>\nUse this option to search in one or more proteomes. This option can be used with the p1-p6 option.")
+    @Option(names = { "--proteomes" }, required = false, description = "Input proteome files format (separated by :) <alias1>=<fasta1>:<alias2>=<fasta2>\nUse this option to search in one or more proteomes. ")
     String proteomes;
 
-    @Option(names = { "-d", "--description" }, required = false, description = "Input file with id\tproteins to join with final result")
-    File proteinsDescription;
+    @Option(names = { "-loc", "--localization" }, required = false, description = "${COMPLETION-CANDIDATES}")
+    Parameters.LocalizationType localizationType;
+
+    @Option(names = { "-loc_file", "--localization_file" }, required = false, description = "Input localization files id<tab>localization")
+    File localizationFile;
+
+    @Option(names = { "-desc_file", "--description_file" }, required = false, description = "Input description files id<tab>description")
+    File descriptionFile;
 
     @Override
     public Integer call() throws IOException {
-        Parameters.FASTA = input;
-        Parameters.BEPIPRED_FILE = input;
-        if (type == FileType.fasta) {
-            Parameters.BEPIPRED_INPUT = Parameters.BEPIPRED_TYPE.FASTA;
-        } else {
-            Parameters.BEPIPRED_INPUT = Parameters.BEPIPRED_TYPE.CSV;
-        }
+        Parameters.INPUT = input;
+        Parameters.FILE_TYPE = type;
 
         Parameters.THRESHOLD_BEPIPRED = threshold;
         Parameters.MIN_LENGTH_BEPIPRED = minLength;
@@ -84,19 +79,17 @@ public class Main implements Callable<Integer> {
         Parameters.MAP_SOFTWARES.put(SoftwareBcellEnum.KARPLUS_SCHULZ, null);
         Parameters.MAP_SOFTWARES.put(SoftwareBcellEnum.PARKER, null);
 
-        Parameters.BASENAME = basename;
-        Path p1 = Paths.get(Parameters.BASENAME);
-        Files.createDirectories(p1);
+        Path p1 = Paths.get(outputFolder);
+        Path destinationFolder = Files.createDirectories(p1);
 
-        Parameters.BASENAME += "/" + Parameters.BASENAME;
+        Parameters.DESTINATION_FOLDER = destinationFolder.toAbsolutePath().toString();
 
-        if (search != Search.none) {
-            if (search == Search.blast) {
-                Parameters.SEARCH_BLAST = true;
-                Parameters.BLAST_IDENTITY = blastIdentity;
-                Parameters.BLAST_COVER = blastCover;
-                Parameters.BLAST_WORD_SIZE = blastWordsize;
-            }
+        if (StringUtils.isNotEmpty(proteomes)) {
+            Parameters.SEARCH_BLAST = true;
+            Parameters.BLAST_IDENTITY = blastIdentity;
+            Parameters.BLAST_COVER = blastCover;
+            Parameters.BLAST_WORD_SIZE = blastWordsize;
+
             ArrayList<Proteome> proteomeFiles = new ArrayList<>();
             int totalProt = proteomeFiles.size();
 
@@ -116,7 +109,20 @@ public class Main implements Callable<Integer> {
             Parameters.PROTEOMES = proteomeFiles;
         }
         Parameters.OUTPUT_FILE = false;
-        Parameters.MAP_PROTEIN_DESCRIPTION = ProteinDescriptionReader.readTsvToMap(proteinsDescription);
+        Parameters.LOCALIZATION_TYPE = localizationType;
+
+        if (localizationFile != null && localizationFile.exists()) {
+            Path destLocalization = destinationFolder.resolve("localization.tsv");
+            Files.copy(localizationFile.toPath(), destLocalization, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            File localization = destLocalization.toFile();
+            Parameters.MAP_PROTEIN_LOCALIZATION = ProteinCSVReader.readTsvToMap(localization);
+        }
+        if (descriptionFile != null && descriptionFile.exists()) {
+            Path destDescription = destinationFolder.resolve("description.tsv");
+            Files.copy(descriptionFile.toPath(), destDescription, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            File description = destDescription.toFile();
+            Parameters.MAP_PROTEIN_DESCRIPTION = ProteinCSVReader.readTsvToMap(description);
+        }
         EpitopeFinder.process();
         return 0;
     }
@@ -124,11 +130,17 @@ public class Main implements Callable<Integer> {
     private void addProteome(ArrayList<Proteome> proteomes, String proteomeFile, String alias, int i) {
         if (proteomeFile != null && !proteomeFile.trim().equals("")) {
             File f = new File(proteomeFile);
-            if (f.exists() || new File(proteomeFile+".phr").exists() ) {
+            if (f.exists() ) {
                 if (alias.trim().equals("")) {
                     alias = "proteome" + i;
                 }
-                proteomes.add(new Proteome(alias, f));
+                try {
+                    proteomes.add(new Proteome(alias, f));
+                } catch (IOException e) {
+                    System.out.println("Error processing proteome " + proteomeFile);
+                    System.out.println("Please check your inputs and --proteomes parameter format");
+                    System.exit(1);
+                }
             }else{
                 System.out.println(proteomeFile+" does not exist - ignoring");
             }
@@ -140,16 +152,14 @@ public class Main implements Callable<Integer> {
         System.out.println("Arguments");
 
         System.out.println("Execution started");
+        /**args =  new String[]{
+                "--input", "/bioinformatic/labioinfoufsc/EpiBuilder/src/core/raw_output.csv",
+                "-f", "csv",
+                "-o", "/bioinformatic/labioinfoufsc/EpiBuilder/src/core/teste12456",
+                "--proteomes", "p1=/bioinformatic/db/uniprot_sprot123.fasta",
+                "-loc", "animal"
+        };**/
         System.exit(new CommandLine(new Main()).execute(args));
 
-    }
-
-    private enum Search {
-        blast,
-        none
-    }
-
-    public enum FileType {
-        csv, fasta
     }
 }

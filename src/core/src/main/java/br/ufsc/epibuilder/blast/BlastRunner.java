@@ -8,12 +8,10 @@ package br.ufsc.epibuilder.blast;
 import br.ufsc.epibuilder.Parameters;
 import br.ufsc.epibuilder.converter.FileHelper;
 import br.ufsc.epibuilder.entity.Proteome;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStreamReader;
+
+import java.io.*;
 import java.util.ArrayList;
+import java.util.Scanner;
 
 /**
  *
@@ -54,19 +52,6 @@ public class BlastRunner {
         }
     }
 
-    public static void chmodBlast(Parameters.SO so) {
-        System.out.println("Giving permission to execution to blastp and makeblastdb");
-        try {
-            if (so == Parameters.SO.linux || so == Parameters.SO.macos) {
-                runCommand("chmod +x " + Parameters.BLASTP_PATH);
-                runCommand("chmod +x " + Parameters.MAKEBLASTDB_PATH);
-            }
-        } catch (Exception e) {
-//            e.printStackTrace();
-            System.out.println("Error giving permission: "+ e.getMessage());
-        }
-    }
-
     public static void addHeader(File file) throws Exception {
         String res = FileHelper.readFile(file);
         FileWriter fw = new FileWriter(file);
@@ -76,26 +61,13 @@ public class BlastRunner {
 
     public static File getBlastResults(Proteome proteome, String epiBuilderFastaEpitopesFile) {
         String s = null;
-        String db = String.format("%s/%s-epibuilder-blast-%s", Parameters.DESTINATION_FOLDER, Parameters.BASENAME, proteome.getOrganism());
+        String db = String.format("%s/%s", Parameters.DESTINATION_FOLDER, proteome.getOrganism());
         String blastOutput = db + "_blast.csv";
 
         System.out.printf("BLAST in database %s",proteome.getFile().getAbsolutePath());
         db = proteome.getFile().getAbsolutePath();
 
-        if(proteome.getFile().getAbsolutePath().endsWith(".fasta") &&
-                new File(proteome.getFile().getAbsolutePath()+".phr").exists()){
-
-            System.out.println("Blast: " + db);
-        }
-
-        ArrayList<String[]> cmds = new ArrayList<>();
-
-        String[] makeblast = {Parameters.MAKEBLASTDB_PATH,
-                    "-dbtype", "prot",
-                    "-in", proteome.getFile().getAbsolutePath(),
-                    "-out", db};
-
-        String[] blastp = {Parameters.BLASTP_PATH,
+        String[] cmd = {Parameters.BLASTP_PATH,
                 epiBuilderFastaEpitopesFile,
                 db,
                 Parameters.BLAST_TASK,
@@ -104,23 +76,8 @@ public class BlastRunner {
                 Parameters.BLAST_COVER+"",
                 blastOutput};
 
-        String[] removeDb = {
-                "/bin/bash", "-c", String.format("rm %s.*", db)
-        };
-
-        if(proteome.getFile().getAbsolutePath().endsWith(".fasta")){
-            if((new File(proteome.getFile().getAbsolutePath()+".phr").exists())) {
-                cmds.add(blastp);
-            }else {
-                cmds.add(makeblast);
-                cmds.add(blastp);
-                cmds.add(removeDb);
-            }
-        }else{
-            cmds.add(blastp);
-        }
         try {
-            for (String[] cmd : cmds) {
+
                 System.out.print("Running command[: ");
                 for (String string : cmd) {
                     System.out.print(string + " ");
@@ -157,10 +114,9 @@ public class BlastRunner {
                     System.out.println(stError);
                 }
 
-            }
             File blastfile = new File(blastOutput);
 
-            addHeader(blastfile);
+            //addHeader(blastfile);
 
             return blastfile;
         } catch (Exception e) {
