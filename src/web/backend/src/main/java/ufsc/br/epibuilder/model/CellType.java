@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import java.util.Arrays;
 
 public enum CellType {
-    EUKARYOTE, BACTERIA, ARCHAEA;
+    EUKARYOTE, BACTERIA, ARCHAEA, NONE;
 
      @JsonCreator
     public static CellType fromString(String value) {

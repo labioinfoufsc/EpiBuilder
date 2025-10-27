@@ -100,8 +100,8 @@ public class PipelineService {
             StringBuilder fullCommand = new StringBuilder();
             fullCommand.append("docker run --rm ");
             fullCommand.append("-v /var/run/docker.sock:/var/run/docker.sock ");
-            fullCommand.append(String.format("-v %s:/tmp/epibuilder ",epibuilderVolume));
-            fullCommand.append(String.format("-e EPIBUILDER_VOLUME=%s ",epibuilderVolume));
+            fullCommand.append(String.format("-v %s:/tmp/epibuilder ", epibuilderVolume));
+            fullCommand.append(String.format("-e EPIBUILDER_VOLUME=%s ", epibuilderVolume));
             fullCommand.append("bioinfoufsc/epibuilder-core:latest epibuilder ");
             fullCommand.append("--input_file ").append(taskData.getFile().getAbsolutePath()).append(" ");
             fullCommand.append("--basename ").append(taskData.getCompleteBasename()).append(" ");
@@ -140,6 +140,9 @@ public class PipelineService {
 
                     case ARCHAEA:
                         locParam = "arch";
+                        break;
+
+                    case NONE:
                         break;
                 }
             }
@@ -479,7 +482,7 @@ public class PipelineService {
     public List<Blast> parseBlastCsv(String filePath) throws IOException {
         List<Blast> blastList = new ArrayList<>();
 
-        String dbName= extractDBName(filePath);
+        String dbName = extractDBName(filePath);
 
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             String line;
@@ -545,7 +548,7 @@ public class PipelineService {
 
     public static int countProteins(String pathFile) throws IOException {
         try (BufferedReader br = new BufferedReader(new FileReader(pathFile))) {
-            String line = br.readLine(); 
+            String line = br.readLine();
 
             int countProtein = 0;
             while ((line = br.readLine()) != null) {

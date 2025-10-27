@@ -23,6 +23,7 @@ export class NewComponent {
   sequenceCount: number | null = null;
   fileType: 'fasta' | 'csv' | null = null;
   cellTypes = [
+    { label: 'Do not predict', value: 'NONE' },
     { label: 'Eukaryote', value: 'EUKARYOTE' },
     { label: 'Bacteria', value: 'BACTERIA' },
     { label: 'Archaea', value: 'ARCHAEA' }
@@ -76,30 +77,38 @@ export class NewComponent {
     });
 
     cellTypeControl?.valueChanges.subscribe(cellType => {
-      if (cellType === 'EUKARYOTE') {
-        organismControl?.setValidators(Validators.required);
+      switch (cellType) {
+        case 'EUKARYOTE':
+          organismControl?.setValidators(Validators.required);
+          if (!organismControl?.value) {
+            organismControl?.setValue('ANIMAL');
+          }
+          bacterialControl?.reset();
+          bacterialControl?.clearValidators();
+          break;
 
-        // ✅ Define valor padrão como 'ANIMAL' se ainda não estiver preenchido
-        if (!organismControl?.value) {
-          organismControl?.setValue('ANIMAL');
-        }
+        case 'BACTERIA':
+          bacterialControl?.setValidators(Validators.required);
+          if (!bacterialControl?.value) {
+            bacterialControl?.setValue('GRAM_POSITIVE');
+          }
+          organismControl?.reset();
+          organismControl?.clearValidators();
+          break;
 
-        bacterialControl?.reset();
-        bacterialControl?.clearValidators();
-      } else if (cellType === 'BACTERIA') {
-        bacterialControl?.setValidators(Validators.required);
+        case 'ARCHAEA':
+          organismControl?.reset();
+          bacterialControl?.reset();
+          organismControl?.clearValidators();
+          bacterialControl?.clearValidators();
+          break;
 
-        if (!bacterialControl?.value) {
-          bacterialControl?.setValue('GRAM_POSITIVE');
-        }
-
-        organismControl?.reset();
-        organismControl?.clearValidators();
-      } else if (cellType === 'ARCHAEA') {
-        organismControl?.reset();
-        bacterialControl?.reset();
-        organismControl?.clearValidators();
-        bacterialControl?.clearValidators();
+        case 'NONE':
+          organismControl?.reset();
+          bacterialControl?.reset();
+          organismControl?.clearValidators();
+          bacterialControl?.clearValidators();
+          break;
       }
 
       organismControl?.updateValueAndValidity();
@@ -115,7 +124,7 @@ export class NewComponent {
       },
       error: (error) => {
         console.error('Failed to load databases', error);
-        this.databasesLoaded = true; // Para evitar bloqueio eterno
+        this.databasesLoaded = true;
       }
     });
   }
@@ -145,7 +154,7 @@ export class NewComponent {
       wordSize: [4],
       proteomes: this.fb.array([]),
       biologicalClassification: this.fb.group({
-        cellType: ['EUKARYOTE', Validators.required],
+        cellType: ['NONE', Validators.required],
         organism: ['ANIMAL'],
         bacterialType: ['GRAM_POSITIVE', Validators.required],
       }),
