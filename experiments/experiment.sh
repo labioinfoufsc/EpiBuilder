@@ -158,7 +158,6 @@ declare -A STAPHYLOCOCCUS=(
     ["UP000538955"]="S_capitis"
     ["UP000325462"]="S_lugdunensis"
     ["UP000006371"]="S_saprophyticus"
-    ["UP001234913"]="S_hyicus"
     ["UP000255549"]="S_intermedius"
 )
 
