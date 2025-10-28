@@ -8,13 +8,13 @@ show_help() {
     echo "  --input_file PATH      Path to the input file"
     echo ""
     echo "Optional parameters:"
-    echo "  --loc                  Subcellular localization: 'euk', 'arch', 'gram_pos', 'gram_neg'"
+    echo "  --loc                  Subcellular localization: 'animal', 'plant', 'fungi', 'arch', 'gram_pos', 'gram_neg'"
     echo "                         animal     - Eukaryote - Animal"
     echo "                         plant      - Eukaryote - Plant"
     echo "                         fungi      - Eukaryote - Fungi"
-    echo "                         arch     - Archaea"
-    echo "                         gram_pos - Bacteria Gram +"
-    echo "                         gram_neg - Bacteria Gram -"
+    echo "                         arch       - Archaea"
+    echo "                         gram_pos   - Bacteria Gram +"
+    echo "                         gram_neg   - Bacteria Gram -"
     echo "  --min-length INT       Minimum length"
     echo "  --max-length INT       Maximum length"
     echo "  --threshold FLOAT      Threshold value"
@@ -23,11 +23,22 @@ show_help() {
     echo "  --proteomes FILE       Path to proteomes file (format: alias1=path1:alias2=path2)"
     echo "  --cover INT            BLAST minimum coverage cutoff (default: 90)"
     echo "  --identity INT         BLAST minimum identity cutoff (default: 90)"
-    echo "  --word-size INT        BLAST word size (default: 4)"
     echo "  --help                 Show this help message and exit"
     echo ""
+    echo "Available databases:"
+    echo "  /db/iedb.fasta"
+    echo "      Epitope sequences obtained from https://www.iedb.org/"
+    echo ""
+    echo "  /db/uniprot.fasta"
+    echo "      Protein sequences obtained from https://www.uniprot.org/"
+    if [ -f /db/uniprot_release_notes.txt ]; then
+        RELEASE_LINE=$(head -n 1 /db/uniprot_release_notes.txt)
+        echo "      Release: $RELEASE_LINE"
+    fi
+    echo ""
     echo "Example:"
-    echo "  epibuilder --input_file data.fasta --min-length 8 --max-length 30 --threshold 0.8 --output result  --proteomes human=proteomes/human.fa:virus=proteomes/virus.fa --cover 85 --identity 80 --word-size 3"
+    echo "  epibuilder --input_file /fasta/ebola.fasta --min-length 8 --max-length 30 --threshold 0.1512 --output /data/result_ebola \\"
+    echo "             --proteomes iedb=/db/iedb.fasta:uniprot=/db/uniprot.fasta --cover 85 --identity 80"
     echo ""
 }
 
@@ -123,13 +134,13 @@ fi
 [[ -n "$OUTPUT_DIR" ]] && mkdir -p "$OUTPUT_DIR/reports"
 
 # Build Nextflow command with all parameters
-NF_CMD="nextflow run "$MAIN_NF" --with-docker bioinfoufsc/bepipred3 --docker-run-options \"-v /var/run/docker.sock:/var/run/docker.sock\" --input_file \"$INPUT_FILE\" --search \"$SEARCH\""
+NF_CMD="nextflow run "$MAIN_NF" --input_file \"$INPUT_FILE\" --search \"$SEARCH\""
 
 [[ -n "$LOC" ]] && NF_CMD+=" --loc \"$LOC\""
 [[ -n "$MIN_LENGTH" ]] && NF_CMD+=" --min-length \"$MIN_LENGTH\""
 [[ -n "$MAX_LENGTH" ]] && NF_CMD+=" --max-length \"$MAX_LENGTH\""
 [[ -n "$THRESHOLD" ]] && NF_CMD+=" --threshold \"$THRESHOLD\""
-[[ -n "$OUTPUT_DIR" ]] && NF_CMD+=" --output \"$OUTPUT_DIR\""
+[[ -n "$OUTPUT_DIR" ]] && NF_CMD+=" --output_dir \"$OUTPUT_DIR\""
 [[ -n "$PROTEOMES" ]] && NF_CMD+=" --proteomes \"$PROTEOMES\""
 NF_CMD+=" --cover \"$COVER\""
 NF_CMD+=" --identity \"$IDENTITY\""
