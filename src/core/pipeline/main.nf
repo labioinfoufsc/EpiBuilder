@@ -12,6 +12,8 @@ params.identity       = params.identity       ?: 90
 params.cover          = params.cover          ?: 90
 params.proteomes      = params.proteomes      ?: null
 params.bepipred_batch = params.bepipred_batch ?: 100
+params.bepipred_gpu   = params.bepipred_gpu ?: false
+params.bepipred_gpu_options = params.bepipred_gpu_options ?: ""
 
 epibuilder_jar = params.jar ? file(params.jar) : file("${projectDir}/epibuilder-core.jar")
 
@@ -145,16 +147,30 @@ process run_bepipred {
 
     input:
     path input_file
-    val bepipred_batch
 
     output:
     path 'raw_output.csv', emit: output
 
     script:
+    // Define flags corretamente
+    def gpuFlag = params.bepipred_gpu ? "--use-gpu" : ""
+    def gpuOptions = (params.bepipred_gpu_options && !(params.bepipred_gpu_options instanceof Boolean)) ? "--gpu-options '${params.bepipred_gpu_options}'" : ""
+
     """
     #!/bin/bash
     set -e
-    java -cp ${epibuilder_jar} Bepipred3 -i ${input_file} -o raw_output.csv -s ${bepipred_batch} 2>&1 | tee /dev/stderr
+    echo "[INFO] Executando Bepipred3..." >&2
+    echo "[INFO] Batch size: ${params.bepipred_batch}" >&2
+    echo "[INFO] GPU enabled: ${params.bepipred_gpu}" >&2
+    echo "[INFO] GPU options: ${params.bepipred_gpu_options}" >&2
+
+    java -cp ${epibuilder_jar} Bepipred3 \
+        -i ${input_file} \
+        -o raw_output.csv \
+        -s ${params.bepipred_batch} \
+        ${gpuFlag} \
+        ${gpuOptions} \
+        2>&1 | tee /dev/stderr
     """
 }
 
@@ -327,7 +343,7 @@ workflow {
         valid_proteins_ch = fasta_files.valid_proteins
         description_ch = fasta_files.description
 
-        def bepipred_out = run_bepipred(fasta_files.valid_proteins, params.bepipred_batch)
+        def bepipred_out = run_bepipred(fasta_files.valid_proteins)
         epibuilder_input_ch = bepipred_out.output
 
     } else if (params.input_file.endsWith('.csv')) {

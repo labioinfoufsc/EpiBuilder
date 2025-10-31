@@ -23,7 +23,9 @@ show_help() {
     echo "  --proteomes FILE           Path to proteomes file (format: alias1=path1:alias2=path2)"
     echo "  --cover INT                BLAST minimum coverage cutoff (default: 90)"
     echo "  --identity INT             BLAST minimum identity cutoff (default: 90)"
-    echo "  --bepipred_batch INT       Maximum number of proteins submitted for Bepipred processing (default 100)"
+    echo "  --bepipred_batch INT       Maximum number of proteins submitted for Bepipred processing (default: 100)"
+    echo "  --bepipred_gpu             Enable GPU acceleration for Bepipred (default: false)"
+    echo "  --bepipred_gpu_options STR Additional GPU options for Bepipred (default: empty)"
     echo "  --help                     Show this help message and exit"
     echo ""
     echo "Available databases:"
@@ -41,6 +43,9 @@ show_help() {
     echo "  epibuilder --input_file /fasta/ebola.fasta --min-length 8 --max-length 30 --threshold 0.1512 --output /data/result_ebola \\"
     echo "             --proteomes iedb=/db/iedb.fasta:uniprot=/db/uniprot.fasta --cover 85 --identity 80"
     echo ""
+    echo "  # With GPU acceleration:"
+    echo "  epibuilder --input_file /fasta/ebola.fasta --bepipred_gpu --bepipred_gpu_options '--device 0'"
+    echo ""
 }
 
 # Default values
@@ -49,6 +54,8 @@ COVER=90
 IDENTITY=90
 WORD_SIZE=4
 BEPIPRED_BATCH=100
+BEPIPRED_GPU="false"
+BEPIPRED_GPU_OPTIONS=" "
 
 SCRIPT_PATH="$(readlink -f "$0")"
 SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
@@ -119,6 +126,15 @@ while [[ $# -gt 0 ]]; do
             shift
             shift
             ;;
+        --bepipred_gpu)
+            BEPIPRED_GPU="true"
+            shift
+            ;;
+        --bepipred_gpu_options)
+            BEPIPRED_GPU_OPTIONS="$2"
+            shift
+            shift
+            ;;
         --help)
             show_help
             exit 0
@@ -141,7 +157,7 @@ fi
 [[ -n "$OUTPUT_DIR" ]] && mkdir -p "$OUTPUT_DIR/reports"
 
 # Build Nextflow command with all parameters
-NF_CMD="nextflow run "$MAIN_NF" --input_file \"$INPUT_FILE\" --search \"$SEARCH\""
+NF_CMD="nextflow run \"$MAIN_NF\" --input_file \"$INPUT_FILE\" --search \"$SEARCH\""
 
 [[ -n "$LOC" ]] && NF_CMD+=" --loc \"$LOC\""
 [[ -n "$MIN_LENGTH" ]] && NF_CMD+=" --min-length \"$MIN_LENGTH\""
@@ -154,6 +170,8 @@ NF_CMD+=" --identity \"$IDENTITY\""
 NF_CMD+=" --word-size \"$WORD_SIZE\""
 NF_CMD+=" --jar \"$JAR_PATH\""
 NF_CMD+=" --bepipred_batch \"$BEPIPRED_BATCH\""
+NF_CMD+=" --bepipred_gpu \"$BEPIPRED_GPU\""
+NF_CMD+=" --bepipred_gpu_options \"$BEPIPRED_GPU_OPTIONS\""
 
 # Add Nextflow reports if BASENAME is defined
 [[ -n "$OUTPUT_DIR" ]] && NF_CMD+=" \
