@@ -89,6 +89,10 @@ public class FastaValidation implements Callable<Integer> {
                     .append(entry.getValue() == null ? "" : entry.getValue())
                     .append("\n");
         }
+        if(validProteins.isEmpty()){
+            System.out.println("No valid proteins. Please check your FASTA file.");
+            System.exit(1);
+        }
 
         Files.writeString(descriptionFile.toPath(), descriptions);
         Files.writeString(validProteinsFile.toPath(), EpitopeFinder.generateReportFastaProteins(validProteins));

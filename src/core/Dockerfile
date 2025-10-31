@@ -23,7 +23,6 @@ RUN mkdir -p /db && \
 RUN mkdir -p /db && \
     curl -f -L -o /db/uniprot_release_notes.txt https://ftp.uniprot.org/pub/databases/uniprot/current_release/relnotes.txt
 
-
 COPY db/* /db/
 
 RUN curl -s https://get.nextflow.io | bash && \
@@ -37,13 +36,8 @@ RUN mkdir /fasta
 RUN cp /epibuilder/pipeline/fasta/ebola.fasta /fasta/ebola.fasta
 
 RUN chmod +x /epibuilder/pipeline/epibuilder.sh
-RUN chmod +x /epibuilder/pipeline/bepipred3.sh
-RUN chmod +x /epibuilder/pipeline/localization.sh
-RUN chmod +x /epibuilder/pipeline/blastp_custom.sh
-
 RUN ln -s /epibuilder/pipeline/epibuilder.sh /usr/local/bin/epibuilder
-RUN ln -s /epibuilder/pipeline/bepipred3.sh /usr/local/bin/bepipred3
-RUN ln -s /epibuilder/pipeline/localization.sh /usr/local/bin/localization
-RUN ln -s /epibuilder/pipeline/blastp_custom.sh /usr/local/bin/blastp_custom
 
 WORKDIR /
+
+#ENTRYPOINT ["epibuilder"]

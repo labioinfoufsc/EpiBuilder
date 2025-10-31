@@ -101,45 +101,6 @@ public class EpitopeFinder {
             setOutput();
             sout("Process started: ");
             ArrayList<ProteinConverter> proteins = new ArrayList<>();
-            if(Parameters.FILE_TYPE == FileType.fasta){
-                HashMap<String, ProteinSequence> mapProtein = FastaReaderHelper.readFastaProteinSequence(INPUT);
-                Collection<ProteinSequence> proteinsFasta = mapProtein.values();
-                ArrayList<ProteinConverter> validProteins = new ArrayList<>();
-                ArrayList<ProteinConverter> invalidProteins = new ArrayList<>();
-                HashMap<String, String> mapDescription = new HashMap<>();
-                for(ProteinSequence protein : proteinsFasta){
-                    String id = protein.getAccession().getID();
-                    String proteinId = id.split(" ")[0].trim();
-                    String sequence = protein.getSequenceAsString().toUpperCase();
-                    String header = protein.getOriginalHeader();
-                    String description = FastaUtils.extractName(header);
-                    ProteinConverter proteinProcess = new ProteinConverter(proteinId, sequence);
-                    if(FastaUtils.isSequenceValid(protein.getSequenceAsString().toUpperCase())){
-                        validProteins.add(proteinProcess);
-                        mapDescription.put(proteinId, description);
-                    }else{
-                        invalidProteins.add(proteinProcess);
-                    }
-                }
-                StringBuilder descriptions = new StringBuilder();
-                // Header
-                descriptions.append("Id\tDescription\n");
-                // Entries
-                for (Map.Entry<String, String> entry : mapDescription.entrySet()) {
-                    descriptions.append(entry.getKey())
-                            .append("\t")
-                            .append(entry.getValue() == null ? "" : entry.getValue())
-                            .append("\n");
-                }
-                saveRandomFileName(DESTINATION_FOLDER,"description.tsv",descriptions.toString());
-                String fasta = saveRandomFileName(DESTINATION_FOLDER,"proteins_valid.fasta",generateReportFastaProteins(validProteins));
-                saveRandomFileName(DESTINATION_FOLDER,"proteins_invalid.fasta",generateReportFastaProteins(validProteins));
-                sout("Starting BepiPre-3.0");
-                File bepipredOutput = BepiPredRunner.runBepipred(new File(fasta));
-                INPUT = bepipredOutput;
-                sout("Finished BepiPre-3.0");
-                Parameters.MAP_PROTEIN_DESCRIPTION = mapDescription;
-            }
 
             sout("Loading BepiPred-3.0 - CSV file");
             proteins = BepiPred3Converter.getBepipred3FromBiolib(INPUT);
@@ -498,7 +459,7 @@ public class EpitopeFinder {
         return sb.toString();
     }
 
-    public static String generateReportFastaProteins(ArrayList<ProteinConverter> proteins) {
+    public static String generateReportFastaProteins(List<ProteinConverter> proteins) {
         StringBuilder sb = new StringBuilder();
         int count = 1;
         for (ProteinConverter protein : proteins) {

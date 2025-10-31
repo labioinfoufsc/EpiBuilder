@@ -24,9 +24,6 @@ public class Main implements Callable<Integer> {
     @Option(names = { "-i", "--input" }, required = true, description = "Input file (fasta or csv)")
     File input;
 
-    @Option(names = { "-f", "--format" }, required = true, description = "${COMPLETION-CANDIDATES}", defaultValue = "csv")
-    Parameters.FileType type;
-
     @Option(names = { "-min",
             "--min-length" }, description = "Minimum epitope length. Default: ${DEFAULT-VALUE}", defaultValue = "10")
 
@@ -40,7 +37,7 @@ public class Main implements Callable<Integer> {
     Double threshold;
 
     @Option(names = { "-o",
-            "--output" }, description = "The common base name for the output generated files. Default: ${DEFAULT-VALUE}", defaultValue = ".")
+            "--output" }, description = "The common base name for the output generated files. Default: ${DEFAULT-VALUE}", defaultValue = "")
     String outputFolder;
 
     @Option(names = { "--identity" }, description = "Minimum identity cutoff. Default: ${DEFAULT-VALUE}", defaultValue = "90")
@@ -67,7 +64,6 @@ public class Main implements Callable<Integer> {
     @Override
     public Integer call() throws IOException {
         Parameters.INPUT = input;
-        Parameters.FILE_TYPE = type;
 
         Parameters.THRESHOLD_BEPIPRED = threshold;
         Parameters.MIN_LENGTH_BEPIPRED = minLength;
@@ -112,16 +108,18 @@ public class Main implements Callable<Integer> {
         Parameters.LOCALIZATION_TYPE = localizationType;
 
         if (localizationFile != null && localizationFile.exists()) {
-            Path destLocalization = destinationFolder.resolve("localization.tsv");
-            Files.copy(localizationFile.toPath(), destLocalization, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-            File localization = destLocalization.toFile();
-            Parameters.MAP_PROTEIN_LOCALIZATION = ProteinCSVReader.readTsvToMap(localization);
+//            Path destLocalization = destinationFolder.resolve("localization.tsv");
+//            Files.copy(localizationFile.toPath(), destLocalization, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+//            File localization = destLocalization.toFile();
+//            Parameters.MAP_PROTEIN_LOCALIZATION = ProteinCSVReader.readTsvToMap(destLocalization.toFile());
+            Parameters.MAP_PROTEIN_LOCALIZATION = ProteinCSVReader.readTsvToMap(localizationFile);
         }
         if (descriptionFile != null && descriptionFile.exists()) {
-            Path destDescription = destinationFolder.resolve("description.tsv");
-            Files.copy(descriptionFile.toPath(), destDescription, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-            File description = destDescription.toFile();
-            Parameters.MAP_PROTEIN_DESCRIPTION = ProteinCSVReader.readTsvToMap(description);
+//            Path destDescription = destinationFolder.resolve("description.tsv");
+//            Files.copy(descriptionFile.toPath(), destDescription, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+//            File description = destDescription.toFile();
+//            Parameters.MAP_PROTEIN_DESCRIPTION = ProteinCSVReader.readTsvToMap(description);
+            Parameters.MAP_PROTEIN_DESCRIPTION = ProteinCSVReader.readTsvToMap(descriptionFile);
         }
         EpitopeFinder.process();
         return 0;

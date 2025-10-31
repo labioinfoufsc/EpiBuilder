@@ -2,106 +2,54 @@
 
 nextflow.enable.dsl = 2
 
-params.input_file  = params.input_file  ?: null
-params.loc         = params.loc         ?: null
-params.minLength   = params.minLength   ?: null
-params.maxLength   = params.maxLength   ?: null
-params.threshold   = params.threshold   ?: null
-params.output_dir  = params.output_dir  ?: null
-params.identity    = params.identity    ?: 90
-params.cover       = params.cover       ?: 90
-params.proteomes   = params.proteomes   ?: null
+params.input_file     = params.input_file     ?: null
+params.loc            = params.loc            ?: "none"
+params.minLength      = params.minLength      ?: null
+params.maxLength      = params.maxLength      ?: null
+params.threshold      = params.threshold      ?: null
+params.output_dir     = params.output_dir     ?: null
+params.identity       = params.identity       ?: 90
+params.cover          = params.cover          ?: 90
+params.proteomes      = params.proteomes      ?: null
+params.bepipred_batch = params.bepipred_batch ?: 100
 
 epibuilder_jar = params.jar ? file(params.jar) : file("${projectDir}/epibuilder-core.jar")
 
-
 process run_blast {
     tag 'blast'
-
     publishDir "${params.output_dir}", mode: 'copy', overwrite: true
 
     input:
     path epitope_fasta
+    path epitope_detail
+
+    output:
+    path "epitope-detail.tsv", emit: epitope_detail_blast
 
     script:
     """
     #!/bin/bash
     set -e
-    input_path="\$(realpath ${epitope_fasta})"
-
-    # Diretório de saída dentro do workDir
-    out_dir="\$(realpath ${params.output_dir})"
-    mkdir -p "\$out_dir"
-
-    echo "[INFO] Epitope FASTA: ${epitope_fasta}"
-    echo "[INFO] Output directory: \$out_dir"
-
-    proteomes="${params.proteomes ?: ''}"
-
-    if [ -n "\$proteomes" ]; then
-        IFS=':' read -ra pairs <<< "\$proteomes"
-        for pair in "\${pairs[@]}"; do
-            alias="\$(echo \$pair | cut -d'=' -f1)"
-            db="\$(echo \$pair | cut -d'=' -f2)"
-            out_file="\$out_dir/\${alias}_blast.csv"
-
-            echo "[INFO] Running DIAMOND for alias '\$alias' and DB '\$db'"
-            "${projectDir}/blastp_custom.sh" "\$input_path" "\$db" "blastp-short" "4" "\$params.id" "\$params.cov" "\$out_file"
-        done
-    fi
+    java -cp ${epibuilder_jar} Blastp --input ${epitope_fasta} --proteomes ${params.proteomes} --identity ${params.identity} --cover ${params.cover} --report ${epitope_detail} --output epitope-detail.tsv 2>&1 | tee /dev/stderr
     """
 }
-
-process run_blastp {
-    tag 'blastp'
-
-    publishDir "${params.output_dir}", mode: 'copy', overwrite: true
-
-    input:
-    path epitope_fasta   // vem do run_epibuilder
-
-    output:
-    path '*.csv', emit: blast_results  // todos os CSVs gerados
-
-    script:
-    def proteomes = params.proteomes ?: ''
-
-    // Monta os comandos de forma groovy
-    def cmds = []
-    if (proteomes) {
-        proteomes.split(':').each { pair ->
-            def (alias, db) = pair.split('=')
-            def outFile = "${alias}_blast.csv"
-            cmds << """
-                echo "[INFO] Running BLAST for alias '${alias}' and DB '${db}'"
-                "${projectDir}/blastp_custom.sh" "${epitope_fasta}" "${db}" "blastp-short" "4" "${params.identity}" "${params.cover}" "${outFile}"
-            """.stripIndent()
-        }
-    }
-    """
-    ${cmds.join('\n')}
-    """
-}
-
 
 process run_localization {
-    tag 'localization'
+    tag 'run_localization'
 
     publishDir "${params.output_dir}", mode: 'copy', overwrite: true
 
     input:
     path input_file
-
+    val localization
     output:
     path 'localization.tsv', emit: output
 
     script:
     """
-    # Absolute path of input_file
-    INPUT_PATH="\$(realpath ${input_file})"
-
-    # Run localization
-    ${projectDir}/localization.sh ${input_file} ${params.loc}
+    #!/bin/bash
+    set -e
+    java -cp ${epibuilder_jar} SubcellularLocalization -i ${input_file} -o localization.tsv -loc ${localization} 2>&1 | tee /dev/stderr
     """
 }
 
@@ -116,17 +64,13 @@ process export_excel {
     path topology
 
     output:
-    path "epibuilder-blast.xlsx", emit: excel_file
+    path "epibuilder.xlsx", emit: excel_file
 
     script:
     """
-    echo "[INFO] Exporting reports from "
-    """
-    def cmd = "java -cp ${epibuilder_jar} ExportExcel --detailed ${epitope_report} --protein ${protein_summary} --topology ${topology} --output epibuilder-blast.xlsx"
-    """
-    echo "Exporting excel..."
-    echo "Running command: ${cmd}"
-    ${cmd} > epibuilder.log
+    #!/bin/bash
+    set -e
+    java -cp ${epibuilder_jar} ExportExcel --detailed ${epitope_report} --protein ${protein_summary} --topology ${topology} --output epibuilder.xlsx
     """
 }
 
@@ -143,17 +87,9 @@ process prepare_csv {
 
     script:
     """
-    echo "[INFO] Extracting FASTA from ${input_file} using Java..."
-
-    # Executa o programa Java
-
-    echo "[INFO] FASTA file created: valid_proteins.fasta"
-    """
-    def cmd = "java -cp ${epibuilder_jar} FastaFromBepiPredCSV --input ${input_file} --output valid_proteins.fasta"
-    """
-    echo "Extracting fasta from csv descriptions..."
-    echo "Running command: ${cmd}"
-    ${cmd} > epibuilder.log
+    #!/bin/bash
+    set -e
+    java -cp ${epibuilder_jar} FastaFromBepiPredCSV --input ${input_file} --output valid_proteins.fasta
     """
 }
 
@@ -163,85 +99,31 @@ process join_blast_hits {
     publishDir "${params.output_dir}", mode: 'copy', overwrite: true
 
     input:
-    path blast_csvs                // múltiplos arquivos do run_blastp
+    path blast_csvs
     path epitope_detail
 
     output:
-    path 'epitope-detail-blast.tsv', emit: joined_blast
+    path 'epitope-detail.tsv', emit: joined_blast
 
     script:
     """
-    java -cp ${epibuilder_jar} JoinBlastHits \\
-         --report ${epitope_detail} \\
-         --identity ${params.identity} \\
-         --cover ${params.cover} \\
-         --blast ${blast_csvs.join(' ')} \\
-         --output epitope-detail-blast.tsv
+    #!/bin/bash
+    set -e
+    java -cp ${epibuilder_jar} JoinBlastHits --report ${epitope_detail} --identity ${params.identity} --cover ${params.cover} --blast ${blast_csvs.join(' ')} --output epitope-detail.tsv
     """
 }
 
-/**
- * Process: copy_results
- * Description:
- *   Copies the results from the generated output directory to a new directory
- *   named after the `params.output_dir` parameter. It ensures a clean copy of results
- *   into a clearly labeled and user-defined location.
- *
- * Inputs:
- *   - output_dir: The directory containing the results to be copied.
- *
- * Outputs:
- *   - stdout: A message confirming the location of the copied results.
- */
-process copy_results {
-    input:
-    path output_dir
+process validate_proteomes_fasta {
+    tag 'validate_proteomes_fasta'
 
-    output:
-    stdout
+    input:
+    val proteomes
 
     script:
     """
-    #echo "Starting copy"
-    #echo "Output dir: ${params.output_dir}"
-    #echo "Current dir: \${PWD}"
-
-    # Define temporary path
-    final_path="\${PWD}/${params.output_dir}/temp"
-
-    # Create temp directory
-    mkdir -p "\$final_path"
-
-    # Copy new results
-    cp -r \$(realpath ${output_dir})/* "\$final_path/"
-
-    # Rename files by removing 'epibuilder-results-' prefix
-    if ls \$final_path/epibuilder-results-* 1> /dev/null 2>&1; then
-        for file in \$final_path/epibuilder-results-*; do
-            newname=\$(output_dir "\$file" | sed 's/^epibuilder-results-//')
-            mv "\$file" "\$final_path/\$newname"
-        done
-    else
-        echo "No files with prefix 'epibuilder-results-' found."
-    fi
-
-    # Rename files by removing 'epibuilder-' prefix
-    if ls \$final_path/epibuilder-* 1> /dev/null 2>&1; then
-        for file in \$final_path/epibuilder-*; do
-            newname=\$(output_dir "\$file" | sed 's/^epibuilder-//')
-            mv "\$file" "\$final_path/\$newname"
-        done
-    else
-        echo "No files with prefix 'epibuilder-' found."
-    fi
-
-    # Move all contents from temp to final output directory
-    mv \$final_path/* "${params.output_dir}/"
-
-    # Optionally remove empty temp dir
-    rmdir "\$final_path"
-
-    echo "Your results are in \$(realpath ${params.output_dir})"
+    #!/bin/bash
+    set -e
+    java -cp ${epibuilder_jar} ProteomesValidation --proteomes ${proteomes}
     """
 }
 
@@ -263,14 +145,16 @@ process run_bepipred {
 
     input:
     path input_file
+    val bepipred_batch
 
     output:
     path 'raw_output.csv', emit: output
 
     script:
     """
-    # Call bepipred3 script
-    ${projectDir}/bepipred3.sh ${input_file}
+    #!/bin/bash
+    set -e
+    java -cp ${epibuilder_jar} Bepipred3 -i ${input_file} -o raw_output.csv -s ${bepipred_batch} 2>&1 | tee /dev/stderr
     """
 }
 
@@ -305,6 +189,7 @@ process run_epibuilder {
     path 'epitope-detail.tsv', emit: epitope_detail
     path 'topology.tsv', emit: topology
     path 'protein-summary.tsv', emit: protein_summary
+    path 'scores.tsv', emit: scores
 
     script:
     def args = []
@@ -321,12 +206,8 @@ process run_epibuilder {
     def descArg = desc_file ? "--description_file ${desc_file}" : ""
     def localizationArg = localization_file ? "--localization_file ${localization_file}" : ""
 
-    def cmd = "java -jar ${epibuilder_jar} --input ${input_file} --format csv ${descArg} ${localizationArg} ${args.join(' ')} --output results"
-
     """
-    echo "Running command: ${cmd}"
-    ${cmd} > epibuilder.log
-    cp -r results/* .
+    java -jar ${epibuilder_jar} --input ${input_file} ${descArg} ${localizationArg} ${args.join(' ')}
     """
 }
 
@@ -339,7 +220,8 @@ process run_epibuilder_csv {
 
     input:
     path input_file
-    path localization_file
+    path desc_file, stageAs: 'description.tsv'
+    path localization_file, stageAs: 'localization.tsv'
 
     output:
     path 'epitopes.fasta', emit: epitopes
@@ -361,10 +243,9 @@ process run_epibuilder_csv {
 
     def localizationArg = localization_file ? "--localization_file ${localization_file}" : ""
 
-    def cmd = "java -jar ${epibuilder_jar} --input ${input_file} --format csv ${localizationArg} ${args.join(' ')} --output results"
+    def cmd = "java -jar ${epibuilder_jar} --input ${input_file} ${args.join(' ')} --output results"
 
     """
-    echo "Running command: ${cmd}"
     ${cmd} > epibuilder.log
     cp -r results/* .
     """
@@ -385,7 +266,6 @@ process run_epibuilder_csv {
  process validate_fasta {
      tag 'validate_fasta'
 
-     // publica automaticamente no output_dir após terminar
      publishDir "${params.output_dir}", mode: 'copy', overwrite: true
 
      input:
@@ -403,46 +283,25 @@ process run_epibuilder_csv {
          echo "[INFO] Jar: ${epibuilder_jar}"
          echo "[INFO] Working directory: \$(pwd)"
 
-         java -cp ${epibuilder_jar} FastaValidation \
-             --input ${input_fasta} \
-             --valid proteins_valid.fasta \
-             --invalid proteins_invalid.fasta \
-             --description description.tsv
+         java -cp ${epibuilder_jar} FastaValidation --input ${input_fasta} --valid proteins_valid.fasta --invalid proteins_invalid.fasta --description description.tsv
          """
  }
 
-process rename_report_file {
-    tag 'rename_final'
-
-    // publica no mesmo diretório final
-    publishDir "${params.output_dir}", mode: 'copy', overwrite: true
-
-    input:
-    path final_blast_file  // exemplo: epitope-detail-blast.tsv
-
-    output:
-    path 'epitope-detail.tsv', emit: renamed_file
-
-    script:
-    """
-
-    if [ -f "${final_blast_file}" ]; then
-        cp "${final_blast_file}" epitope-detail.tsv
-    else
-        echo "[WARN] File not found: ${final_blast_file}"
-        touch epitope-detail.tsv
-    fi
-    """
-}
-
-
 workflow {
     def input_file_path = file(params.input_file)
+    def files
 
+    // Validações de parâmetros obrigatórios
+    if (!params.input_file) {
+        error "You must provide a value for 'params.input_file' using --input_file"
+    }
+
+    if (!params.output_dir) {
+        error "You must provide a value for 'params.output_dir' using --output_dir"
+    }
     if (!params.output_dir) {
         error "You must provide a value for 'params.output_dir'"
     }
-
     // Cria o diretório se não existir
     def outputDir = new File(params.output_dir).absoluteFile
 
@@ -452,48 +311,80 @@ workflow {
     } else {
         println "Output directory already exists: ${outputDir}"
     }
+    //Validate proteomes before all process to avoid unnecessary processing
+    if (params.proteomes) {
+        validate_proteomes_fasta(params.proteomes)
+    }
+     // Declara channels e variáveis
+    def valid_proteins_ch
+    def description_ch
+    def epibuilder_input_ch  // Pode ser bepipred output ou CSV direto
 
+    // Processa o input dependendo do tipo
     if (params.input_file.endsWith('.fasta')) {
+        // Para FASTA: valida -> bepipred -> epibuilder
+        def fasta_files = validate_fasta(input_file_path)
+        valid_proteins_ch = fasta_files.valid_proteins
+        description_ch = fasta_files.description
 
-        def files = validate_fasta(input_file_path)
-        if (files.valid_proteins) {
-            run_bepipred(files.valid_proteins)
-            run_localization(files.valid_proteins)
-            def epibuilder = run_epibuilder(run_bepipred.out, files.description, run_localization.output)
+        def bepipred_out = run_bepipred(fasta_files.valid_proteins, params.bepipred_batch)
+        epibuilder_input_ch = bepipred_out.output
 
-            if (params.proteomes) {
-                def blast = run_blastp(epibuilder.epitopes)
-                def report_blast = join_blast_hits(blast.blast_results.collect(), epibuilder.epitope_detail)
-                def rename_report_file = rename_report_file(report_blast)
-                export_excel(rename_report_file.renamed_file, epibuilder.protein_summary, epibuilder.topology)
-            }else{
-                export_excel(epibuilder.epitope_detail, epibuilder.protein_summary, epibuilder.topology)
-            }
-            //copy_results(epibuilder.out).view()*/
-        }else {
-            error "Review the fasta file, ${files.invalid_proteins} invalid proteins "
-        }
     } else if (params.input_file.endsWith('.csv')) {
+        // Para CSV: prepara -> valida -> epibuilder (sem bepipred)
+        def csv_files = prepare_csv(input_file_path)
+        def csv_validated = validate_fasta(csv_files.valid_proteins)
+        valid_proteins_ch = csv_validated.valid_proteins
+        description_ch = csv_validated.description
+        epibuilder_input_ch = input_file_path  // CSV vai direto para epibuilder
 
-        def files = prepare_csv(input_file_path)
-        if (files.valid_proteins) {
-            run_localization(files.valid_proteins)
-            def epibuilder = run_epibuilder_csv(input_file_path, run_localization.output)
-
-            if (params.proteomes) {
-                def blast = run_blastp(epibuilder.epitopes)
-                def report_blast = join_blast_hits(blast.blast_results.collect(), epibuilder.epitope_detail)
-                def rename_report_file = rename_report_file(report_blast)
-                export_excel(rename_report_file.renamed_file, epibuilder.protein_summary, epibuilder.topology)
-            }else{
-                export_excel(epibuilder.epitope_detail, epibuilder.protein_summary, epibuilder.topology)
-            }
-            //copy_results(epibuilder.out).view()*/
-        }else {
-            error "Review the fasta file, ${files.invalid_proteins} invalid proteins "
-        }
-        //copy_results(epibuilder.out).view()
     } else {
         error 'Unsupported file type. Use .fasta or .csv'
     }
+
+    // Processos comuns para ambos os tipos
+    def localization_out = run_localization(valid_proteins_ch, params.loc)
+
+    // Executa epibuilder com os inputs apropriados
+    epibuilder = run_epibuilder(
+        epibuilder_input_ch,      // FASTA: output do bepipred | CSV: arquivo original
+        description_ch,
+        localization_out.output
+    )
+
+    // Executing blast
+    if (params.proteomes) {
+        def blast = run_blast(epibuilder.epitopes, epibuilder.epitope_detail)
+        export_excel(blast.epitope_detail_blast, epibuilder.protein_summary, epibuilder.topology)
+    } else {
+        export_excel(epibuilder.epitope_detail, epibuilder.protein_summary, epibuilder.topology)
+    }
+
+
+
+
+    /**if (params.input_file.endsWith('.fasta')) {
+        def files = validate_fasta(input_file_path)
+        if (files.valid_proteins) {
+            run_bepipred(files.valid_proteins)
+            run_localization(files.valid_proteins, params.loc)
+            epibuilder = run_epibuilder(run_bepipred.out, files.description, run_localization.output)
+        }else {
+            error "Review the fasta file, ${input_file} invalid proteins "
+        }
+    } else if (params.input_file.endsWith('.csv')) {
+        def files = prepare_csv(input_file_path)
+        if (files.valid_proteins) {
+            run_localization(files.valid_proteins, params.loc)
+            epibuilder = run_epibuilder(input_file_path,file('OPTIONAL_FILE'), run_localization.output)
+        }else {
+            error "Review the csv file, ${input_file} invalid proteins "
+        }
+    } else {
+        error 'Unsupported file type. Use .fasta or .csv'
+    }**/
+
+
+    //Executing blast
+
 }

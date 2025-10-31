@@ -22,7 +22,7 @@ public class Blast {
 
     private String name;
     private File file;
-    ArrayList<Peptide> peps = new ArrayList<>();
+    ArrayList<BlastPeptide> peps = new ArrayList<>();
 
     public Blast(String name, File file) throws FileNotFoundException {
         this.name = name;
@@ -30,7 +30,7 @@ public class Blast {
         Scanner s = new Scanner(file);
         s.nextLine();
         while (s.hasNext()) {
-            Peptide pep = new Peptide(s.nextLine());
+            BlastPeptide pep = new BlastPeptide(s.nextLine());
             peps.add(pep);
         }
     }
@@ -52,8 +52,8 @@ public class Blast {
     }
 
     private void clear(double id, double cov) {
-        ArrayList<Peptide> res = new ArrayList<Peptide>();
-        for (Peptide pep : peps) {
+        ArrayList<BlastPeptide> res = new ArrayList<BlastPeptide>();
+        for (BlastPeptide pep : peps) {
             if (pep.getIdentity() >= id && pep.getCover() >= cov) {
                 res.add(pep);
             }
@@ -62,25 +62,25 @@ public class Blast {
         peps.addAll(res);
     }
 
-    private int getCount(String peptideAccessId, TreeMap<String, ArrayList<Peptide>> map) {
+    private int getCount(String peptideAccessId, TreeMap<String, ArrayList<BlastPeptide>> map) {
         if (map.get(peptideAccessId) != null) {
             return map.get(peptideAccessId).size();
         }
         return 0;
     }
 
-    private String getIds(String peptideAccessId, TreeMap<String, ArrayList<Peptide>> map) {
+    private String getIds(String peptideAccessId, TreeMap<String, ArrayList<BlastPeptide>> map) {
         String res = "-";
         if (map.get(peptideAccessId) != null && Parameters.HIT_ACCESSION) {
-            ArrayList<Peptide> pep = map.get(peptideAccessId);
+            ArrayList<BlastPeptide> pep = map.get(peptideAccessId);
             return Joiner.on(",").join(pep);
         }
         return res;
     }
 
-    private TreeMap<String, ArrayList<Peptide>> getMap() {
-        TreeMap<String, ArrayList<Peptide>> map = new TreeMap<>();
-        for (Peptide pep : peps) {
+    private TreeMap<String, ArrayList<BlastPeptide>> getMap() {
+        TreeMap<String, ArrayList<BlastPeptide>> map = new TreeMap<>();
+        for (BlastPeptide pep : peps) {
             if (map.get(pep.getPeptideAccessId()) == null) {
                 map.put(pep.getPeptideAccessId(), new ArrayList<>());
             }
@@ -93,13 +93,13 @@ public class Blast {
         StringBuilder sb = new StringBuilder();
         //remove duplicated ids
         TreeSet<String> listIds = new TreeSet<>();
-        for (Peptide pep : peps) {
+        for (BlastPeptide pep : peps) {
             listIds.add(pep.getPeptideAccessId());
         }
         //remove hits less than identity and cover
         clear(identity, cover);
 
-        TreeMap<String, ArrayList<Peptide>> map = getMap();
+        TreeMap<String, ArrayList<BlastPeptide>> map = getMap();
 
         sb.append("Peptide\tAccession\tCount\tId\n");
         for (String listId : listIds) {

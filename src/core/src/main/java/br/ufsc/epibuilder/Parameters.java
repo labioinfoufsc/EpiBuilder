@@ -19,7 +19,6 @@ import java.util.LinkedHashMap;
  */
 public class Parameters {
 
-    public static FileType FILE_TYPE = FileType.csv;
     public static double THRESHOLD_BEPIPRED = 0.6;
     public static int MIN_LENGTH_BEPIPRED = 10;
     public static int MAX_LENGTH_BEPIPRED = 30;

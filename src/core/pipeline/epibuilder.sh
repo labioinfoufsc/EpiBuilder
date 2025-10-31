@@ -5,25 +5,26 @@ show_help() {
     echo "Usage: epibuilder [OPTIONS]"
     echo ""
     echo "Required parameters:"
-    echo "  --input_file PATH      Path to the input file"
+    echo "  --input_file PATH          Path to the input file"
     echo ""
     echo "Optional parameters:"
-    echo "  --loc                  Subcellular localization: 'animal', 'plant', 'fungi', 'arch', 'gram_pos', 'gram_neg'"
-    echo "                         animal     - Eukaryote - Animal"
-    echo "                         plant      - Eukaryote - Plant"
-    echo "                         fungi      - Eukaryote - Fungi"
-    echo "                         arch       - Archaea"
-    echo "                         gram_pos   - Bacteria Gram +"
-    echo "                         gram_neg   - Bacteria Gram -"
-    echo "  --min-length INT       Minimum length"
-    echo "  --max-length INT       Maximum length"
-    echo "  --threshold FLOAT      Threshold value"
-    echo "  --output NAME          Basename for output files"
-    echo "  --search MODE          Search mode: 'none', 'blast', etc. (default: 'none')"
-    echo "  --proteomes FILE       Path to proteomes file (format: alias1=path1:alias2=path2)"
-    echo "  --cover INT            BLAST minimum coverage cutoff (default: 90)"
-    echo "  --identity INT         BLAST minimum identity cutoff (default: 90)"
-    echo "  --help                 Show this help message and exit"
+    echo "  --loc                      Subcellular localization: 'animal', 'plant', 'fungi', 'arch', 'gram_pos', 'gram_neg'"
+    echo "                              animal     - Eukaryote - Animal"
+    echo "                              plant      - Eukaryote - Plant"
+    echo "                              fungi      - Eukaryote - Fungi"
+    echo "                              arch       - Archaea"
+    echo "                              gram_pos   - Bacteria Gram +"
+    echo "                              gram_neg   - Bacteria Gram -"
+    echo "  --min-length INT           Minimum length"
+    echo "  --max-length INT           Maximum length"
+    echo "  --threshold FLOAT          Threshold value"
+    echo "  --output NAME              Basename for output files"
+    echo "  --search MODE              Search mode: 'none', 'blast', etc. (default: 'none')"
+    echo "  --proteomes FILE           Path to proteomes file (format: alias1=path1:alias2=path2)"
+    echo "  --cover INT                BLAST minimum coverage cutoff (default: 90)"
+    echo "  --identity INT             BLAST minimum identity cutoff (default: 90)"
+    echo "  --bepipred_batch INT       Maximum number of proteins submitted for Bepipred processing (default 100)"
+    echo "  --help                     Show this help message and exit"
     echo ""
     echo "Available databases:"
     echo "  /db/iedb.fasta"
@@ -47,6 +48,7 @@ SEARCH="none"
 COVER=90
 IDENTITY=90
 WORD_SIZE=4
+BEPIPRED_BATCH=100
 
 SCRIPT_PATH="$(readlink -f "$0")"
 SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
@@ -112,6 +114,11 @@ while [[ $# -gt 0 ]]; do
             shift
             shift
             ;;
+        --bepipred_batch)
+            BEPIPRED_BATCH="$2"
+            shift
+            shift
+            ;;
         --help)
             show_help
             exit 0
@@ -146,6 +153,7 @@ NF_CMD+=" --cover \"$COVER\""
 NF_CMD+=" --identity \"$IDENTITY\""
 NF_CMD+=" --word-size \"$WORD_SIZE\""
 NF_CMD+=" --jar \"$JAR_PATH\""
+NF_CMD+=" --bepipred_batch \"$BEPIPRED_BATCH\""
 
 # Add Nextflow reports if BASENAME is defined
 [[ -n "$OUTPUT_DIR" ]] && NF_CMD+=" \

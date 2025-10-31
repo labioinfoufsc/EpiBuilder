@@ -9,13 +9,13 @@ package br.ufsc.epibuilder.blast;
  *
  * @author renato
  */
-public class Peptide {
+public class BlastPeptide {
     private String peptideAccessId;
     private String queryaAccessId;
     private double identity;
     private double cover;
 
-    public Peptide(String blastline){
+    public BlastPeptide(String blastline){
         String[] tab = blastline.split("\t");
         peptideAccessId = tab[0];
         queryaAccessId = tab[1];
