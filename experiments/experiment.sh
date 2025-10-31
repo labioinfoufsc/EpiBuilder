@@ -12,6 +12,7 @@ COVER=80
 IDENTITY=80
 
 mkdir -p "${DB_DIR}"
+docker pull "${EPIBUILDER_IMAGE}"
 
 # -------------------------------
 # Function to download proteome via Uniprot
@@ -74,9 +75,9 @@ process_group() {
         --max-length ${MAX_LENGTH} \
         --threshold ${THRESHOLD} \
         --proteomes ${PROTEOMES_ARG} \
-        --output /experiment/${group_name}/epibuilder_results \
+        --output /experiment/${group_name}/ \
         --cover ${COVER} \
-        --identity ${IDENTITY}"
+        --identity ${IDENTITY} --bepipred_batch 100"
 
     echo "▶ Running: $CMD"
     eval "$CMD"
@@ -103,20 +104,6 @@ declare -A BORRELIA=(
     ["UP000185502"]="B_anserina_Es"
     ["UP001305787"]="B_andersonii_21038"
     ["UP000001634"]="B_bissettiae_DN127"
-)
-
-declare -A RICKETTSIA=(
-    ["P000000796"]="R_rickettsii_Iowa"
-    ["P000007581"]="R_typhi_TH1527"
-    ["P000007589"]="R_australis_Cutlack"
-    ["P001056268"]="R_conorii_BIME"
-    ["P000002480"]="R_prowazekii_MadridE"
-    ["P000008548"]="R_felis"
-    ["P000001565"]="O_tsutsugamushi_Boryong"
-    ["P000004455"]="R_sibirica"
-    ["P000035491"]="R_parkeri"
-    ["P000006830"]="R_akari"
-    ["P000007997"]="R_philipii"
 )
 
 declare -A EBOLA=(
@@ -181,7 +168,6 @@ process_group "INFLUENZA" INFLUENZA none
 process_group "EBOLA" EBOLA none
 process_group "BORRELIA" BORRELIA gram_neg
 process_group "STAPHYLOCOCCUS" STAPHYLOCOCCUS gram_pos
-process_group "RICKETTSIA" RICKETTSIA gram_neg
 process_group "PLASMODIUM" PLASMODIUM animal
 process_group "CANDIDA" CANDIDA fungi
 
