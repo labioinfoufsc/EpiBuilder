@@ -1,5 +1,4 @@
-# Base image: Debian 11
-FROM openjdk:21-jdk-bookworm
+FROM eclipse-temurin:21-jdk
 
 LABEL app="EpiBuilder"
 LABEL version="2.0"
