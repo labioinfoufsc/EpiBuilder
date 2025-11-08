@@ -77,7 +77,7 @@ process_group() {
         --proteomes ${PROTEOMES_ARG} \
         --output /experiment/${group_name}/ \
         --cover ${COVER} \
-        --identity ${IDENTITY} --bepipred_batch 100"
+        --identity ${IDENTITY} --bepipred_batch 10000"
 
     echo "▶ Running: $CMD"
     eval "$CMD"
@@ -122,7 +122,6 @@ declare -A PLASMODIUM=(
     ["UP000078555"]="P_ovale_wallikeri"
     ["UP000242942"]="P_ovale_PocGH01"
     ["UP000008333"]="P_vivax_SalvadorI"
-    ["UP001056978"]="P_brasilianum_BolivianI"
     ["UP000006319"]="P_cynomolgi_B"
     ["UP000030640"]="P_inui_SanAntonio1"
 )
