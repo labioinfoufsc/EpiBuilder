@@ -1,4 +1,4 @@
-FROM openjdk:21-jdk-bookworm
+FROM eclipse-temurin:21-jdk
 
 LABEL app="EpiBuilder - CLI"
 LABEL version="2.0"

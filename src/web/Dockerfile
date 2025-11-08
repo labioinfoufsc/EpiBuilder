@@ -1,5 +1,4 @@
-# Base image: Debian 11
-FROM openjdk:21-jdk-bookworm
+FROM eclipse-temurin:21-jdk
 
 LABEL app="EpiBuilder"
 LABEL version="2.0"
@@ -40,10 +39,7 @@ RUN apt-get update && apt-get install -y curl \
     && npm install -g @angular/cli
 
 # --- Instala NGINX mainline ---
-RUN wget -qO - https://nginx.org/keys/nginx_signing.key | apt-key add - \
-    && echo "deb http://nginx.org/packages/mainline/debian $(lsb_release -cs) nginx" > /etc/apt/sources.list.d/nginx.list \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends nginx
+RUN apt-get install -y --no-install-recommends nginx
 
 # Limpa cache do apt
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
