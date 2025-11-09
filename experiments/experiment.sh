@@ -114,18 +114,6 @@ declare -A EBOLA=(
     ["UP000007207"]="Reston_ebolavirus"
 )
 
-declare -A PLASMODIUM=(
-    ["UP000001450"]="P_falciparum_3D7"
-    ["UP000030673"]="P_falciparum_NF54"
-    ["UP000031513"]="P_knowlesi_H"
-    ["UP000219813"]="P_malariae"
-    ["UP000078555"]="P_ovale_wallikeri"
-    ["UP000242942"]="P_ovale_PocGH01"
-    ["UP000008333"]="P_vivax_SalvadorI"
-    ["UP000006319"]="P_cynomolgi_B"
-    ["UP000030640"]="P_inui_SanAntonio1"
-)
-
 declare -A INFLUENZA=(
     ["UP000008158"]="InfluenzaB_BLee1940"
     ["UP000204142"]="InfluenzaD_bovineFrance2986"
@@ -167,7 +155,6 @@ process_group "INFLUENZA" INFLUENZA none
 process_group "EBOLA" EBOLA none
 process_group "BORRELIA" BORRELIA gram_neg
 process_group "STAPHYLOCOCCUS" STAPHYLOCOCCUS gram_pos
-process_group "PLASMODIUM" PLASMODIUM animal
 process_group "CANDIDA" CANDIDA fungi
 
 echo "✅ All groups processed!"
