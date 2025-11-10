@@ -52,18 +52,25 @@ public class ExportExcel implements Callable<Integer> {
         return 0;
     }
 
-    public static void exportExcel(File reportDetailedFile, File reportByProteinFile, File reportTopologyFile, File excelFile) throws Exception {
-        ArrayList<ExcelTabReport> excelTab = new ArrayList<>();
+    public static void exportExcel(File reportDetailedFile, File reportByProteinFile, File reportTopologyFile, File excelFile) {
+        try {
+            ArrayList<ExcelTabReport> excelTab = new ArrayList<>();
 
-        String reportDetailed = Files.readString(reportDetailedFile.toPath());
-        String reportByProtein = Files.readString(reportByProteinFile.toPath());
-        String reportTopology = Files.readString(reportTopologyFile.toPath());
+            String reportDetailed = Files.readString(reportDetailedFile.toPath());
+            String reportByProtein = Files.readString(reportByProteinFile.toPath());
+            String reportTopology = Files.readString(reportTopologyFile.toPath());
 
-        excelTab.add(new ExcelTabReport("Epitopes Detailed", reportDetailed));
-        excelTab.add(new ExcelTabReport("Protein Summary", reportByProtein));
-        excelTab.add(new ExcelTabReport("Epitopes Topology", reportTopology));
+            excelTab.add(new ExcelTabReport("Epitopes Detailed", reportDetailed));
+            excelTab.add(new ExcelTabReport("Protein Summary", reportByProtein));
+            excelTab.add(new ExcelTabReport("Epitopes Topology", reportTopology));
 
-        ExcelReport.generateExcelXlsx(excelTab, excelFile.getAbsolutePath());
+            ExcelReport.generateExcelXlsx(excelTab, excelFile.getAbsolutePath());
+        }catch(Exception e){
+            System.err.println(
+                    "An error occurred while exporting to Excel: " + e.getMessage() +
+                            ". This error was caused by Excel's own limitations, but the reports in TSV and CSV formats contain all data and can be used normally."
+            );
+        }
     }
 
     public static void main(String[] args) {

@@ -13,7 +13,7 @@ params.cover          = params.cover          ?: 90
 params.proteomes      = params.proteomes      ?: null
 params.bepipred_batch = params.bepipred_batch ?: 100
 params.bepipred_gpu   = params.bepipred_gpu ?: false
-params.bepipred_gpu_options = params.bepipred_gpu_options ?: ""
+params.bepipred_gpu_options = params.bepipred_gpu_options ?: null
 
 epibuilder_jar = params.jar ? file(params.jar) : file("${projectDir}/epibuilder-core.jar")
 
@@ -155,7 +155,7 @@ process run_bepipred {
     script:
     // Define flags corretamente
     def gpuFlag = params.bepipred_gpu ? "--use-gpu" : ""
-    def gpuOptions = (params.bepipred_gpu_options && !(params.bepipred_gpu_options instanceof Boolean)) ? "--gpu-options '${params.bepipred_gpu_options}'" : ""
+    def gpuOptions = (params.bepipred_gpu_options) ? "--gpu-options '${params.bepipred_gpu_options}'" : ""
 
     """
     #!/bin/bash

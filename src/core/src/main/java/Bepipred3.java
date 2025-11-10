@@ -41,7 +41,7 @@ public class Bepipred3 implements Callable<Integer> {
             defaultValue = "",
             description = "Additional GPU options (default: empty)"
     )
-    private String optionsGpu;
+    private String optionsGpu="";
 
     public static void main(String[] args) {
         int exitCode = new CommandLine(new Bepipred3()).execute(args);
@@ -73,14 +73,18 @@ public class Bepipred3 implements Callable<Integer> {
             // === 4. Testa GPU ===
             System.out.println("Checking for GPU support...");
            // boolean gpuAvailable = checkGpuSupport();
-            //boolean gpuAvailable = new GPUChecker(tmpDir).call() == 0;
+            if(useGpu) {
+                useGpu = new GPUChecker(optionsGpu).hasGpu();
+                if (useGpu)
+                    System.out.println("✅ GPU detected, running with GPU support...");
+                else
+                    System.out.println("⚠️ No GPU available or error occurred, running on CPU...");
+            }
 
-            /**String gpuOpts = gpuAvailable ? "--runtime=nvidia --gpus all" : "";
-            if (gpuAvailable)
-                System.out.println("✅ GPU detected, running with GPU support...");
-            else
-                System.out.println("⚠️ No GPU available or error occurred, running on CPU...");
-            **/
+
+            //String gpuOpts = gpuAvailable ? "--runtime=nvidia --gpus all" : "";
+
+
 
             // === 5. Define volume ===
             HashMap<String, ProteinSequence> mapProtein = FastaReaderHelper.readFastaProteinSequence(tmpFile.toFile());
@@ -117,7 +121,7 @@ public class Bepipred3 implements Callable<Integer> {
                 Files.writeString(inputTmp, sb);
                 System.out.println("[INFO] Running container...");
 
-                int exitCode = new BepiPred3Docker(tmpDir,inputTmp,useGpu, optionsGpu).call();
+                int exitCode = new BepiPred3Docker(inputTmp,useGpu, optionsGpu).call();
                 if(exitCode==0) {
                     Path path = tmpDir.resolve("raw_output.csv");
                     String resp = Files.lines(path)

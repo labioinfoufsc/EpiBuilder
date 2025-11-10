@@ -5,9 +5,8 @@ import java.util.List;
 
 
 public class MakeblastdbDocker extends AbstractDockerExecutor {
-    public MakeblastdbDocker(Path tmpDir, Path db) {
+    public MakeblastdbDocker(Path db) {
         super("staphb/blast:2.17.0",
-                tmpDir,
                 List.of("--rm"),
                 List.of("makeblastdb",
                         "-in", db.toString(),

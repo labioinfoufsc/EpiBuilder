@@ -2,10 +2,7 @@ package br.ufsc.epibuilder.util.docker;
 
 import lombok.Getter;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -13,6 +10,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static br.ufsc.epibuilder.util.docker.AbstractDockerExecutor.LogLevel.*;
 
@@ -27,18 +26,32 @@ public abstract class AbstractDockerExecutor implements Callable<Integer> {
     private List<String> options;
     private boolean ignoreExitCode = false;
     private List<String> commandArgs;
-
+    private FileWriter fileWriter;
     @Getter
     private String commandExecuted = "";
+    private StringBuilder output = new StringBuilder();
 
     private static String EPIBUILDER_VOLUME = System.getenv().getOrDefault("EPIBUILDER_VOLUME", "/tmp/epibuilder");
 
-    public AbstractDockerExecutor(String container, Path tmpDir, List<String> options, List<String> commandArgs, boolean ignoreExitCode) {
+    public AbstractDockerExecutor(String container, List<String> options, List<String> commandArgs, boolean ignoreExitCode) {
         this.container = container;
-        this.tmpDir = tmpDir;
         this.options = options;
         this.ignoreExitCode = ignoreExitCode;
         this.commandArgs = commandArgs;
+
+        Pattern pattern = Pattern.compile(".*/([^:]+)(?::.*)?");
+        Matcher matcher = pattern.matcher(container);
+
+        if (matcher.matches()) {
+            String containerName = matcher.group(1);
+            System.out.println(containerName);
+            try {
+                this.fileWriter = new FileWriter(containerName+".txt");// 👉 bepipred3
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
     }
 
     public void addOption(String option) {
@@ -63,11 +76,10 @@ public abstract class AbstractDockerExecutor implements Callable<Integer> {
             pb.redirectErrorStream(true);
 
             Process process = pb.start();
-
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));) {
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    System.out.println(line);
+                    //System.out.println(line);
                     log(line, LogLevel.INFO);
                 }
             }
@@ -76,6 +88,7 @@ public abstract class AbstractDockerExecutor implements Callable<Integer> {
             if (exitCode != 0) {
                 log("Error while executing docker command: " + command, ERROR);
                 log("Docker command exited with code " + exitCode, ERROR);
+
                 return exitCode;
             }
             return 0;
@@ -89,18 +102,16 @@ public abstract class AbstractDockerExecutor implements Callable<Integer> {
     }
 
     public void log(String message, LogLevel logLevel) {
+            String msg = String.format("[%s] %s\n", logLevel, message);
+            //System.out.println(msg);
+            output.append(msg);
         try {
-            System.out.printf("[%s] %s", logLevel, message);
-            BufferedWriter logWriter = null;
-
-            logWriter = Files.newBufferedWriter(tmpDir.resolve("pipeline.log"), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-
-            logWriter.append(String.format("[%s] %s", logLevel, message));
-            logWriter.newLine();
-            logWriter.close();
+            fileWriter.write(msg);
+            fileWriter.flush();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+
     }
 
     public Integer call() {
@@ -117,5 +128,9 @@ public abstract class AbstractDockerExecutor implements Callable<Integer> {
             return 1;
         }
         return 0;
+    }
+
+    public String getOutput() {
+        return output.toString();
     }
 }

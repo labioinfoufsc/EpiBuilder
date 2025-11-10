@@ -127,7 +127,7 @@ public class SubcellularLocalization implements Callable<Integer> {
                 "-o", rawFile.toString()
         );
 
-       int exitCode = new WolfPSORTDocker(tmpDir,tmpFile,loc, rawFile).call();
+       int exitCode = new WolfPSORTDocker(tmpFile,loc, rawFile).call();
        if(exitCode == 0) {
            System.out.println("[INFO] Converting WolfPsort output to localization.tsv...");
            convertWolfPsortOutput(rawFile, tsvFile);
@@ -192,11 +192,7 @@ public class SubcellularLocalization implements Callable<Integer> {
                 "-r", tsvFile.toString()
         );
 
-        new PSORTbDocker(tmpDir,tmpFile,flag, tsvFile).call();
-
-       // System.out.println(String.join(" ", dockerCmd));
-
-        //executeDockerCommand(dockerCmd, tmpDir.resolve("pipeline.log"));
+        new PSORTbDocker(tmpFile,flag, tsvFile).call();
     }
 
     private void createEmptyLocalization(Path outputFile) throws IOException {
