@@ -53,7 +53,7 @@ process_group() {
     FIRST_PROTEOME=$(ls "$GROUP_DIR"/*.fasta | head -n 1)
 
     # Mount proteome db args
-    PROTEOMES_ARG="iedb=/db/iedb.fasta:uniprot=/db/uniprot.fasta"
+    PROTEOMES_ARG="iedb=/db/iedb.fasta"
     for acc in "${!accession_map[@]}"; do
         clean_name="${accession_map[$acc]}"
         PROTEOMES_ARG="${PROTEOMES_ARG}:${clean_name}=/experiment/db/proteomes/${group_name}/${acc}.fasta"
