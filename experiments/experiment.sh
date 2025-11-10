@@ -77,7 +77,7 @@ process_group() {
         --proteomes ${PROTEOMES_ARG} \
         --output /experiment/${group_name}/ \
         --cover ${COVER} \
-        --identity ${IDENTITY} --bepipred_batch 10000"
+        --identity ${IDENTITY} --bepipred_batch 500"
 
     echo "▶ Running: $CMD"
     eval "$CMD"
