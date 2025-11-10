@@ -27,6 +27,7 @@ process run_blast {
 
     output:
     path "epitope-detail.tsv", emit: epitope_detail_blast
+    path "*.csv", emit: blast_csvs
 
     script:
     """

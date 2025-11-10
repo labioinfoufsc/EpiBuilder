@@ -8,6 +8,7 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -114,8 +115,6 @@ public class Blastp implements Callable<Integer> {
         if (exitCode == 0) {
             exitCode = new BlastpDocker(tmpDir, tmpEpitopeFile, tmpDb, tmpOut).call();
             List<String> lines = Files.readAllLines(tmpOut);
-
-            // Filtra as linhas baseado em identity e cover
             List<String> filteredLines = new ArrayList<>();
             filteredLines.add("qacc\tsacc\tpident\tqcovs\tqseq\tsseq");
 
@@ -130,17 +129,15 @@ public class Blastp implements Callable<Integer> {
                             filteredLines.add(line);
                         }
                     } catch (NumberFormatException e) {
-                        // Ignora linhas com formato inválido
                         System.err.println("Warning: Skipping line with invalid format: " + line);
                     }
                 }
             }
 
-            Path destination = Paths.get(tmpOut.getFileName().toString().replace("raw.csv",".csv"));
+            Path destination = Paths.get(tmpOut.getFileName().toString().replace(".raw.csv",".csv"));
             Files.write(destination, filteredLines, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 
             Blast blast = new Blast(proteome.getOrganism(), destination.toFile());
-
 
             System.out.printf("Filtered results: %d/%d lines passed filters (identity >= %.1f%%, cover >= %.1f%%)%n",
                     filteredLines.size() - 1, lines.size(), identity, cover);
