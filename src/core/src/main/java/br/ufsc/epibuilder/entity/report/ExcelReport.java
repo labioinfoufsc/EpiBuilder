@@ -7,6 +7,8 @@ package br.ufsc.epibuilder.entity.report;
 
 import java.io.FileOutputStream;
 import java.util.ArrayList;
+
+import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Font;
@@ -19,13 +21,6 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
  * @author renato
  */
 public class ExcelReport {
-
-    private static final int MAX_CELL_CHARS = 32000;
-
-    private static String truncate(String value) {
-        return value.length() > MAX_CELL_CHARS ? value.substring(0, MAX_CELL_CHARS) : value;
-    }
-
     public static void generateExcelXlsx(ArrayList<ExcelTabReport> tabs, String fileName) throws Exception {
 
         XSSFWorkbook workbook = new XSSFWorkbook();
@@ -48,7 +43,7 @@ public class ExcelReport {
                 for (Object field : line) {
                     Cell cell = row.createCell(columnCount++);
                     if (field instanceof String) {
-                        cell.setCellValue(truncate((String) field));
+                        cell.setCellValue(StringUtils.truncate((String) field, 32767));
                     } else if (field instanceof Double) {
                         cell.setCellValue((Double) field);
                     }
@@ -59,17 +54,5 @@ public class ExcelReport {
         try ( FileOutputStream outputStream = new FileOutputStream(fileName)) {
             workbook.write(outputStream);
         }
-
     }
-
-    public static void main(String[] args) throws Exception {
-        ArrayList<ExcelTabReport> report = new ArrayList<>();
-
-        report.add(new ExcelTabReport("tab1", "A\t2\t3\n11\t22\t33"));
-        report.add(new ExcelTabReport("tab2", "B\t5\t6\n41\t51\t61"));
-        report.add(new ExcelTabReport("tab3", "C\t8\t9\n71\t81\t91"));
-        generateExcelXlsx(report, "teste.xlsx");
-
-    }
-
 }

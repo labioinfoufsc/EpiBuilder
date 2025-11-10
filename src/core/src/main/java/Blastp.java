@@ -111,9 +111,9 @@ public class Blastp implements Callable<Integer> {
         Path tmpDb = tmpDir.resolve(proteome.getFile().getName());
         Files.copy(proteome.getFile().toPath(), tmpDb, StandardCopyOption.REPLACE_EXISTING);
         Path tmpOut = tmpDir.resolve(proteome.getOrganism() + "_blast.raw.csv");
-        int exitCode = new MakeblastdbDocker(tmpDir, tmpDb).call();
+        int exitCode = new MakeblastdbDocker(tmpDb).call();
         if (exitCode == 0) {
-            exitCode = new BlastpDocker(tmpDir, tmpEpitopeFile, tmpDb, tmpOut).call();
+            exitCode = new BlastpDocker(tmpEpitopeFile, tmpDb, tmpOut).call();
             List<String> lines = Files.readAllLines(tmpOut);
             List<String> filteredLines = new ArrayList<>();
             filteredLines.add("qacc\tsacc\tpident\tqcovs\tqseq\tsseq");

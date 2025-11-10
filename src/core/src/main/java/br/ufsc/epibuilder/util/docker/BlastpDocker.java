@@ -5,9 +5,8 @@ import java.util.List;
 
 
 public class BlastpDocker extends AbstractDockerExecutor {
-    public BlastpDocker(Path tmpDir, Path query, Path db, Path output) {
+    public BlastpDocker(Path query, Path db, Path output) {
         super("staphb/blast:2.17.0",
-                tmpDir,
                 List.of("--rm"),
                 List.of("blastp",
                         "-query", query.toString(),
