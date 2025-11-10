@@ -20,31 +20,12 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
  */
 public class ExcelReport {
 
-    /* public static void generateExcel(ArrayList<ExcelTabReport> tabs, String fileName) throws Exception {
-        
-        HSSFWorkbook workbook = new HSSFWorkbook();
-        for (ExcelTabReport tab : tabs) {
-            HSSFSheet sheet = workbook.createSheet(tab.getName());
-            Object[][] data = tab.getMatrix();
-            int rowCount = 0;
-            for (Object[] line : data) {
-                Row row = sheet.createRow(rowCount++);
-                int columnCount = 0;
-                for (Object field : line) {
-                    Cell cell = row.createCell(columnCount++);
-                    if (field instanceof String) {
-                        cell.setCellValue((String) field);
-                    } else if (field instanceof Double) {
-                        cell.setCellValue((Double) field);
-                    } 
-                }
-            }
-        }
-        try ( FileOutputStream outputStream = new FileOutputStream(fileName)) {
-            workbook.write(outputStream);
-        }
+    private static final int MAX_CELL_CHARS = 32000;
 
-    }*/
+    private static String truncate(String value) {
+        return value.length() > MAX_CELL_CHARS ? value.substring(0, MAX_CELL_CHARS) : value;
+    }
+
     public static void generateExcelXlsx(ArrayList<ExcelTabReport> tabs, String fileName) throws Exception {
 
         XSSFWorkbook workbook = new XSSFWorkbook();
@@ -67,7 +48,7 @@ public class ExcelReport {
                 for (Object field : line) {
                     Cell cell = row.createCell(columnCount++);
                     if (field instanceof String) {
-                        cell.setCellValue((String) field);
+                        cell.setCellValue(truncate((String) field));
                     } else if (field instanceof Double) {
                         cell.setCellValue((Double) field);
                     }
