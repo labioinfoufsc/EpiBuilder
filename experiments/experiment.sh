@@ -167,7 +167,6 @@ process_group "INFLUENZA" INFLUENZA none
 process_group "EBOLA" EBOLA none
 process_group "BORRELIA" BORRELIA gram_neg
 process_group "STAPHYLOCOCCUS" STAPHYLOCOCCUS gram_pos
-process_group "PLASMODIUM" PLASMODIUM animal
 process_group "CANDIDA" CANDIDA fungi
 
 echo "✅ All groups processed!"
