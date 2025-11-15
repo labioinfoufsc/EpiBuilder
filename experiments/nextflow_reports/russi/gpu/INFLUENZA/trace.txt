@@ -1,0 +1,8 @@
+task_id	hash	native_id	name	status	exit	submit	duration	realtime	%cpu	peak_rss	peak_vmem	rchar	wchar
+2	a8/e0374b	128	validate_fasta (validate_fasta)	COMPLETED	0	2025-11-13 06:17:52.993	409ms	380ms	277.8%	36.8 MB	10 GB	9 MB	5.8 KB
+3	04/203ffe	403	run_localization (run_localization)	COMPLETED	0	2025-11-13 06:17:53.428	177ms	152ms	185.3%	37.9 MB	10 GB	5.3 MB	5.9 KB
+1	64/0f7d33	146	validate_proteomes_fasta (validate_proteomes_fasta)	COMPLETED	0	2025-11-13 06:17:53.005	1.1s	1.1s	243.2%	594.9 MB	11.9 GB	30.1 MB	1.1 KB
+4	3b/d49589	459	run_bepipred (bepipred)	COMPLETED	0	2025-11-13 06:17:53.454	41.3s	41.2s	2.8%	137.8 MB	13.7 GB	9.6 MB	246.7 KB
+5	73/c6779e	2444	run_epibuilder (epibuilder)	COMPLETED	0	2025-11-13 06:18:34.740	950ms	921ms	499.7%	35.7 MB	9.8 GB	15.4 MB	367.4 KB
+6	4d/105c55	2602	run_blast (blast)	COMPLETED	0	2025-11-13 06:18:35.707	13s	13s	5.4%	98.3 MB	12.9 GB	69.3 MB	63.5 MB
+7	53/9dcdb0	4078	export_excel (export_excel)	COMPLETED	0	2025-11-13 06:18:48.714	574ms	544ms	480.3%	37 MB	10 GB	8.2 MB	23.2 KB
