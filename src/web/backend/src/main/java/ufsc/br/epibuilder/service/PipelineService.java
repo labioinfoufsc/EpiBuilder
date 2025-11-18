@@ -410,10 +410,12 @@ public class PipelineService {
 
             if (task.getTaskStatus().getStatus() != Status.IMPORTED) {
                 task.getTaskStatus().setStatus(Status.COMPLETED);
+                LocalDateTime now = ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).toLocalDateTime();
+                task.setFinishedDate(now);
+            } else {
+                task.setFinishedDate(null);
             }
-            LocalDateTime now = ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).toLocalDateTime();
-            task.setFinishedDate(now);
-
+           
             epitopeTaskDataService.save(task);
 
             log.info("Successfully processed results for task {}", task.getId());

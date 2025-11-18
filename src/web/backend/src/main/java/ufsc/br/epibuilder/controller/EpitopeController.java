@@ -102,22 +102,30 @@ public class EpitopeController {
         Path taskDir = null;
 
         try {
+
             User user = userService.findUserEntityById(userId);
             String username = user.getUsername();
 
             Path baseDir = Paths.get("/tmp/epibuilder", username);
             Files.createDirectories(baseDir);
-            String dirName = originalFilename.substring(0, originalFilename.lastIndexOf(".zip"));
 
-            taskDir = baseDir.resolve(dirName);
+            String baseName = originalFilename.substring(0, originalFilename.lastIndexOf(".zip"));
+
+            String timestamp = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
+                    .format(LocalDateTime.now());
+
+            String unifiedRunName = baseName + "_" + timestamp;
+
+            taskDir = baseDir.resolve(unifiedRunName);
 
             try {
                 Files.createDirectory(taskDir);
             } catch (FileAlreadyExistsException e) {
-                return errorResponse("A task with this name ('" + dirName + "') already exists.", HttpStatus.CONFLICT);
+                return errorResponse("A task with this name ('" + unifiedRunName + "') already exists.",
+                        HttpStatus.CONFLICT);
             }
 
-            String rootToStrip = dirName.replace(File.separator, "/") + "/";
+            String rootToStrip = baseName.replace(File.separator, "/") + "/";
 
             unzipFile(zipFile.getInputStream(), taskDir, rootToStrip);
             log.info("Zip file successfully unzipped to {}", taskDir);
@@ -129,14 +137,11 @@ public class EpitopeController {
             }
             log.info("Found main FASTA file: {}", fastaFile);
 
-            String timestamp = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
-                    .format(LocalDateTime.now());
-
             EpitopeTaskData taskData = new EpitopeTaskData();
 
-            taskData.setRunName(dirName + "_" + timestamp);
+            taskData.setRunName(unifiedRunName);
             taskData.setUser(user);
-            taskData.setExecutionDate(LocalDateTime.now());
+            taskData.setExecutionDate(null);
 
             taskData.setCompleteBasename(taskDir.toString());
             taskData.setAbsolutePath(fastaFile.toString());

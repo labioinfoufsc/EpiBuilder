@@ -103,7 +103,7 @@ export class LastExecutionsComponent implements OnDestroy {
 
   calculateExecutionTime(date: any, date2: any): string {
     if (!date || !date2) {
-      return "N/A";
+      return "-";
     }
     const startDate = new Date(date);
     const endDate = new Date(date2);
