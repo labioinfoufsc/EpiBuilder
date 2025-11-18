@@ -1,7 +1,7 @@
 package ufsc.br.epibuilder.model;
 
 public enum Status {
-    RUNNING, COMPLETED, FAILED, STOPPED;
+    RUNNING, COMPLETED, FAILED, STOPPED, IMPORTED;
 
     public static Status fromString(String status) {
         for (Status s : Status.values()) {

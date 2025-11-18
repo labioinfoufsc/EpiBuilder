@@ -55,6 +55,10 @@ public class UserService {
         }
     }
 
+    public User findUserEntityById(Long id) {
+        return userRepository.findById(id).get();
+    }
+
     /**
      * Retrieves a user by their ID.
      *

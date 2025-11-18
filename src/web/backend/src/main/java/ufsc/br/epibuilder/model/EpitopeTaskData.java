@@ -119,7 +119,7 @@ public class EpitopeTaskData {
     /**
      * Type of analysis to perform (PREDICT, ANALYZE, or PREDICT_AND_ANALYZE)
      */
-    @Column(nullable = false)
+    @Column
     @Enumerated(EnumType.STRING)
     private ActionType actionType;
 
