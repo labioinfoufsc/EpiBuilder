@@ -1,6 +1,8 @@
 package ufsc.br.epibuilder.controller;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
@@ -15,6 +17,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 import org.springframework.core.io.UrlResource;
@@ -29,6 +32,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -38,6 +42,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.extern.slf4j.Slf4j;
+import ufsc.br.epibuilder.dto.UserDTO;
 import ufsc.br.epibuilder.model.*;
 import ufsc.br.epibuilder.service.*;
 import org.springframework.core.io.UrlResource;
@@ -53,11 +58,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Optional;
 import java.util.Comparator;
 import java.time.ZonedDateTime;
+import java.util.stream.Stream;
+import java.io.File;
 
 @RestController
 @Slf4j
 @RequestMapping("/epitopes")
 public class EpitopeController {
+
+    private final UserService userService;
 
     private final EpitopeTaskDataService epitopeTaskDataService;
 
@@ -66,10 +75,11 @@ public class EpitopeController {
     private final DatabaseService databaseService;
 
     public EpitopeController(EpitopeTaskDataService epitopeTaskDataService, PipelineService pipelineService,
-            DatabaseService databaseService) {
+            DatabaseService databaseService, UserService userService) {
         this.databaseService = databaseService;
         this.epitopeTaskDataService = epitopeTaskDataService;
         this.pipelineService = pipelineService;
+        this.userService = userService;
     }
 
     private Path saveFile(Path baseDir, MultipartFile file) throws IOException {
@@ -77,6 +87,153 @@ public class EpitopeController {
         file.transferTo(filePath.toFile());
         log.info("File saved: {}", filePath);
         return filePath;
+    }
+
+    @PostMapping("/tasks/import/{userId}")
+    public ResponseEntity<Map<String, Object>> importTask(
+            @PathVariable Long userId,
+            @RequestParam("file") MultipartFile zipFile) {
+
+        String originalFilename = zipFile.getOriginalFilename();
+        if (zipFile.isEmpty() || originalFilename == null || !originalFilename.toLowerCase().endsWith(".zip")) {
+            return errorResponse("Invalid file. Only .zip files are allowed.", HttpStatus.BAD_REQUEST);
+        }
+
+        Path taskDir = null;
+
+        try {
+            User user = userService.findUserEntityById(userId);
+            String username = user.getUsername();
+
+            Path baseDir = Paths.get("/tmp/epibuilder", username);
+            Files.createDirectories(baseDir);
+            String dirName = originalFilename.substring(0, originalFilename.lastIndexOf(".zip"));
+
+            taskDir = baseDir.resolve(dirName);
+
+            try {
+                Files.createDirectory(taskDir);
+            } catch (FileAlreadyExistsException e) {
+                return errorResponse("A task with this name ('" + dirName + "') already exists.", HttpStatus.CONFLICT);
+            }
+
+            String rootToStrip = dirName.replace(File.separator, "/") + "/";
+
+            unzipFile(zipFile.getInputStream(), taskDir, rootToStrip);
+            log.info("Zip file successfully unzipped to {}", taskDir);
+
+            Path fastaFile = findFastaFile(taskDir);
+            if (fastaFile == null) {
+                log.error("No FASTA file (.fasta, .fna, .fa) found in the task directory: {}", taskDir);
+                throw new IOException("Import failed: No FASTA file (.fasta, .fna, .fa) found in the zip archive.");
+            }
+            log.info("Found main FASTA file: {}", fastaFile);
+
+            String timestamp = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
+                    .format(LocalDateTime.now());
+
+            EpitopeTaskData taskData = new EpitopeTaskData();
+
+            taskData.setRunName(dirName + "_" + timestamp);
+            taskData.setUser(user);
+            taskData.setExecutionDate(LocalDateTime.now());
+
+            taskData.setCompleteBasename(taskDir.toString());
+            taskData.setAbsolutePath(fastaFile.toString());
+            taskData.setFile(fastaFile.toFile());
+
+            TaskStatus taskStatus = new TaskStatus();
+            taskStatus.setStatus(Status.IMPORTED);            
+            taskData.setTaskStatus(taskStatus);
+
+            EpitopeTaskData savedTaskData = epitopeTaskDataService.save(taskData);
+            log.info("Import task pre-saved with ID: {}", savedTaskData.getId());
+            taskStatus.setEpitopeTaskData(taskData);
+
+            pipelineService.processCompletedTask(savedTaskData);
+            log.info("processCompletedTask finished for imported task ID {}", savedTaskData.getId());
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Task imported successfully");
+            response.put("importedTaskId", savedTaskData.getId());
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Failed to import task {}: {}", originalFilename, e.getMessage(), e);
+
+            if (taskDir != null && Files.exists(taskDir)) {
+                try (var stream = Files.walk(taskDir)) {
+                    stream.sorted(Comparator.reverseOrder()).forEach(path -> {
+                        try {
+                            Files.delete(path);
+                        } catch (IOException ioex) {
+                            throw new UncheckedIOException(ioex);
+                        }
+                    });
+                    log.info("Cleanup successful for directory: {}", taskDir);
+                } catch (Exception cleanupEx) {
+                    log.error("Failed to cleanup directory {}: {}", taskDir, cleanupEx.getMessage());
+                }
+            }
+
+            return errorResponse("Error during import: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private Path findFastaFile(Path directory) throws IOException {
+        try (Stream<Path> stream = Files.walk(directory)) {
+            return stream
+                    .filter(Files::isRegularFile)
+                    .filter(p -> {
+                        String name = p.getFileName().toString().toLowerCase();
+
+                        boolean isFasta = name.endsWith(".fasta") || name.endsWith(".fna") || name.endsWith(".fa");
+                        boolean isInvalidFile = name.equals("proteins_invalid.fasta");
+
+                        return isFasta && !isInvalidFile;
+                    })
+                    .findFirst()
+                    .orElse(null);
+        }
+    }
+
+    private void unzipFile(InputStream zipInputStream, Path destDir, String rootToStrip) throws IOException {
+        try (ZipInputStream zis = new ZipInputStream(zipInputStream)) {
+            ZipEntry zipEntry = zis.getNextEntry();
+            while (zipEntry != null) {
+
+                String entryName = zipEntry.getName().replace(File.separator, "/");
+                String finalEntryName = entryName;
+
+                if (entryName.startsWith(rootToStrip)) {
+                    finalEntryName = entryName.substring(rootToStrip.length());
+                }
+
+                if (finalEntryName.isEmpty()) {
+                    zis.closeEntry();
+                    zipEntry = zis.getNextEntry();
+                    continue;
+                }
+
+                Path newFilePath = destDir.resolve(finalEntryName);
+
+                if (!newFilePath.normalize().startsWith(destDir.normalize())) {
+                    throw new IOException("Bad zip entry: " + zipEntry.getName());
+                }
+
+                if (zipEntry.isDirectory()) {
+                    Files.createDirectories(newFilePath);
+                } else {
+                    if (newFilePath.getParent() != null) {
+                        Files.createDirectories(newFilePath.getParent());
+                    }
+                    Files.copy(zis, newFilePath, StandardCopyOption.REPLACE_EXISTING);
+                }
+
+                zis.closeEntry();
+                zipEntry = zis.getNextEntry();
+            }
+        }
     }
 
     @PostMapping(value = "/tasks/new", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -473,7 +630,7 @@ public class EpitopeController {
     @GetMapping("/tasks/user/{userId}/status")
     public ResponseEntity<List<EpitopeTaskData>> findTasksByTaskStatusStatus(@PathVariable Long userId) {
         List<EpitopeTaskData> tasks = epitopeTaskDataService.findTasksByUserIdAndStatus(userId, Status.RUNNING);
-        return ResponseEntity.ok(tasks); // sempre retorna 200, mesmo que vazio
+        return ResponseEntity.ok(tasks);
     }
 
 }

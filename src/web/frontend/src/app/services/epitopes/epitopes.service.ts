@@ -165,6 +165,27 @@ export class EpitopesService {
   submitForm(data: FormData): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/tasks/new`, data);
   }
+
+  /**
+   * Imports a task from a .zip file for a specific user.
+   * The backend (Spring Boot) must expect a POST request with
+   * multipart/form-data ("file") and a path variable for the userId.
+   *
+   * @param userId The ID of the user importing the task
+   * @param file The .zip file to import
+   */
+  importTask(userId: number, file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+
+    return this.http.post<any>(
+      `${this.apiUrl}/tasks/import/${userId}`,
+      formData,
+      {
+        withCredentials: true
+      }
+    );
+  }
 }
 
 

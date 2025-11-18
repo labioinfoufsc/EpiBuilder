@@ -3,6 +3,7 @@ import { HttpResponse } from "@angular/common/http";
 import { Component, ElementRef, OnDestroy, ViewChild } from "@angular/core";
 import { Modal } from "bootstrap";
 import { saveAs } from 'file-saver';
+import { finalize } from "rxjs";
 import { APIResponse } from "../../models/APIResponse";
 import { EpitopeTaskData } from "../../models/EpitopeTaskData";
 import { SuccessMessages } from "../../models/SuccessMessages";
@@ -20,6 +21,7 @@ export class LastExecutionsComponent implements OnDestroy {
   executedTasks: EpitopeTaskData[] = [];
   selectedTask: EpitopeTaskData | null = null;
   taskToDelete: EpitopeTaskData | null = null;
+  isImporting: boolean = false;
   @ViewChild("deleteModal") deleteModal!: ElementRef;
   private deleteModalInstance!: Modal;
   alertMessage: string | null = null;
@@ -42,8 +44,8 @@ export class LastExecutionsComponent implements OnDestroy {
   ) {
     const userId = loginService.getUser()?.id;
     if (userId !== undefined) {
-      this.loadTasks(userId); // Carrega as tarefas imediatamente
-      this.setupAutoRefresh(userId); // Configura o refresh automático
+      this.loadTasks(userId);
+      this.setupAutoRefresh(userId);
     }
   }
 
@@ -58,14 +60,12 @@ export class LastExecutionsComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
-    // Limpa o intervalo quando o componente é destruído
     if (this.refreshInterval) {
       clearInterval(this.refreshInterval);
     }
   }
 
   private setupAutoRefresh(userId: number): void {
-    // Configura o intervalo para atualizar a cada 1 minuto (60000 ms)
     this.refreshInterval = setInterval(() => {
       this.loadTasks(userId);
     }, 60000);
@@ -74,7 +74,9 @@ export class LastExecutionsComponent implements OnDestroy {
   private loadTasks(userId: number): void {
     this.epitopeService.getExecutedTasksByUserId(userId).subscribe((tasks) => {
       const filteredTasks = tasks.filter(task =>
-        task.taskStatus?.status === 'COMPLETED' || task.taskStatus?.status === 'FAILED'
+        task.taskStatus?.status === 'COMPLETED' ||
+        task.taskStatus?.status === 'FAILED' ||
+        task.taskStatus?.status === 'IMPORTED'
       );
       this.executedTasks = filteredTasks;
     });
@@ -111,6 +113,59 @@ export class LastExecutionsComponent implements OnDestroy {
     const seconds = Math.floor((diff % (1000 * 60)) / 1000);
     return `${hours}h ${minutes}m ${seconds}s`;
   }
+
+  importResults(): void {
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.zip, application/zip';
+
+    fileInput.onchange = (event: any) => {
+      this.handleFileSelect(event);
+    };
+
+    fileInput.click();
+  }
+
+  private handleFileSelect(event: any): void {
+    const files: FileList = event.target.files;
+
+    if (!files || files.length === 0) {
+      return;
+    }
+
+    if (files.length > 1) {
+      this.showAlert("Please select only one file at a time.", "danger");
+      return;
+    }
+
+    const file: File = files[0];
+
+    if (!file.name.toLowerCase().endsWith('.zip')) {
+      this.showAlert("Invalid file type. Please select a .zip file.", "danger");
+      return;
+    }
+
+    const userId = this.loginService.getUser()?.id;
+    if (userId === undefined) {
+      this.showAlert("User not logged in. Cannot import.", "danger");
+      return;
+    }
+
+    this.isImporting = true;
+
+    this.epitopeService.importTask(userId, file).pipe(
+      finalize(() => this.isImporting = false)
+    ).subscribe({
+      next: (response: any) => {
+        this.showAlert("File imported successfully!", "success");
+        
+        this.loadTasks(userId);
+      },
+      error: (err: any) => {
+        this.showAlert(`Error importing file: ${err.message || 'Unknown error'}`, "danger");
+      }
+    });
+  }  
 
   deleteTask(): void {
     const task: EpitopeTaskData | null = this.taskToDelete;

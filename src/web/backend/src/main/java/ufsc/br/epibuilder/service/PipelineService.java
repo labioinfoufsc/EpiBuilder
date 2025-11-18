@@ -94,7 +94,7 @@ public class PipelineService {
             command.add("-c");
             String epibuilderVolume = System.getenv("EPIBUILDER_VOLUME");
             if (epibuilderVolume == null || epibuilderVolume.isEmpty()) {
-                epibuilderVolume = "/tmp/epibuilder"; // valor padrão
+                epibuilderVolume = "/tmp/epibuilder";
             }
 
             StringBuilder fullCommand = new StringBuilder();
@@ -121,7 +121,7 @@ public class PipelineService {
                 switch (classification.getCellType()) {
                     case EUKARYOTE:
                         if (classification.getOrganism() != null) {
-                            locParam = classification.getOrganism().toString().toLowerCase(); // animal, plant, fungi
+                            locParam = classification.getOrganism().toString().toLowerCase();
                         }
                         break;
 
@@ -152,7 +152,6 @@ public class PipelineService {
                 fullCommand.append("--loc ").append(locParam).append(" ");
             }
 
-            // Add optional parameters if not null
             if (taskData.getBepipredThreshold() != null) {
                 fullCommand.append("--threshold ").append(taskData.getBepipredThreshold()).append(" ");
             }
@@ -163,7 +162,6 @@ public class PipelineService {
                 fullCommand.append("--max-length ").append(taskData.getMaxEpitopeLength()).append(" ");
             }
 
-            // Add BLAST parameters if necessary
             if (taskData.isDoBlast()) {
                 List<String> proteomes = taskData.getProteomes().stream()
                         .map(Database::toString)
@@ -186,7 +184,6 @@ public class PipelineService {
 
             ProcessBuilder processBuilder = new ProcessBuilder(command);
 
-            // Environment variables
             Map<String, String> env = processBuilder.environment();
             String blastPath = "/usr/local/bin";
             String currentPath = env.getOrDefault("PATH", "");
@@ -284,7 +281,7 @@ public class PipelineService {
         }
     }
 
-    private void processCompletedTask(EpitopeTaskData task) {
+    public void processCompletedTask(EpitopeTaskData task) {
         Path completePath = Paths.get(task.getCompleteBasename());
 
         if (!Files.exists(completePath)) {
@@ -369,55 +366,54 @@ public class PipelineService {
 
             }
 
-            if (task.isDoBlast()) {
-                log.info("Processing BLAST files in {}", completePath);
-                try {
-                    List<Path> blastFiles = Files.list(completePath)
-                            .filter(path -> path.getFileName().toString().endsWith("blast.csv"))
-                            .collect(Collectors.toList());
-
-                    log.info("Found {} BLAST files", blastFiles.size());
-
-                    if (!blastFiles.isEmpty()) {
-                        for (Path searchPath : blastFiles) {
-                            log.info("Processing BLAST file: {}", searchPath.getFileName());
-
-                            List<Blast> convertedBlasts = parseBlastCsv(searchPath.toString());
-                            log.info("BLAST converted: {}", convertedBlasts.size());
-
-                            List<Epitope> updatedEpitopes = associateBlasts(completeEpitopes, convertedBlasts);
-
-                            log.info("BLAST completed for file {}", searchPath.getFileName());
-                        }
-                    } else {
-                        log.warn("No BLAST files found in directory: {}", completePath);
-                    }
-                } catch (IOException e) {
-                    log.error("Error while processing BLAST files: {}", e.getMessage(), e);
-                    throw new RuntimeException("Failed to process BLAST files", e);
-                }
-            }
-
+            log.info("Checking for BLAST files in {}", completePath);
             try {
-                log.info("Saving {} epitopes to database with all associations...", completeEpitopes.size());
-                completeEpitopes = epitopeService.saveAll(completeEpitopes);
-                log.info("Epitopes successfully saved to database.");
-            } catch (Exception e) {
-                log.error("Failed to save epitopes to database: {}", e.getMessage(), e);
-                throw new RuntimeException("Database save operation failed", e);
+                List<Path> blastFiles = Files.list(completePath)
+                        .filter(path -> path.getFileName().toString().endsWith("blast.csv"))
+                        .collect(Collectors.toList());
+
+                log.info("Found {} BLAST files", blastFiles.size());
+
+                if (!blastFiles.isEmpty()) {
+                    for (Path searchPath : blastFiles) {
+                        log.info("Processing BLAST file: {}", searchPath.getFileName());
+
+                        List<Blast> convertedBlasts = parseBlastCsv(searchPath.toString());
+                        log.info("BLAST converted: {}", convertedBlasts.size());
+
+                        associateBlasts(completeEpitopes, convertedBlasts);
+
+                        log.info("BLAST completed for file {}", searchPath.getFileName());
+                    }
+                } else {
+                    log.warn("No BLAST files found to process in directory: {}", completePath);
+                }
+            } catch (IOException e) {
+                log.error("Error while processing BLAST files: {}", e.getMessage(), e);
+                throw new RuntimeException("Failed to process BLAST files", e);
             }
 
-            // Save the task with the epitopes
-            task.setEpitopes(completeEpitopes);
+            log.info("Updating managed epitope list on task {}...", task.getId());
 
-            // Count proteome size
+            List<Epitope> managedEpitopes = task.getEpitopes();
+            if (managedEpitopes == null) {
+                managedEpitopes = new ArrayList<>();
+                task.setEpitopes(managedEpitopes); 
+            }
+
+            managedEpitopes.clear(); 
+            managedEpitopes.addAll(completeEpitopes);
+            log.info("Managed epitope list updated with {} epitopes.", completeEpitopes.size());
+
             int proteomeSize = countProteins(proteinSummary.toString());
             task.setProteomeSize(proteomeSize);
 
-            // Update task status
-            task.getTaskStatus().setStatus(Status.COMPLETED);
+            if (task.getTaskStatus().getStatus() != Status.IMPORTED) {
+                task.getTaskStatus().setStatus(Status.COMPLETED);
+            }
             LocalDateTime now = ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).toLocalDateTime();
             task.setFinishedDate(now);
+
             epitopeTaskDataService.save(task);
 
             log.info("Successfully processed results for task {}", task.getId());
@@ -649,10 +645,8 @@ public class PipelineService {
         log.info("Method name: {}", methodName);
 
         try {
-            // Clean up method name from input
             String cleanedMethodName = methodName.trim();
 
-            // Handle special cases
             if (cleanedMethodName.equals("BepiPred-3.0")) {
                 topology.setDescription(parts[4]);
                 cleanedMethodName = "BepiPred";
@@ -660,7 +654,6 @@ public class PipelineService {
 
             log.info("Method name: {}", cleanedMethodName);
 
-            // Use the enum's fromDescription method
             Method method = Method.fromDescription(cleanedMethodName);
             log.info(method.getDescription());
             topology.setMethod(method);
@@ -671,7 +664,6 @@ public class PipelineService {
         }
 
         try {
-            // Add array bounds checking
             if (parts == null || parts.length < 4) {
                 log.warn("Insufficient data for topology. Parts length: {}", parts == null ? "null" : parts.length);
                 return topology;
