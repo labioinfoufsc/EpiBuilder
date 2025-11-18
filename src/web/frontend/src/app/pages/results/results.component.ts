@@ -14,6 +14,7 @@ import { LoginService } from "../../services/login/login.service";
 })
 export class ResultsComponent implements OnInit {
   epitopes: Epitope[] = [];
+  epitopesOriginal: Epitope[] = [];
   expandedEpitopeIndex: number | null = null;
   epitopeTaskData: EpitopeTaskData[] = [];
   filterText: string = "";
@@ -29,7 +30,6 @@ export class ResultsComponent implements OnInit {
   hasDescription: boolean = true;
   hasLocalization: boolean = true;
   generateColumns() {
-    // Colunas fixas iniciais
     this.columns = [
     { key: 'n', label: 'N' },
     { key: 'protein.proteinId', label: 'Protein ID' },
@@ -48,15 +48,14 @@ export class ResultsComponent implements OnInit {
     { key: 'kolaskar', label: 'Kolaskar' }
     ];
 
-    // Remove Description se todos forem vazio ou '-'
     this.hasDescription = this.epitopes.some(
       e => e.protein?.description && e.protein.description !== '-'
     );
     if (!this.hasDescription) {
       this.columns = this.columns.filter(c => c.key !== 'protein.description');
     }
+    
 
-    // Remove Localization se todos forem vazio ou '-'
     this.hasLocalization = this.epitopes.some(
       e => e.protein?.localization && e.protein.localization !== '-'
     );
@@ -86,6 +85,10 @@ export class ResultsComponent implements OnInit {
   ) {
     this.getData();
   }
+
+  getNestedValue = (obj: any, path: string): any => {
+    return path.split('.').reduce((acc, part) => acc?.[part], obj);
+  };
 
   getBlastCount(epitope: Epitope, dbName: string): number {
   return (epitope as any)[`blastCount_${dbName}`] || 0;
@@ -123,38 +126,31 @@ export class ResultsComponent implements OnInit {
     this.selectedTask = {};
   }
 
-  applyFilters() {
-    const search = this.filterText.toLowerCase().trim();
+  applyColumnFilters() {
+    let filtered = this.epitopesOriginal;
 
-    if (
-      !search &&
-      !Array.isArray(this.selectedTask) &&
-      this.selectedTask?.epitopes
-    ) {
-      this.epitopes = this.selectedTask.epitopes;
-      return;
-    }
-
-    if (!Array.isArray(this.selectedTask) && this.selectedTask?.epitopes) {
-      this.epitopes = this.selectedTask.epitopes.filter((epitope) => {
-        const matchInEpitope = Object.entries(epitope).some(([key, value]) => {
-          if (typeof value === 'string' || typeof value === 'number') {
-            return value.toString().toLowerCase().includes(search);
-          }
-          return false;
+    for (const col of this.columns) {
+      const filterText = this.filters[col.key]?.trim().toLowerCase();
+      if (filterText) {
+        filtered = filtered.filter(epitope => {
+          const cellValue = this.getNestedValue(epitope, col.key);
+          return String(cellValue ?? '').toLowerCase().includes(filterText);
         });
-
-        const matchInProtein = epitope.protein &&
-          Object.entries(epitope.protein).some(([key, value]) => {
-            if (typeof value === 'string') {
-              return value.toLowerCase().includes(search);
-            }
-            return false;
-          });
-
-        return matchInEpitope || matchInProtein;
-      });
+      }
     }
+
+    for (const dbName of this.dynamicDbs) {
+      const filterText = this.filters[dbName]?.trim().toLowerCase();
+      if (filterText) {
+        filtered = filtered.filter(epitope => {
+          const cellValue = this.getBlastCount(epitope, dbName);
+          return String(cellValue ?? '').toLowerCase().includes(filterText);
+        });
+      }
+    }
+
+    this.epitopes = filtered;
+    this.sortData();
   }
 
   sort(columnKey: string) {
@@ -164,14 +160,15 @@ export class ResultsComponent implements OnInit {
       this.sortColumn = columnKey;
       this.sortDirection = "asc";
     }
+    this.sortData();
+  }
 
-    const getNestedValue = (obj: any, path: string): any => {
-      return path.split('.').reduce((acc, part) => acc?.[part], obj);
-    };
+  sortData() {
+    if (!this.sortColumn) return;
 
     this.epitopes.sort((a, b) => {
-      const valueA = getNestedValue(a, columnKey);
-      const valueB = getNestedValue(b, columnKey);
+      const valueA = this.getNestedValue(a, this.sortColumn);
+      const valueB = this.getNestedValue(b, this.sortColumn);
 
       const aVal = isNaN(valueA) || valueA === null ? valueA : +valueA;
       const bVal = isNaN(valueB) || valueB === null ? valueB : +valueB;
@@ -194,14 +191,23 @@ export class ResultsComponent implements OnInit {
 
       if (!task?.epitopes || task.epitopes.length === 0) {
         this.epitopes = [];
+        this.epitopesOriginal = [];
         this.selectedEpitope = null;
         this.selectedTask = {};
         this.selectEpitope(null);
       } else {
-        this.epitopes = task.epitopes;
+        this.epitopes = [...task.epitopes];
+        this.epitopesOriginal = [...task.epitopes];
       }
       this.generateColumns();
+      this.initializeFilters();
     });
+  }
+
+  initializeFilters(): void {
+    this.filters = {};
+    this.columns.forEach(col => this.filters[col.key] = '');
+    this.dynamicDbs.forEach(dbName => this.filters[dbName] = '');
   }
 
   toggleEpitope(index: number) {
