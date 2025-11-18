@@ -13,7 +13,6 @@ params.cover          = params.cover          ?: 90
 params.proteomes      = params.proteomes      ?: null
 params.bepipred_batch = params.bepipred_batch ?: 100
 params.bepipred_gpu   = params.bepipred_gpu ?: false
-params.bepipred_gpu_options = params.bepipred_gpu_options ?: null
 
 epibuilder_jar = params.jar ? file(params.jar) : file("${projectDir}/epibuilder-core.jar")
 
@@ -155,7 +154,6 @@ process run_bepipred {
     script:
     // Define flags corretamente
     def gpuFlag = params.bepipred_gpu ? "--use-gpu" : ""
-    def gpuOptions = (params.bepipred_gpu_options) ? "--gpu-options '${params.bepipred_gpu_options}'" : ""
 
     """
     #!/bin/bash
@@ -163,14 +161,12 @@ process run_bepipred {
     echo "[INFO] Executando Bepipred3..." >&2
     echo "[INFO] Batch size: ${params.bepipred_batch}" >&2
     echo "[INFO] GPU enabled: ${params.bepipred_gpu}" >&2
-    echo "[INFO] GPU options: ${params.bepipred_gpu_options}" >&2
 
     java -cp ${epibuilder_jar} Bepipred3 \
         -i ${input_file} \
         -o raw_output.csv \
         -s ${params.bepipred_batch} \
         ${gpuFlag} \
-        ${gpuOptions} \
         2>&1 | tee /dev/stderr
     """
 }

@@ -36,13 +36,6 @@ public class Bepipred3 implements Callable<Integer> {
     )
     private boolean useGpu;
 
-    @Option(
-            names = {"--gpu-options"},
-            defaultValue = "",
-            description = "Additional GPU options (default: empty)"
-    )
-    private String optionsGpu="";
-
     public static void main(String[] args) {
         int exitCode = new CommandLine(new Bepipred3()).execute(args);
         System.exit(exitCode);
@@ -72,43 +65,27 @@ public class Bepipred3 implements Callable<Integer> {
 
             // === 4. Testa GPU ===
             System.out.println("Checking for GPU support...");
-           // boolean gpuAvailable = checkGpuSupport();
             if(useGpu) {
-                useGpu = new GPUChecker(optionsGpu).hasGpu();
+                useGpu = new GPUChecker().hasGpu();
                 if (useGpu)
                     System.out.println("✅ GPU detected, running with GPU support...");
                 else
                     System.out.println("⚠️ No GPU available or error occurred, running on CPU...");
             }
 
-
-            //String gpuOpts = gpuAvailable ? "--runtime=nvidia --gpus all" : "";
-
-
-
             // === 5. Define volume ===
             HashMap<String, ProteinSequence> mapProtein = FastaReaderHelper.readFastaProteinSequence(tmpFile.toFile());
             Collection<ProteinSequence> proteinsFasta = mapProtein.values();
             List<ProteinSequence> list = new ArrayList<>(proteinsFasta);
 
-            // Tenta ler do ambiente
-            String envValue = System.getenv("BEPIPRED_BATCH");
-            Integer envBatch = null;
-            if (envValue != null && !envValue.isBlank()) {
-                try {
-                    envBatch = Integer.parseInt(envValue);
-                } catch (NumberFormatException e) {
-                    System.err.println("Warning: invalid BEPIPRED_BATCH value, using default " + 100);
-                }
-            }
-            int batchSize = (size != null) ? size : (envBatch != null ? envBatch : 100);
+            Integer batchSize = size != null ?  size : Integer.valueOf(100);
 
             StringBuilder bepipredOut = new StringBuilder();
             bepipredOut.append("Accession,Residue,BepiPred-3.0 score,BepiPred-3.0 linear epitope score\n");
             for (int i = 0; i < list.size(); i += batchSize) {
                 int end = Math.min(i + batchSize, list.size());
                 List<ProteinSequence> batch = list.subList(i, end);
-                System.out.printf("Processing batch %d to %d (size=%d)%n", i, end - 1, batch.size());
+                System.out.printf("Processing batch %s to %s (size=%s) \n", i, (end - 1), batch.size());
                 StringBuilder sb = new StringBuilder();
                 for (ProteinSequence protein : batch) {
                     sb.append(">"+protein.getAccession()).append("\n");
@@ -121,7 +98,7 @@ public class Bepipred3 implements Callable<Integer> {
                 Files.writeString(inputTmp, sb);
                 System.out.println("[INFO] Running container...");
 
-                int exitCode = new BepiPred3Docker(inputTmp,useGpu, optionsGpu).call();
+                int exitCode = new BepiPred3Docker(inputTmp,useGpu).call();
                 if(exitCode==0) {
                     Path path = tmpDir.resolve("raw_output.csv");
                     String resp = Files.lines(path)
@@ -140,7 +117,7 @@ public class Bepipred3 implements Callable<Integer> {
 
         } catch (Exception e) {
             e.printStackTrace();
-            return (1);
+            return 1;
         }
         return 0;
     }

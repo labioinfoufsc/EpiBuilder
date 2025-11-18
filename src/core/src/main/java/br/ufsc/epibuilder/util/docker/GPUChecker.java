@@ -6,10 +6,10 @@ import java.util.List;
 
 public class GPUChecker extends AbstractDockerExecutor {
     private Integer exitCode;
-    public GPUChecker(String gpuOptions) {
+    public GPUChecker() {
         super("bioinfoufsc/bepipred3",
                 List.of("--rm",
-                        "--gpus all", gpuOptions),
+                        "--gpus all"),
                 List.of("python3","-u","bepipred3_custom.py","-v"),
                 false);
     }
@@ -20,9 +20,5 @@ public class GPUChecker extends AbstractDockerExecutor {
         }
         return false;
     }
-
-    public static void main(String[] args) throws Exception {
-        System.out.println("Tem GPU? "+new GPUChecker("").hasGpu());
-        System.out.println("Tem GPU? "+new GPUChecker("--runtime=nvidia").hasGpu());
-    }
+    
 }
