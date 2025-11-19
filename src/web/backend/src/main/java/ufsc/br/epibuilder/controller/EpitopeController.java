@@ -130,10 +130,10 @@ public class EpitopeController {
             }
 
             // Load FastaValidation class dynamically
-            Class<?> validationClass = Class.forName("FastaValidation");
+            Class<?> validationClass = Class.forName("br.ufsc.epibuilder.FastaValidation");
 
             // Obtain static method 'validateForWeb'
-            java.lang.reflect.Method method = validationClass.getMethod("validateForWeb", InputStream.class);
+            Method method = validationClass.getMethod("validateForWeb", InputStream.class);
 
             // Invoke static method with the input stream
             boolean isValid = (boolean) method.invoke(null, streamToValidate);
