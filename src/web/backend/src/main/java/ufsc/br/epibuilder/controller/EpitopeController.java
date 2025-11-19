@@ -2,6 +2,7 @@ package ufsc.br.epibuilder.controller;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
@@ -59,7 +60,10 @@ import java.util.Optional;
 import java.util.Comparator;
 import java.time.ZonedDateTime;
 import java.util.stream.Stream;
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.InputStream;
+import java.lang.reflect.Method;
 
 @RestController
 @Slf4j
@@ -87,6 +91,67 @@ public class EpitopeController {
         file.transferTo(filePath.toFile());
         log.info("File saved: {}", filePath);
         return filePath;
+    }
+
+    /**
+     * REST endpoint for validating protein FASTA sequences.
+     * <p>
+     * Accepts either a FASTA file or a raw sequence string as multipart input.
+     * Uses reflection to invoke
+     * {@code FastaValidation.validateForWeb(InputStream)}.
+     * <p>
+     * Business rule:
+     * <ul>
+     * <li>If no input is provided, returns HTTP 400 with {@code valid=false}.</li>
+     * <li>If at least one valid protein is found, returns {@code valid=true}.</li>
+     * <li>If no valid proteins are found, returns {@code valid=false} with an error
+     * message.</li>
+     * </ul>
+     *
+     * @param file     optional FASTA file containing protein sequences
+     * @param sequence optional raw protein sequence string
+     * @return ResponseEntity containing validation result as JSON
+     */
+    @PostMapping(value = "/validate/fasta", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, Object>> validateFasta(
+            @RequestPart(value = "file", required = false) MultipartFile file,
+            @RequestPart(value = "sequence", required = false) String sequence) {
+
+        try {
+            InputStream streamToValidate = null;
+
+            if (file != null && !file.isEmpty()) {
+                streamToValidate = file.getInputStream();
+            } else if (sequence != null && !sequence.trim().isEmpty()) {
+                streamToValidate = new ByteArrayInputStream(sequence.getBytes(StandardCharsets.UTF_8));
+            } else {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("valid", false, "message", "No FASTA file or sequence provided."));
+            }
+
+            // Load FastaValidation class dynamically
+            Class<?> validationClass = Class.forName("FastaValidation");
+
+            // Obtain static method 'validateForWeb'
+            java.lang.reflect.Method method = validationClass.getMethod("validateForWeb", InputStream.class);
+
+            // Invoke static method with the input stream
+            boolean isValid = (boolean) method.invoke(null, streamToValidate);
+
+            if (isValid) {
+                return ResponseEntity.ok(Map.of("valid", true));
+            } else {
+                return ResponseEntity.ok(Map.of(
+                        "valid", false,
+                        "message", "No valid protein sequences found in the provided file or input."));
+            }
+
+        } catch (Exception e) {
+            log.error("Validation error", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("valid", false, "message",
+                            "Internal server error during validation: " + e.getMessage()));
+        }
     }
 
     @PostMapping("/tasks/import/{userId}")
