@@ -24,11 +24,16 @@
                 <td>{{ process.executionDate | date : "yyyy-MM-dd 'at' HH'h'mm'min'ss'sec'" }}</td>
                 <td>{{ process.elapsedTime }}</td>
                 <td>
-                  <span *ngIf="process.taskStatus?.status === 'RUNNING'"
-                    class="badge bg-warning d-inline-flex align-items-center">
+                  <span *ngIf="process.taskStatus?.status === 'RUNNING'" class="badge bg-warning d-inline-flex align-items-center">
                     <span class="spinner-border spinner-border-sm text-light" role="status" aria-hidden="true"></span>
                     &nbsp; Running
                   </span>
+                
+                  <span *ngIf="process.taskStatus?.status === 'STOPPING'" class="badge bg-secondary d-inline-flex align-items-center">
+                    <span class="spinner-border spinner-border-sm text-light" role="status" aria-hidden="true"></span>
+                    &nbsp; Stopping
+                  </span>
+                
                   <span class="badge bg-danger" *ngIf="process.taskStatus?.status === 'FAILED'">
                     Failed
                   </span>
@@ -36,6 +41,7 @@
                     Finished
                   </span>
                 </td>
+
                 <td>
                   <!-- Action icons: View log and Stop process -->
 

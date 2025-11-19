@@ -1,32 +1,39 @@
 package ufsc.br.epibuilder.controller;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
-import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
+import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
-import org.springframework.scheduling.config.Task;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -43,49 +50,49 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.extern.slf4j.Slf4j;
-import ufsc.br.epibuilder.dto.UserDTO;
-import ufsc.br.epibuilder.model.*;
-import ufsc.br.epibuilder.service.*;
-import org.springframework.core.io.UrlResource;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
+import ufsc.br.epibuilder.model.Database;
+import ufsc.br.epibuilder.model.EpitopeTaskData;
+import ufsc.br.epibuilder.model.Status;
+import ufsc.br.epibuilder.model.TaskStatus;
+import ufsc.br.epibuilder.model.User;
+import ufsc.br.epibuilder.service.DatabaseService;
+import ufsc.br.epibuilder.service.EpitopeTaskDataService;
+import ufsc.br.epibuilder.service.PipelineService;
+import ufsc.br.epibuilder.service.UserService;
 
-import org.springframework.http.MediaType;
-import java.io.UncheckedIOException;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
-import java.io.IOException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.Optional;
-import java.util.Comparator;
-import java.time.ZonedDateTime;
-import java.util.stream.Stream;
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.InputStream;
-import java.lang.reflect.Method;
-
+/**
+ * REST controller for managing epitope tasks.
+ * Provides endpoints for validation, task creation, import, monitoring,
+ * stopping, downloading, and deletion of epitope tasks.
+ */
 @RestController
 @Slf4j
 @RequestMapping("/epitopes")
 public class EpitopeController {
 
     private final UserService userService;
-
     private final EpitopeTaskDataService epitopeTaskDataService;
-
     private final PipelineService pipelineService;
-
     private final DatabaseService databaseService;
 
-    public EpitopeController(EpitopeTaskDataService epitopeTaskDataService, PipelineService pipelineService,
-            DatabaseService databaseService, UserService userService) {
+    public EpitopeController(EpitopeTaskDataService epitopeTaskDataService,
+            PipelineService pipelineService,
+            DatabaseService databaseService,
+            UserService userService) {
         this.databaseService = databaseService;
         this.epitopeTaskDataService = epitopeTaskDataService;
         this.pipelineService = pipelineService;
         this.userService = userService;
     }
 
+    /**
+     * Saves an uploaded multipart file under the specified base directory.
+     *
+     * @param baseDir base directory to save the file
+     * @param file    multipart file to save
+     * @return saved file path
+     * @throws IOException if saving fails
+     */
     private Path saveFile(Path baseDir, MultipartFile file) throws IOException {
         Path filePath = baseDir.resolve(file.getOriginalFilename());
         file.transferTo(filePath.toFile());
@@ -94,19 +101,10 @@ public class EpitopeController {
     }
 
     /**
-     * REST endpoint for validating protein FASTA sequences.
-     * <p>
+     * Validates protein FASTA sequences.
      * Accepts either a FASTA file or a raw sequence string as multipart input.
      * Uses reflection to invoke
-     * {@code FastaValidation.validateForWeb(InputStream)}.
-     * <p>
-     * Business rule:
-     * <ul>
-     * <li>If no input is provided, returns HTTP 400 with {@code valid=false}.</li>
-     * <li>If at least one valid protein is found, returns {@code valid=true}.</li>
-     * <li>If no valid proteins are found, returns {@code valid=false} with an error
-     * message.</li>
-     * </ul>
+     * br.ufsc.epibuilder.FastaValidation.validateForWeb(InputStream).
      *
      * @param file     optional FASTA file containing protein sequences
      * @param sequence optional raw protein sequence string
@@ -129,13 +127,8 @@ public class EpitopeController {
                         .body(Map.of("valid", false, "message", "No FASTA file or sequence provided."));
             }
 
-            // Load FastaValidation class dynamically
             Class<?> validationClass = Class.forName("br.ufsc.epibuilder.FastaValidation");
-
-            // Obtain static method 'validateForWeb'
-            Method method = validationClass.getMethod("validateForWeb", InputStream.class);
-
-            // Invoke static method with the input stream
+            java.lang.reflect.Method method = validationClass.getMethod("validateForWeb", InputStream.class);
             boolean isValid = (boolean) method.invoke(null, streamToValidate);
 
             if (isValid) {
@@ -154,6 +147,13 @@ public class EpitopeController {
         }
     }
 
+    /**
+     * Imports a task from a ZIP file with previously computed results.
+     *
+     * @param userId  user ID
+     * @param zipFile ZIP file containing task data
+     * @return ResponseEntity with import result
+     */
     @PostMapping("/tasks/import/{userId}")
     public ResponseEntity<Map<String, Object>> importTask(
             @PathVariable Long userId,
@@ -167,7 +167,6 @@ public class EpitopeController {
         Path taskDir = null;
 
         try {
-
             User user = userService.findUserEntityById(userId);
             String username = user.getUsername();
 
@@ -175,10 +174,7 @@ public class EpitopeController {
             Files.createDirectories(baseDir);
 
             String baseName = originalFilename.substring(0, originalFilename.lastIndexOf(".zip"));
-
-            String timestamp = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
-                    .format(LocalDateTime.now());
-
+            String timestamp = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss").format(LocalDateTime.now());
             String unifiedRunName = baseName + "_" + timestamp;
 
             taskDir = baseDir.resolve(unifiedRunName);
@@ -190,8 +186,7 @@ public class EpitopeController {
                         HttpStatus.CONFLICT);
             }
 
-            String rootToStrip = baseName.replace(File.separator, "/") + "/";
-
+            String rootToStrip = baseName.replace(java.io.File.separator, "/") + "/";
             unzipFile(zipFile.getInputStream(), taskDir, rootToStrip);
             log.info("Zip file successfully unzipped to {}", taskDir);
 
@@ -203,17 +198,15 @@ public class EpitopeController {
             log.info("Found main FASTA file: {}", fastaFile);
 
             EpitopeTaskData taskData = new EpitopeTaskData();
-
             taskData.setRunName(unifiedRunName);
             taskData.setUser(user);
             taskData.setExecutionDate(null);
-
             taskData.setCompleteBasename(taskDir.toString());
             taskData.setAbsolutePath(fastaFile.toString());
             taskData.setFile(fastaFile.toFile());
 
             TaskStatus taskStatus = new TaskStatus();
-            taskStatus.setStatus(Status.IMPORTED);            
+            taskStatus.setStatus(Status.IMPORTED);
             taskData.setTaskStatus(taskStatus);
 
             EpitopeTaskData savedTaskData = epitopeTaskDataService.save(taskData);
@@ -250,16 +243,21 @@ public class EpitopeController {
         }
     }
 
+    /**
+     * Finds the first FASTA file in a directory (excluding proteins_invalid.fasta).
+     *
+     * @param directory directory to search
+     * @return path to the first FASTA file found or null
+     * @throws IOException if traversal fails
+     */
     private Path findFastaFile(Path directory) throws IOException {
         try (Stream<Path> stream = Files.walk(directory)) {
             return stream
                     .filter(Files::isRegularFile)
                     .filter(p -> {
                         String name = p.getFileName().toString().toLowerCase();
-
                         boolean isFasta = name.endsWith(".fasta") || name.endsWith(".fna") || name.endsWith(".fa");
                         boolean isInvalidFile = name.equals("proteins_invalid.fasta");
-
                         return isFasta && !isInvalidFile;
                     })
                     .findFirst()
@@ -267,12 +265,21 @@ public class EpitopeController {
         }
     }
 
+    /**
+     * Unzips a ZIP archive into the destination directory.
+     * Optionally strips a root path prefix from entries.
+     *
+     * @param zipInputStream input stream of ZIP file
+     * @param destDir        destination directory
+     * @param rootToStrip    root folder prefix to strip from entry names
+     * @throws IOException if extraction fails
+     */
     private void unzipFile(InputStream zipInputStream, Path destDir, String rootToStrip) throws IOException {
         try (ZipInputStream zis = new ZipInputStream(zipInputStream)) {
             ZipEntry zipEntry = zis.getNextEntry();
             while (zipEntry != null) {
 
-                String entryName = zipEntry.getName().replace(File.separator, "/");
+                String entryName = zipEntry.getName().replace(java.io.File.separator, "/");
                 String finalEntryName = entryName;
 
                 if (entryName.startsWith(rootToStrip)) {
@@ -306,6 +313,15 @@ public class EpitopeController {
         }
     }
 
+    /**
+     * Creates a new epitope task by receiving metadata (JSON) and a FASTA file,
+     * plus optional proteomes.
+     *
+     * @param taskDataJson JSON with task metadata
+     * @param fastaFile    main FASTA file
+     * @param proteomes    optional proteome files for BLAST
+     * @return ResponseEntity with creation result
+     */
     @PostMapping(value = "/tasks/new", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> newEpitopeTask(
             @RequestPart("data") String taskDataJson,
@@ -328,7 +344,6 @@ public class EpitopeController {
         }
 
         try {
-
             log.info("Received new task request: {}", taskData);
             log.info("Fasta file: {}", fastaFile.getOriginalFilename());
             log.info("Proteomes: {}", proteomes != null ? proteomes.length : 0);
@@ -345,9 +360,7 @@ public class EpitopeController {
                 }
             }
 
-        } catch (
-
-        IllegalArgumentException e) {
+        } catch (IllegalArgumentException e) {
             log.error("Database error: {}", e.getMessage());
             return errorResponse("Database configuration error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (Exception e) {
@@ -362,26 +375,35 @@ public class EpitopeController {
             taskData.setFile(fastaPath.toFile());
             taskData.setAbsolutePath(fastaPath.toString());
 
-            if (taskData.isDoBlast() == true) {
+            if (taskData.isDoBlast()) {
                 processProteomes(taskData, baseDir, proteomes);
             }
 
-            Process process = pipelineService.runPipeline(taskData);
-            EpitopeTaskData savedTask = saveTask(taskData, process);
+            EpitopeTaskData savedTaskData = epitopeTaskDataService.save(taskData);
+            Process process = pipelineService.runPipeline(savedTaskData);
 
-            return successResponse(savedTask);
+            EpitopeTaskData finalTask = saveTask(savedTaskData, process);
+            return successResponse(finalTask);
 
         } catch (IOException e) {
             log.error("IO Error: {}", e.getMessage(), e);
             return errorResponse("Error while processing files: " + e.getMessage(),
                     HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (Exception e) {
-            log.error("Erro inesperado: {}", e.getMessage(), e);
+            log.error("Unexpected error: {}", e.getMessage(), e);
             return errorResponse("Internal server error: " + e.getMessage(),
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
+    /**
+     * Prepares the base directory for a new task under
+     * /tmp/epibuilder/{username}/{runName_timestamp}.
+     *
+     * @param taskData task metadata
+     * @return created base directory path
+     * @throws IOException if directory creation fails
+     */
     private Path prepareBaseDirectory(EpitopeTaskData taskData) throws IOException {
         String username = taskData.getUser().getUsername();
         String timestamp = ZonedDateTime.now(ZoneId.of("America/Sao_Paulo"))
@@ -394,6 +416,15 @@ public class EpitopeController {
         return baseDir;
     }
 
+    /**
+     * Processes proteome files (either uploaded FASTA for BLAST or existing
+     * database aliases).
+     *
+     * @param taskData  task metadata
+     * @param baseDir   base directory of the task
+     * @param proteomes uploaded proteome files (optional)
+     * @throws IOException if file operations fail
+     */
     private void processProteomes(EpitopeTaskData taskData, Path baseDir,
             MultipartFile[] proteomes) throws IOException {
         if (taskData.getProteomes() == null || taskData.getProteomes().isEmpty()) {
@@ -401,7 +432,6 @@ public class EpitopeController {
         }
 
         log.info("Processing proteomes: {}", taskData.getProteomes());
-
         Path proteomesDir = baseDir.resolve("proteomes");
         Files.createDirectories(proteomesDir);
 
@@ -411,8 +441,7 @@ public class EpitopeController {
         for (Database proteome : taskData.getProteomes()) {
             log.info("Processing proteome - Type: {}, Alias: {}", proteome.getSourceType(), proteome.getAlias());
 
-            if ("fasta_blast".equals(proteome.getSourceType())) { // Alterado de "fasta_file" para "fasta_blast"
-                // Lógica para novo arquivo enviado pelo usuário
+            if ("fasta_blast".equals(proteome.getSourceType())) {
                 if (proteomes == null || fileIndex >= proteomes.length) {
                     throw new IllegalArgumentException("No proteome file provided for: " + proteome.getAlias());
                 }
@@ -424,25 +453,20 @@ public class EpitopeController {
 
                 Database db = new Database();
                 db.setAlias(proteome.getAlias());
-                db.setSourceType("fasta_blast"); // Definindo explicitamente o tipo
+                db.setSourceType("fasta_blast");
 
-                // Sanitiza o nome do arquivo
                 String sanitizedFilename = Paths.get(proteomeFile.getOriginalFilename())
                         .getFileName().toString();
                 Path proteomePath = proteomesDir.resolve(sanitizedFilename);
 
-                // Salva o arquivo
-                Files.copy(proteomeFile.getInputStream(), proteomePath,
-                        StandardCopyOption.REPLACE_EXISTING);
+                Files.copy(proteomeFile.getInputStream(), proteomePath, StandardCopyOption.REPLACE_EXISTING);
 
-                // Configura o objeto Database
                 db.setFileName(sanitizedFilename);
                 db.setAbsolutePath(proteomePath.toString());
                 LocalDateTime now = ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).toLocalDateTime();
                 db.setDate(now);
 
-                log.info("New proteome file saved: {}", db.toString());
-
+                log.info("New proteome file saved: {}", db);
                 processedDatabases.add(db);
 
             } else if ("database".equals(proteome.getSourceType())) {
@@ -461,26 +485,33 @@ public class EpitopeController {
         log.info("Final processed proteomes: {}", processedDatabases);
     }
 
+    /**
+     * Persists final task state after starting the pipeline.
+     *
+     * @param taskData task metadata
+     * @param process  started process (unused here but kept for future)
+     * @return saved task
+     */
     private EpitopeTaskData saveTask(EpitopeTaskData taskData, Process process) {
-        TaskStatus taskStatus = new TaskStatus();
-        taskStatus.setPid(process.pid());
-        taskStatus.setStatus(Status.RUNNING);
-        taskStatus.setEpitopeTaskData(taskData);
-
         String locParam = taskData.getBiologicalClassification() != null
                 ? taskData.getBiologicalClassification().toLocParam()
                 : null;
         taskData.setLocalizationParam(locParam);
-
-        taskData.setTaskStatus(taskStatus);
         LocalDateTime now = ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).toLocalDateTime();
         taskData.setExecutionDate(now);
 
         return epitopeTaskDataService.save(taskData);
     }
 
+    /**
+     * Stops a running task by container name, updates status, deletes task files.
+     *
+     * @param id task ID
+     * @return ResponseEntity with operation result
+     */
     @PostMapping("/tasks/stop/{id}")
     public ResponseEntity<Map<String, Object>> stopTask(@PathVariable Long id) {
+        log.info("Received request to stop task with ID: {}", id);
         try {
             EpitopeTaskData taskData = epitopeTaskDataService.findById(id);
             if (taskData == null) {
@@ -492,24 +523,26 @@ public class EpitopeController {
                 return errorResponse("Task is not running or already finalized", HttpStatus.CONFLICT);
             }
 
-            Long pid = taskStatus.getPid();
-            if (pid == null) {
-                return errorResponse("Task process ID is missing", HttpStatus.INTERNAL_SERVER_ERROR);
+            String containerName = taskStatus.getContainerName();
+            if (containerName == null) {
+                return errorResponse("Task container name is missing", HttpStatus.INTERNAL_SERVER_ERROR);
             }
 
-            log.info("Attempting to stop task ID {} with PID {}", id, pid);
-
-            boolean stopped = pipelineService.stopProcessByPid(pid);
+            boolean stopped = pipelineService.stopProcessInsideContainer(containerName);
             if (!stopped) {
-                return errorResponse("Failed to stop the process", HttpStatus.INTERNAL_SERVER_ERROR);
+                log.warn("Container {} was not running or could not be stopped. Marking task as STOPPED.",
+                        containerName);
             }
 
             taskStatus.setStatus(Status.STOPPED);
             taskData.setFinishedDate(LocalDateTime.now());
             epitopeTaskDataService.save(taskData);
 
+            deleteTaskFiles(taskData.getCompleteBasename());
+            log.info("Deleted task directory: {}", taskData.getCompleteBasename());
+
             Map<String, Object> response = new HashMap<>();
-            response.put("message", "Task stopped successfully");
+            response.put("message", "Task stopped and files deleted successfully");
             response.put("taskId", taskData.getId());
             response.put("status", taskStatus.getStatus().name());
             return ResponseEntity.ok(response);
@@ -520,6 +553,12 @@ public class EpitopeController {
         }
     }
 
+    /**
+     * Success response builder for task creation.
+     *
+     * @param savedTask saved task
+     * @return OK response with task info
+     */
     private ResponseEntity<Map<String, Object>> successResponse(EpitopeTaskData savedTask) {
         Map<String, Object> response = new HashMap<>();
         response.put("message", "Task created. PID: " + savedTask.getTaskStatus().getPid());
@@ -527,12 +566,25 @@ public class EpitopeController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Error response builder with custom message and status.
+     *
+     * @param message error message
+     * @param status  HTTP status
+     * @return ResponseEntity with error payload
+     */
     private ResponseEntity<Map<String, Object>> errorResponse(String message, HttpStatus status) {
         Map<String, Object> response = new HashMap<>();
         response.put("message", message);
         return ResponseEntity.status(status).body(response);
     }
 
+    /**
+     * Downloads a ZIP containing the entire task directory.
+     *
+     * @param id task ID
+     * @return ResponseEntity streaming the ZIP file
+     */
     @GetMapping("/tasks/{id}/download")
     public ResponseEntity<Resource> downloadFile(@PathVariable Long id) {
         try {
@@ -571,21 +623,25 @@ public class EpitopeController {
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
                             "attachment; filename=\"" + zipFileName + "\"")
-                    .header(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS,
-                            HttpHeaders.CONTENT_DISPOSITION)
+                    .header(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, HttpHeaders.CONTENT_DISPOSITION)
                     .contentType(MediaType.APPLICATION_OCTET_STREAM)
                     .contentLength(Files.size(zipFilePath))
                     .body(resource);
 
         } catch (UncheckedIOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(null);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(null);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
 
+    /**
+     * Retrieves the pipeline log content for a task.
+     * If the log indicates completion, triggers async monitoring.
+     *
+     * @param id task ID
+     * @return plain text log content or error status
+     */
     @GetMapping("/tasks/{id}/log")
     public ResponseEntity<?> getTaskLog(@PathVariable Long id) {
         EpitopeTaskData task = epitopeTaskDataService.findById(id);
@@ -601,8 +657,7 @@ public class EpitopeController {
 
         Path logFile = taskDir.resolve("pipeline.log");
         if (!Files.exists(logFile)) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Log file not found");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Log file not found");
         }
 
         try {
@@ -621,11 +676,20 @@ public class EpitopeController {
         }
     }
 
+    /**
+     * Triggers asynchronous monitoring of running tasks.
+     */
     @Async
     public void monitorRunningTasksAsync() {
         pipelineService.monitorRunningTasks();
     }
 
+    /**
+     * Lists all tasks for a user.
+     *
+     * @param userId user ID
+     * @return list of task data or 404 if none
+     */
     @GetMapping("/tasks/user/{userId}")
     public ResponseEntity<?> getTasksByUser(@PathVariable Long userId) {
         List<EpitopeTaskData> tasks = epitopeTaskDataService.findTasksByUserId(userId);
@@ -635,6 +699,12 @@ public class EpitopeController {
         return ResponseEntity.ok(tasks);
     }
 
+    /**
+     * Deletes a task and all associated data.
+     *
+     * @param id task ID
+     * @return OK or error response
+     */
     @DeleteMapping("/tasks/{id}")
     public ResponseEntity<Map<String, String>> deleteTask(@PathVariable Long id) {
         try {
@@ -644,11 +714,9 @@ public class EpitopeController {
             }
 
             epitopeTaskDataService.deleteEpitopeTaskDataWithAssociations(id);
-
             this.deleteTaskFiles(taskFound.getCompleteBasename());
 
-            return ResponseEntity.ok(Map.of(
-                    "message", "Task and all associated data deleted successfully"));
+            return ResponseEntity.ok(Map.of("message", "Task and all associated data deleted successfully"));
         } catch (Exception e) {
             log.error("Error deleting task {}: {}", id, e.getMessage(), e);
             return ResponseEntity.internalServerError()
@@ -656,51 +724,118 @@ public class EpitopeController {
         }
     }
 
+    /**
+     * Marks a task as completed by verifying log content and process state.
+     *
+     * @param id task ID
+     * @return OK if status updated, CONFLICT if still running, or error status
+     */
     @PutMapping("/tasks/{id}/complete")
     public ResponseEntity<Void> markTaskAsCompleted(@PathVariable Long id) {
-
         EpitopeTaskData task = epitopeTaskDataService.findById(id);
-        if (task.getTaskStatus() != null && task.getTaskStatus().getStatus() != Status.COMPLETED) {
-            pipelineService.monitorRunningTasks();
-            return ResponseEntity.ok().build();
+        if (task == null) {
+            return ResponseEntity.notFound().build();
         }
 
-        return ResponseEntity.status(HttpStatus.CONFLICT).build();
-    }
-
-    private void deleteTaskFiles(String completeBasename) throws IOException {
-        if (completeBasename == null || completeBasename.isEmpty()) {
-            return;
-        }
-
-        Path directoryPath = Paths.get(completeBasename).normalize();
-        if (!Files.exists(directoryPath)) {
-            log.warn("Directory does not exist: {}", directoryPath);
-            return;
+        TaskStatus status = task.getTaskStatus();
+        if (status == null) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
         }
 
         try {
-            Files.walk(directoryPath)
-                    .sorted(Comparator.reverseOrder())
-                    .forEach(path -> {
-                        try {
-                            Files.deleteIfExists(path);
-                            log.debug("Deleted file: {}", path);
-                        } catch (IOException e) {
-                            log.error("Failed to delete {}: {}", path, e.getMessage());
-                            throw new UncheckedIOException(e);
-                        }
-                    });
-            log.info("Successfully deleted directory: {}", directoryPath);
-        } catch (UncheckedIOException e) {
-            throw new IOException("Failed to delete task files", e.getCause());
+            boolean processRunning = pipelineService.isProcessRunning(status.getPid());
+
+            if (!processRunning) {
+                Path logFile = Paths.get(task.getCompleteBasename(), "pipeline.log");
+                if (Files.exists(logFile)) {
+                    String logContent = Files.readString(logFile);
+                    if (logContent.contains("Your results are in")) {
+                        status.setStatus(Status.COMPLETED);
+                        task.setFinishedDate(LocalDateTime.now());
+                        epitopeTaskDataService.save(task);
+                        return ResponseEntity.ok().build();
+                    }
+                }
+                status.setStatus(Status.STOPPED);
+                task.setFinishedDate(LocalDateTime.now());
+                epitopeTaskDataService.save(task);
+                return ResponseEntity.ok().build();
+            }
+
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+
+        } catch (IOException e) {
+            log.error("Error while verifying task {} log: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
+    /**
+     * Recursively deletes all files and directories under the given base directory.
+     * Attempts to adjust permissions before deletion to improve success on
+     * restrictive filesystems.
+     *
+     * @param baseDir base directory to delete
+     */
+    private void deleteTaskFiles(String baseDir) {
+        Path dir = Paths.get(baseDir);
+        if (Files.exists(dir)) {
+            try {
+                Files.walkFileTree(dir, new SimpleFileVisitor<>() {
+                    @Override
+                    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                        try {
+                            try {
+                                file.toFile().setWritable(true, false);
+                            } catch (Exception ignored) {
+                            }
+                            Files.delete(file);
+                            log.info("Deleted file: {}", file);
+                        } catch (IOException e) {
+                            log.warn("Could not delete file {} (possibly in use or permission issue): {}", file,
+                                    e.getMessage());
+                        }
+                        return FileVisitResult.CONTINUE;
+                    }
+
+                    @Override
+                    public FileVisitResult postVisitDirectory(Path d, IOException exc) {
+                        try {
+                            try {
+                                d.toFile().setWritable(true, false);
+                            } catch (Exception ignored) {
+                            }
+                            Files.delete(d);
+                            log.info("Deleted directory: {}", d);
+                        } catch (IOException e) {
+                            log.warn("Could not delete directory {} (possibly in use or permission issue): {}", d,
+                                    e.getMessage());
+                        }
+                        return FileVisitResult.CONTINUE;
+                    }
+                });
+
+                if (!Files.exists(dir)) {
+                    log.info("Deleted task directory: {}", baseDir);
+                } else {
+                    log.error("Failed to fully delete task directory {}", baseDir);
+                }
+
+            } catch (IOException e) {
+                log.error("Failed to walk file tree for {}: {}", baseDir, e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Finds tasks by user with RUNNING status.
+     *
+     * @param userId user ID
+     * @return list of running tasks
+     */
     @GetMapping("/tasks/user/{userId}/status")
     public ResponseEntity<List<EpitopeTaskData>> findTasksByTaskStatusStatus(@PathVariable Long userId) {
         List<EpitopeTaskData> tasks = epitopeTaskDataService.findTasksByUserIdAndStatus(userId, Status.RUNNING);
         return ResponseEntity.ok(tasks);
     }
-
 }

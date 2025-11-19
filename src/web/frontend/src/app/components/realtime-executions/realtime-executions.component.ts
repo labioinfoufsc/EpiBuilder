@@ -99,15 +99,24 @@ export class RealtimeExecutionsComponent implements OnInit, OnDestroy {
   confirmStop(): void {
     if (!this.selectedProcessToStop) return;
 
-    this.epitopesService.stopTask(this.selectedProcessToStop.id).subscribe({
+    const processToStop = this.selectedProcessToStop;
+
+    this.hideStopModal();
+
+    if (!processToStop.taskStatus) {
+      (processToStop as any).taskStatus = { status: 'STOPPING' };
+    } else {
+      processToStop.taskStatus.status = 'STOPPING';
+    }
+
+    this.epitopesService.stopTask(processToStop.id).subscribe({
       next: () => {
-        console.log(`Process ${this.selectedProcessToStop!.id} stopped successfully.`);
+        console.log(`Process ${processToStop.id} stopped successfully.`);
         this.loadTasks();
-        this.hideStopModal();
       },
       error: (err: any) => {
-        console.error(`Failed to stop process ${this.selectedProcessToStop!.id}:`, err);
-        this.hideStopModal();
+        console.error(`Failed to stop process ${processToStop.id}:`, err);
+        this.loadTasks();
       }
     });
   }

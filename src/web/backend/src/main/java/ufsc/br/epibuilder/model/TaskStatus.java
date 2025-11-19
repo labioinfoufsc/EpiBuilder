@@ -46,4 +46,7 @@ public class TaskStatus {
     @Enumerated(EnumType.STRING)
     private Status status;
 
+    @Column
+    private String containerName;
+
 }

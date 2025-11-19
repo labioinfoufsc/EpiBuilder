@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -11,7 +12,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -21,14 +21,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PutMapping;
 
-import io.jsonwebtoken.lang.Objects;
 import lombok.extern.slf4j.Slf4j;
 import ufsc.br.epibuilder.model.ActionType;
 import ufsc.br.epibuilder.model.Blast;
@@ -43,22 +38,13 @@ import ufsc.br.epibuilder.model.TaskStatus;
 import ufsc.br.epibuilder.model.BiologicalClassification;
 import ufsc.br.epibuilder.model.BacterialType;
 import ufsc.br.epibuilder.model.CellType;
-import ufsc.br.epibuilder.model.Organism;
 
-import ufsc.br.epibuilder.service.*;
-
-import ufsc.br.epibuilder.model.Blast;
-import ufsc.br.epibuilder.model.Epitope;
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.HashSet;
-import java.io.File;
-import java.time.ZonedDateTime;
-
+/**
+ * Service responsible for managing and executing epitope pipeline tasks.
+ * This includes starting and stopping Docker containers, monitoring running
+ * tasks,
+ * parsing pipeline results, and updating task status.
+ */
 @Service
 @Slf4j
 public class PipelineService {
@@ -70,8 +56,10 @@ public class PipelineService {
     private final EpitopeTopologyService epitopeTopologyService;
     private final AuthService authService;
 
-    public PipelineService(EpitopeTaskDataService epitopeTaskDataService, EpitopeTopologyService epitopeTopologyService,
-            EpitopeService epitopeService, AuthService authService) {
+    public PipelineService(EpitopeTaskDataService epitopeTaskDataService,
+            EpitopeTopologyService epitopeTopologyService,
+            EpitopeService epitopeService,
+            AuthService authService) {
         this.epitopeTaskDataService = epitopeTaskDataService;
         this.authService = authService;
         this.epitopeTopologyService = epitopeTopologyService;
@@ -79,131 +67,55 @@ public class PipelineService {
     }
 
     /**
-     * This method runs the pipeline using the provided EpitopeTaskData.
-     * It constructs a command to run the pipeline using Nextflow and executes it.
-     * 
-     * @param taskData
-     * @return
+     * Stops a running Docker container by its name.
+     *
+     * @param containerName the name of the container
+     * @return true if the container was stopped successfully, false otherwise
+     */
+    public boolean stopProcessInsideContainer(String containerName) {
+        try {
+            log.info("Attempting to stop container {}", containerName);
+            ProcessBuilder pb = new ProcessBuilder("docker", "stop", containerName);
+            Process proc = pb.start();
+            int exitCode = proc.waitFor();
+
+            if (exitCode == 0) {
+                log.info("Container {} stopped successfully.", containerName);
+                return true;
+            } else {
+                log.error("Failed to stop container {}. Exit code: {}", containerName, exitCode);
+                return false;
+            }
+        } catch (Exception e) {
+            log.error("Error stopping container {}: {}", containerName, e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * Runs the pipeline using the provided {@link EpitopeTaskData}.
+     *
+     * @param taskData configuration for the pipeline execution
+     * @return the process running the pipeline
      */
     public Process runPipeline(EpitopeTaskData taskData) {
         log.info("Starting pipeline for task: {}", taskData.getId());
 
+        if (taskData.getId() == null) {
+            throw new IllegalStateException("TaskData must be saved before running pipeline (ID is null)");
+        }
+
         try {
-            List<String> command = new ArrayList<>();
-            command.add("bash");
-            command.add("-c");
-            String epibuilderVolume = System.getenv("EPIBUILDER_VOLUME");
-            if (epibuilderVolume == null || epibuilderVolume.isEmpty()) {
-                epibuilderVolume = "/tmp/epibuilder";
-            }
+            String epibuilderVolume = resolveEpibuilderVolume();
+            String command = buildDockerCommand(taskData, epibuilderVolume);
 
-            StringBuilder fullCommand = new StringBuilder();
-            fullCommand.append("docker run --rm ");
-            fullCommand.append("-v /var/run/docker.sock:/var/run/docker.sock ");
-            fullCommand.append(String.format("-v %s:/tmp/epibuilder ", epibuilderVolume));
-            fullCommand.append(String.format("-e EPIBUILDER_VOLUME=%s ", epibuilderVolume));
-            fullCommand.append("bioinfoufsc/epibuilder-core:latest epibuilder ");
-            fullCommand.append("--input_file ").append(taskData.getFile().getAbsolutePath()).append(" ");
-            fullCommand.append("--output ").append(taskData.getCompleteBasename()).append(" ");
+            log.info("Command to run: {}", command);
 
-            log.info("Adding parameters to command: {}", taskData.getActionType().getDesc());
+            ProcessBuilder processBuilder = configureProcessBuilder(command, taskData);
+            Process process = startProcess(processBuilder);
 
-            if (ActionType.DEFAULT.toString().equalsIgnoreCase(taskData.getActionType().getDesc())) {
-                taskData.setBepipredThreshold(0.1512);
-                taskData.setMinEpitopeLength(10);
-                taskData.setMaxEpitopeLength(30);
-            }
-
-            String locParam = null;
-            BiologicalClassification classification = taskData.getBiologicalClassification();
-
-            if (classification != null && classification.getCellType() != null) {
-                switch (classification.getCellType()) {
-                    case EUKARYOTE:
-                        if (classification.getOrganism() != null) {
-                            locParam = classification.getOrganism().toString().toLowerCase();
-                        }
-                        break;
-
-                    case BACTERIA:
-                        if (classification.getBacterialType() != null) {
-                            switch (classification.getBacterialType()) {
-                                case GRAM_POSITIVE:
-                                    locParam = "gram_pos";
-                                    break;
-                                case GRAM_NEGATIVE:
-                                    locParam = "gram_neg";
-                                    break;
-                            }
-                        }
-                        break;
-
-                    case ARCHAEA:
-                        locParam = "arch";
-                        break;
-
-                    case NONE:
-                        break;
-                }
-            }
-
-            List<String> validParams = List.of("animal", "plant", "fungi", "arch", "gram_pos", "gram_neg");
-            if (locParam != null && validParams.contains(locParam)) {
-                fullCommand.append("--loc ").append(locParam).append(" ");
-            }
-
-            if (taskData.getBepipredThreshold() != null) {
-                fullCommand.append("--threshold ").append(taskData.getBepipredThreshold()).append(" ");
-            }
-            if (taskData.getMinEpitopeLength() != null) {
-                fullCommand.append("--min-length ").append(taskData.getMinEpitopeLength()).append(" ");
-            }
-            if (taskData.getMaxEpitopeLength() != null) {
-                fullCommand.append("--max-length ").append(taskData.getMaxEpitopeLength()).append(" ");
-            }
-
-            if (taskData.isDoBlast()) {
-                List<String> proteomes = taskData.getProteomes().stream()
-                        .map(Database::toString)
-                        .collect(Collectors.toList());
-
-                fullCommand.append("--proteomes ").append(String.join(":", proteomes)).append(" ");
-
-                if (taskData.getBlastMinCoverCutoff() != 90) {
-                    fullCommand.append("--cover ").append(taskData.getBlastMinCoverCutoff()).append(" ");
-                }
-
-                if (taskData.getBlastMinIdentityCutoff() != 90) {
-                    fullCommand.append("--identity ").append(taskData.getBlastMinIdentityCutoff()).append(" ");
-                }
-            }
-
-            command.add(fullCommand.toString().trim());
-
-            log.info("Command to run: {}", fullCommand.toString().trim());
-
-            ProcessBuilder processBuilder = new ProcessBuilder(command);
-
-            Map<String, String> env = processBuilder.environment();
-            String blastPath = "/usr/local/bin";
-            String currentPath = env.getOrDefault("PATH", "");
-
-            log.info("Checking if BLAST path is already in PATH...");
-            if (!currentPath.contains(blastPath)) {
-                log.info("Adding BLAST path to environment variables...");
-                env.put("PATH", blastPath + ":" + currentPath);
-            }
-
-            Path workDir = Paths.get(taskData.getCompleteBasename());
-            processBuilder.directory(workDir.toFile());
-
-            File logFile = workDir.resolve("pipeline.log").toFile();
-            processBuilder.redirectOutput(ProcessBuilder.Redirect.appendTo(logFile));
-            processBuilder.redirectErrorStream(true);
-
-            log.info("Starting process...");
-            Process process = processBuilder.start();
-            log.info("Process started with PID: {}", process.pid());
+            String containerName = "epibuilder-task-" + taskData.getId();
+            updateTaskStatus(taskData, null, containerName);
 
             return process;
 
@@ -216,19 +128,163 @@ public class PipelineService {
         }
     }
 
-    /*
-     * * Stops a running process by its PID.
-     * 
-     * @param pid
-     * 
-     * @return true if the process was successfully stopped, false otherwise.
+    private String resolveEpibuilderVolume() {
+        String volume = System.getenv("EPIBUILDER_VOLUME");
+        return (volume == null || volume.isEmpty()) ? "/tmp/epibuilder" : volume;
+    }
+
+    private String buildDockerCommand(EpitopeTaskData taskData, String epibuilderVolume) {
+        String containerName = "epibuilder-task-" + taskData.getId();
+
+        StringBuilder cmd = new StringBuilder("docker run --rm ")
+                .append("--name ").append(containerName).append(" ")
+                .append("-v /var/run/docker.sock:/var/run/docker.sock ")
+                .append(String.format("-v %s:/tmp/epibuilder ", epibuilderVolume))
+                .append(String.format("-e EPIBUILDER_VOLUME=%s ", epibuilderVolume))
+                .append("bioinfoufsc/epibuilder-core:latest epibuilder ")
+                .append("--input_file ").append(taskData.getFile().getAbsolutePath()).append(" ")
+                .append("--output ").append(taskData.getCompleteBasename()).append(" ");
+
+        addDefaultParameters(taskData);
+        addClassificationParameter(taskData, cmd);
+        addThresholdParameters(taskData, cmd);
+        addBlastParameters(taskData, cmd);
+
+        return cmd.toString().trim();
+    }
+
+    private void addDefaultParameters(EpitopeTaskData taskData) {
+        if (ActionType.DEFAULT.toString().equalsIgnoreCase(taskData.getActionType().getDesc())) {
+            taskData.setBepipredThreshold(0.1512);
+            taskData.setMinEpitopeLength(10);
+            taskData.setMaxEpitopeLength(30);
+        }
+    }
+
+    private void addClassificationParameter(EpitopeTaskData taskData, StringBuilder cmd) {
+        String locParam = resolveLocParam(taskData.getBiologicalClassification());
+        List<String> validParams = List.of("animal", "plant", "fungi", "arch", "gram_pos", "gram_neg");
+
+        if (locParam != null && validParams.contains(locParam)) {
+            cmd.append("--loc ").append(locParam).append(" ");
+        }
+    }
+
+    private String resolveLocParam(BiologicalClassification classification) {
+        if (classification == null || classification.getCellType() == null)
+            return null;
+
+        return switch (classification.getCellType()) {
+            case EUKARYOTE ->
+                classification.getOrganism() != null ? classification.getOrganism().toString().toLowerCase() : null;
+            case BACTERIA -> resolveBacteriaParam(classification.getBacterialType());
+            case ARCHAEA -> "arch";
+            case NONE -> null;
+        };
+    }
+
+    private String resolveBacteriaParam(BacterialType type) {
+        if (type == null)
+            return null;
+        return switch (type) {
+            case GRAM_POSITIVE -> "gram_pos";
+            case GRAM_NEGATIVE -> "gram_neg";
+        };
+    }
+
+    private void addThresholdParameters(EpitopeTaskData taskData, StringBuilder cmd) {
+        if (taskData.getBepipredThreshold() != null) {
+            cmd.append("--threshold ").append(taskData.getBepipredThreshold()).append(" ");
+        }
+        if (taskData.getMinEpitopeLength() != null) {
+            cmd.append("--min-length ").append(taskData.getMinEpitopeLength()).append(" ");
+        }
+        if (taskData.getMaxEpitopeLength() != null) {
+            cmd.append("--max-length ").append(taskData.getMaxEpitopeLength()).append(" ");
+        }
+    }
+
+    private void addBlastParameters(EpitopeTaskData taskData, StringBuilder cmd) {
+        if (!taskData.isDoBlast())
+            return;
+
+        List<String> proteomes = taskData.getProteomes().stream()
+                .map(Database::toString)
+                .toList();
+
+        cmd.append("--proteomes ").append(String.join(":", proteomes)).append(" ");
+
+        if (taskData.getBlastMinCoverCutoff() != 90) {
+            cmd.append("--cover ").append(taskData.getBlastMinCoverCutoff()).append(" ");
+        }
+        if (taskData.getBlastMinIdentityCutoff() != 90) {
+            cmd.append("--identity ").append(taskData.getBlastMinIdentityCutoff()).append(" ");
+        }
+    }
+
+    private ProcessBuilder configureProcessBuilder(String command, EpitopeTaskData taskData) {
+        List<String> bashCommand = List.of("bash", "-c", command);
+        ProcessBuilder pb = new ProcessBuilder(bashCommand);
+
+        configureEnvironment(pb);
+        configureWorkingDirectory(pb, taskData);
+
+        return pb;
+    }
+
+    private void configureEnvironment(ProcessBuilder pb) {
+        Map<String, String> env = pb.environment();
+        String blastPath = "/usr/local/bin";
+        String currentPath = env.getOrDefault("PATH", "");
+
+        if (!currentPath.contains(blastPath)) {
+            env.put("PATH", blastPath + ":" + currentPath);
+        }
+    }
+
+    private void configureWorkingDirectory(ProcessBuilder pb, EpitopeTaskData taskData) {
+        Path workDir = Paths.get(taskData.getCompleteBasename());
+        pb.directory(workDir.toFile());
+
+        File logFile = workDir.resolve("pipeline.log").toFile();
+        pb.redirectOutput(ProcessBuilder.Redirect.appendTo(logFile));
+        pb.redirectErrorStream(true);
+    }
+
+    private Process startProcess(ProcessBuilder pb) throws IOException {
+        log.info("Starting process...");
+        Process process = pb.start();
+        log.info("Process started with host PID: {}", process.pid());
+        return process;
+    }
+
+    private void updateTaskStatus(EpitopeTaskData taskData, Long pid, String containerName) {
+        TaskStatus taskStatus = new TaskStatus();
+        taskStatus.setPid(pid);
+        taskStatus.setContainerName(containerName);
+        taskStatus.setStatus(Status.RUNNING);
+        taskStatus.setEpitopeTaskData(taskData);
+        taskData.setTaskStatus(taskStatus);
+    }
+
+    /**
+     * Stops a running process by its PID.
+     *
+     * @param pid the process ID
+     * @return true if the process was successfully stopped, false otherwise
      */
     public boolean stopProcessByPid(Long pid) {
         try {
-            ProcessHandle.of(pid).ifPresent(process -> {
-                process.destroy();
-            });
-            return true;
+            log.info("Attempting to stop host process with PID {}", pid);
+            return ProcessHandle.of(pid).map(ph -> {
+                boolean terminated = ph.destroy();
+                if (!terminated) {
+                    ph.destroyForcibly();
+                }
+                boolean dead = !ph.isAlive();
+                log.info("Process {} terminated: {}", pid, dead);
+                return dead;
+            }).orElse(false);
         } catch (Exception e) {
             log.error("Failed to stop process with PID {}: {}", pid, e.getMessage(), e);
             return false;
@@ -236,41 +292,23 @@ public class PipelineService {
     }
 
     /**
-     * Adds an optional parameter to the command if the parameter value is not null
-     * or "none".
-     * 
-     * @param command
-     * @param paramName
-     * @param paramValue
-     */
-    private void addOptionalParameter(List<String> command, String paramName, Object paramValue) {
-        if (paramValue != null && !(paramValue instanceof String && ((String) paramValue).equalsIgnoreCase("none"))) {
-            command.add(paramName);
-            command.add(paramValue.toString());
-        }
-
-    }
-
-    /**
-     * This method is scheduled to run every 5 minutes. It checks for running tasks
-     * and updates their status if the process is no longer running.
-     * It also logs the files in the complete directory of the task.
-     * 
-     * If the process is not running, it updates the task status to COMPLETED.
-     * 
+     * Monitors running tasks every minute. If a process is no longer running,
+     * updates the task status accordingly.
      */
     @Scheduled(fixedRate = 60_000)
     public void monitorRunningTasks() {
         log.info("Monitoring running tasks...");
         try {
-            log.info("Searching for running tasks...");
             List<EpitopeTaskData> runningTasks = epitopeTaskDataService.findTasksByTaskStatusStatus(Status.RUNNING);
             log.info("Found {} running tasks", runningTasks.size());
             for (EpitopeTaskData task : runningTasks) {
-                log.info("Checking task ID {} with PID {}", task.getId(), task.getTaskStatus().getPid());
-                long pid = task.getTaskStatus().getPid();
-                boolean isRunning = isProcessRunning(pid);
+                Long pid = task.getTaskStatus().getPid();
+                if (pid == null) {
+                    log.warn("Task {} has no PID assigned. Skipping monitoring.", task.getId());
+                    continue;
+                }
 
+                boolean isRunning = isProcessRunning(pid);
                 if (!isRunning) {
                     log.info("PID {} is not running anymore. Processing task ID {}", pid, task.getId());
                     processCompletedTask(task);
@@ -281,6 +319,23 @@ public class PipelineService {
         }
     }
 
+    /**
+     * Checks if a process with the given PID is still running.
+     *
+     * @param pid the process ID
+     * @return true if the process is alive, false otherwise
+     */
+    public boolean isProcessRunning(Long pid) {
+        return ProcessHandle.of(pid).map(ProcessHandle::isAlive).orElse(false);
+    }
+
+    /**
+     * Processes completed tasks by validating result files, parsing epitope and
+     * topology data,
+     * associating BLAST results, and updating task status.
+     *
+     * @param task the completed task
+     */
     public void processCompletedTask(EpitopeTaskData task) {
         Path completePath = Paths.get(task.getCompleteBasename());
 
@@ -292,64 +347,39 @@ public class PipelineService {
         }
 
         try {
-
-            log.info("Checking for result files in {}", completePath);
-
             Path topologyPath = completePath.resolve("topology.tsv");
             Path epitopePath = completePath.resolve("epitope-detail.tsv");
             Path proteinSummary = completePath.resolve("protein-summary.tsv");
 
-            log.info("Localization param: {}", task.getLocalizationParam());
             Path localizationPath = null;
             if (task.getLocalizationParam() != null) {
                 localizationPath = completePath.resolve("localization.tsv");
             }
 
-            log.info("Verifying existence of required files...");
             List<String> missingFiles = new ArrayList<>();
-            if (!Files.exists(topologyPath)) {
+            if (!Files.exists(topologyPath))
                 missingFiles.add("topologyPath");
-            }
-            if (!Files.exists(epitopePath)) {
+            if (!Files.exists(epitopePath))
                 missingFiles.add("epitopePath");
-            }
-            if (!Files.exists(proteinSummary)) {
+            if (!Files.exists(proteinSummary))
                 missingFiles.add("proteinSummary");
-            }
-            if (localizationPath != null) {
-                if (!Files.exists(localizationPath) && task.getLocalizationParam() != null) {
-                    missingFiles.add("localizationPath");
-                }
+            if (localizationPath != null && !Files.exists(localizationPath)) {
+                missingFiles.add("localizationPath");
             }
 
             if (!missingFiles.isEmpty()) {
-                log.error("Missing result files in {} for task {}: {}", completePath, task.getId(),
-                        String.join(", ", missingFiles));
+                log.error("Missing result files for task {}: {}", task.getId(), String.join(", ", missingFiles));
                 task.getTaskStatus().setStatus(Status.FAILED);
                 epitopeTaskDataService.save(task);
                 return;
-            } else {
-                log.info("All required files are present for task {}", task.getId());
             }
 
-            log.info("Converting epitope file for task...");
             List<Epitope> epitopes = convertTsvToEpitopes(epitopePath.toString(), task);
-            log.info("Epitopes converted: {}", epitopes.size());
-
-            log.info("Converting topology file for task...");
             List<EpitopeTopology> topologies = parseEpitopeTopology(topologyPath.toString());
-            log.info("Topologies converted: {}", topologies.size());
-
-            log.info("Associating topologies with epitopes...");
             List<Epitope> completeEpitopes = associateTopologies(epitopes, topologies);
-            log.info("Topologies associated with epitopes: {}", completeEpitopes.size());
 
-            if (task.getLocalizationParam() != null) {
-                log.info("Converting localization file for task...");
+            if (localizationPath != null) {
                 List<Protein> proteins = convertTsvToProteins(localizationPath.toString());
-                log.info("Proteins converted: {}", proteins.size());
-
-                log.info("Associating localization with epitope proteins...");
                 Map<String, String> localizationMap = proteins.stream()
                         .collect(Collectors.toMap(Protein::getProteinId, Protein::getLocalization));
 
@@ -362,48 +392,24 @@ public class PipelineService {
                         }
                     }
                 }
-                log.info("Localization successfully applied to epitope proteins.");
-
             }
 
-            log.info("Checking for BLAST files in {}", completePath);
-            try {
-                List<Path> blastFiles = Files.list(completePath)
-                        .filter(path -> path.getFileName().toString().endsWith("blast.csv"))
-                        .collect(Collectors.toList());
+            List<Path> blastFiles = Files.list(completePath)
+                    .filter(path -> path.getFileName().toString().endsWith("blast.csv"))
+                    .collect(Collectors.toList());
 
-                log.info("Found {} BLAST files", blastFiles.size());
-
-                if (!blastFiles.isEmpty()) {
-                    for (Path searchPath : blastFiles) {
-                        log.info("Processing BLAST file: {}", searchPath.getFileName());
-
-                        List<Blast> convertedBlasts = parseBlastCsv(searchPath.toString());
-                        log.info("BLAST converted: {}", convertedBlasts.size());
-
-                        associateBlasts(completeEpitopes, convertedBlasts);
-
-                        log.info("BLAST completed for file {}", searchPath.getFileName());
-                    }
-                } else {
-                    log.warn("No BLAST files found to process in directory: {}", completePath);
-                }
-            } catch (IOException e) {
-                log.error("Error while processing BLAST files: {}", e.getMessage(), e);
-                throw new RuntimeException("Failed to process BLAST files", e);
+            for (Path searchPath : blastFiles) {
+                List<Blast> convertedBlasts = parseBlastCsv(searchPath.toString());
+                associateBlasts(completeEpitopes, convertedBlasts);
             }
-
-            log.info("Updating managed epitope list on task {}...", task.getId());
 
             List<Epitope> managedEpitopes = task.getEpitopes();
             if (managedEpitopes == null) {
                 managedEpitopes = new ArrayList<>();
-                task.setEpitopes(managedEpitopes); 
+                task.setEpitopes(managedEpitopes);
             }
-
-            managedEpitopes.clear(); 
+            managedEpitopes.clear();
             managedEpitopes.addAll(completeEpitopes);
-            log.info("Managed epitope list updated with {} epitopes.", completeEpitopes.size());
 
             int proteomeSize = countProteins(proteinSummary.toString());
             task.setProteomeSize(proteomeSize);
@@ -415,10 +421,8 @@ public class PipelineService {
             } else {
                 task.setFinishedDate(null);
             }
-           
-            epitopeTaskDataService.save(task);
 
-            log.info("Successfully processed results for task {}", task.getId());
+            epitopeTaskDataService.save(task);
 
         } catch (IOException e) {
             log.error("Error processing result files for task {}: {}", task.getId(), e.getMessage());
@@ -427,77 +431,51 @@ public class PipelineService {
         }
     }
 
+    // --- Helper methods for parsing and conversions ---
+
     public List<Protein> convertTsvToProteins(String filePath) {
         List<Protein> proteins = new ArrayList<>();
-
         try (BufferedReader reader = Files.newBufferedReader(Paths.get(filePath))) {
             String line;
             boolean isHeader = true;
-
             while ((line = reader.readLine()) != null) {
                 if (isHeader) {
                     isHeader = false;
                     continue;
                 }
-
                 String[] parts = line.split("\t");
-                if (parts.length < 3)
+                if (parts.length < 2)
                     continue;
-
-                String seqId = parts[0].trim();
-                String localization = parts[1].trim();
-
                 Protein protein = new Protein();
-                protein.setProteinId(seqId);
-                protein.setLocalization(localization);
-
+                protein.setProteinId(parts[0].trim());
+                protein.setLocalization(parts[1].trim());
                 proteins.add(protein);
             }
-
         } catch (IOException e) {
             log.error("Error reading localization file: {}", e.getMessage(), e);
         }
-
         return proteins;
     }
 
     public static String extractDBName(String path) {
         String regex = "(.*?)\\_blast.csv";
-
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(path);
-
-        if (matcher.find()) {
-            return matcher.group(1);
-        } else {
-            return "DB name not found";
-        }
+        Matcher matcher = Pattern.compile(regex).matcher(path);
+        return matcher.find() ? matcher.group(1) : "DB name not found";
     }
 
     public List<Blast> parseBlastCsv(String filePath) throws IOException {
         List<Blast> blastList = new ArrayList<>();
-
-        String dbName = extractDBName(filePath);
-
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             String line;
             boolean isFirstLine = true;
-
             while ((line = br.readLine()) != null) {
                 if (isFirstLine) {
                     isFirstLine = false;
                     continue;
                 }
-
                 if (line.trim().isEmpty())
                     continue;
-
                 String[] columns = line.split("\\t");
-                log.info("Columns length: {}", columns.length);
-                for (int i = 0; i < columns.length; i++) {
-                    columns[i] = columns[i].trim();
-                }
-
                 Blast blast = new Blast();
 
                 String qacc = columns[0];
@@ -506,7 +484,7 @@ public class PipelineService {
                     try {
                         blast.setN(Long.parseLong(qaccParts[0]));
                     } catch (NumberFormatException e) {
-                        log.warn("Value of N invalid for line: {}", line);
+                        log.warn("Invalid N value for line: {}", line);
                         blast.setN(null);
                     }
                 }
@@ -516,14 +494,14 @@ public class PipelineService {
                 try {
                     blast.setPident(Double.parseDouble(columns[2]));
                 } catch (NumberFormatException e) {
-                    log.warn("Invalid pindent: {}", line);
+                    log.warn("Invalid pident: {}", line);
                     blast.setPident(null);
                 }
 
                 try {
                     blast.setQcovs(Double.parseDouble(columns[3]));
                 } catch (NumberFormatException e) {
-                    log.warn("Line Qcovs: {}", line);
+                    log.warn("Invalid qcovs: {}", line);
                     blast.setQcovs(null);
                 }
 
@@ -534,107 +512,107 @@ public class PipelineService {
                 String fileName = path.getFileName().toString();
                 blast.setDatabase(fileName);
                 blast.setDb(extractDBName(fileName));
+
                 blastList.add(blast);
             }
         }
-
         return blastList;
     }
 
+    /**
+     * Counts the number of proteins in a TSV file.
+     *
+     * @param pathFile path to the protein summary file
+     * @return number of proteins
+     * @throws IOException if file cannot be read
+     */
     public static int countProteins(String pathFile) throws IOException {
         try (BufferedReader br = new BufferedReader(new FileReader(pathFile))) {
-            String line = br.readLine();
-
+            br.readLine(); // skip header
             int countProtein = 0;
-            while ((line = br.readLine()) != null) {
+            while (br.readLine() != null) {
                 countProtein++;
             }
             return countProtein;
         }
     }
 
+    /**
+     * Converts a TSV file into a list of {@link Epitope}.
+     *
+     * @param filePath path to the epitope TSV file
+     * @param task     associated task
+     * @return list of epitopes
+     * @throws IOException if file cannot be read
+     */
     public static List<Epitope> convertTsvToEpitopes(String filePath, EpitopeTaskData task) throws IOException {
         List<Epitope> epitopes = new ArrayList<>();
-        BufferedReader reader = new BufferedReader(new FileReader(filePath));
+        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
+            reader.readLine(); // skip header
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] columns = line.split("\t");
+                Epitope epitope = new Epitope();
+                epitope.setN(Long.parseLong(columns[0]));
 
-        reader.readLine();
+                Protein protein = new Protein();
+                protein.setProteinId(columns[1]);
+                protein.setDescription(columns[2]);
+                protein.setLocalization(columns[3]);
+                protein.setEpitope(epitope);
+                epitope.setProtein(protein);
 
-        String line;
-        while ((line = reader.readLine()) != null) {
-            String[] columns = line.split("\t");
-            Epitope epitope = new Epitope();
-            log.info("Columns length: {}", columns.length);
-            log.info("Columns: {}", (Object) columns);
-            log.info("Processing line: {}", line);
+                epitope.setEpitope(columns[4]);
+                epitope.setStart(Integer.parseInt(columns[5]));
+                epitope.setEndEpitope(Integer.parseInt(columns[6]));
+                epitope.setNGlyc(columns[7]);
+                epitope.setNGlycCount(Integer.parseInt(columns[8]));
+                epitope.setNGlycMotifs(columns[9]);
+                epitope.setLength(Integer.parseInt(columns[10]));
+                epitope.setMolecularWeight(Double.parseDouble(columns[11]));
+                epitope.setIsoelectricPoint(Double.parseDouble(columns[12]));
+                epitope.setHydropathy(Double.parseDouble(columns[13]));
+                epitope.setAllMatchesCover(Double.parseDouble(columns[14]));
+                epitope.setAvgCover(Double.parseDouble(columns[15]));
+                epitope.setBepiPred3(Double.parseDouble(columns[16]));
+                epitope.setEmini(Double.parseDouble(columns[17]));
+                epitope.setKolaskar(Double.parseDouble(columns[18]));
+                epitope.setChouFosman(Double.parseDouble(columns[19]));
+                epitope.setKarplusSchulz(Double.parseDouble(columns[20]));
+                epitope.setParker(Double.parseDouble(columns[21]));
+                epitope.setEpitopeTaskData(task);
 
-            epitope.setN(Long.parseLong(columns[0]));
-
-            Protein protein = new Protein();
-            protein.setProteinId(columns[1]);
-            protein.setDescription(columns[2]);
-            protein.setLocalization(columns[3]);
-            protein.setEpitope(epitope);
-            epitope.setProtein(protein);
-
-            epitope.setEpitope(columns[4]);
-            epitope.setStart(Integer.parseInt(columns[5]));
-            epitope.setEndEpitope(Integer.parseInt(columns[6]));
-            epitope.setNGlyc(columns[7]);
-            epitope.setNGlycCount(Integer.parseInt(columns[8]));
-            epitope.setNGlycMotifs(columns[9]);
-            epitope.setLength(Integer.parseInt(columns[10]));
-            epitope.setMolecularWeight(Double.parseDouble(columns[11]));
-            epitope.setIsoelectricPoint(Double.parseDouble(columns[12]));
-            epitope.setHydropathy(Double.parseDouble(columns[13]));
-            epitope.setAllMatchesCover(Double.parseDouble(columns[14]));
-            epitope.setAvgCover(Double.parseDouble(columns[15]));
-            epitope.setBepiPred3(Double.parseDouble(columns[16]));
-            epitope.setEmini(Double.parseDouble(columns[17]));
-            epitope.setKolaskar(Double.parseDouble(columns[18]));
-            epitope.setChouFosman(Double.parseDouble(columns[19]));
-            epitope.setKarplusSchulz(Double.parseDouble(columns[20]));
-            epitope.setParker(Double.parseDouble(columns[21]));
-            epitope.setEpitopeTaskData(task);
-
-            epitopes.add(epitope);
+                epitopes.add(epitope);
+            }
         }
-
-        reader.close();
         return epitopes;
     }
 
+    /**
+     * Parses epitope topology data from a TSV file.
+     *
+     * @param filePath path to the topology TSV file
+     * @return list of epitope topologies
+     * @throws IOException if file cannot be read
+     */
     public static List<EpitopeTopology> parseEpitopeTopology(String filePath) throws IOException {
         List<EpitopeTopology> topologies = new ArrayList<>();
         List<String> lines = Files.readAllLines(Paths.get(filePath));
 
         Long currentN = null;
-
         for (int i = 1; i < lines.size(); i++) {
-
             String line = lines.get(i);
-
-            log.info("Processing line: {}", line);
-
-            if (line.trim().isEmpty()) {
+            if (line.trim().isEmpty())
                 continue;
-            }
 
             String[] parts = line.split("\t");
-
-            log.info("Parts length: {}", parts.length);
-
             if (!parts[0].trim().isEmpty()) {
                 currentN = Long.parseLong(parts[0]);
-                String methodName = parts[4].trim();
-                EpitopeTopology topology = createTopology(currentN, parts, methodName);
-                topologies.add(topology);
-            } else {
-                String methodName = parts[4].trim();
-                EpitopeTopology topology = createTopology(currentN, parts, methodName);
-                topologies.add(topology);
             }
+            String methodName = parts[4].trim();
+            EpitopeTopology topology = createTopology(currentN, parts, methodName);
+            topologies.add(topology);
         }
-
         return topologies;
     }
 
@@ -642,97 +620,73 @@ public class PipelineService {
         EpitopeTopology topology = new EpitopeTopology();
         topology.setN(n);
 
-        log.info("Creating topology for N: {}", n);
-        log.info("Parts: {}", (Object) parts);
-        log.info("Method name: {}", methodName);
-
         try {
             String cleanedMethodName = methodName.trim();
-
             if (cleanedMethodName.equals("BepiPred-3.0")) {
                 topology.setDescription(parts[4]);
                 cleanedMethodName = "BepiPred";
             }
-
-            log.info("Method name: {}", cleanedMethodName);
-
             Method method = Method.fromDescription(cleanedMethodName);
-            log.info(method.getDescription());
             topology.setMethod(method);
         } catch (IllegalArgumentException e) {
-            log.error("Invalid method name: '{}', using ALL_MATCHES as fallback. Error: {}", methodName,
-                    e.getMessage());
+            log.error("Invalid method name '{}', using ALL_MATCHES as fallback.", methodName);
             topology.setMethod(Method.ALL_MATCHES);
         }
 
         try {
-            if (parts == null || parts.length < 4) {
-                log.warn("Insufficient data for topology. Parts length: {}", parts == null ? "null" : parts.length);
-                return topology;
+            if (parts.length >= 9) {
+                topology.setThreshold(parseDoubleSafe(parts[5]));
+                topology.setAvgScore(parseDoubleSafe(parts[6]));
+                topology.setCover(parts[7].equals("-") ? 0.0 : parseDoubleSafe(parts[7]));
+                topology.setTopologyData(parts[8]);
             }
-
-            topology.setThreshold(parseDoubleSafe(parts[5]));
-            topology.setAvgScore(parseDoubleSafe(parts[6]));
-            topology.setCover(parts[7].equals("-") ? 0.0 : parseDoubleSafe(parts[7]));
-            topology.setTopologyData(parts[8]);
-
         } catch (Exception e) {
             log.error("Error parsing topology data for method {}: {}", methodName, e.getMessage());
         }
-
         return topology;
     }
 
-    private static Double parseDoubleSafe(String value) {
-        if (value == null || value.trim().isEmpty() || value.equals("-")) {
-            return 0.0;
-        }
+    private static double parseDoubleSafe(String value) {
         try {
-            return Double.parseDouble(value.replaceAll("[^0-9.-]", ""));
+            return Double.parseDouble(value);
         } catch (NumberFormatException e) {
-            log.warn("Invalid number format: {}, using 0.0", value);
             return 0.0;
         }
     }
 
-    public static List<Epitope> associateBlasts(List<Epitope> epitopes, List<Blast> blasts) {
-        Map<Long, Epitope> epitopeMap = epitopes.stream()
-                .collect(Collectors.toMap(Epitope::getN, e -> e));
-
-        for (Blast blast : blasts) {
-            Epitope epitope = epitopeMap.get(blast.getN());
-            if (epitope != null) {
-                blast.setEpitope(epitope);
-
-                if (epitope.getBlasts() == null) {
-                    epitope.setBlasts(new ArrayList<>());
-                }
-                epitope.getBlasts().add(blast);
+    /**
+     * Associates epitope topologies with epitopes.
+     *
+     * @param epitopes   list of epitopes
+     * @param topologies list of topologies
+     * @return epitopes with associated topologies
+     */
+    private List<Epitope> associateTopologies(List<Epitope> epitopes, List<EpitopeTopology> topologies) {
+        Map<Long, List<EpitopeTopology>> topologyMap = topologies.stream()
+                .collect(Collectors.groupingBy(EpitopeTopology::getN));
+        for (Epitope epitope : epitopes) {
+            List<EpitopeTopology> epitopeTopologies = topologyMap.get(epitope.getN());
+            if (epitopeTopologies != null) {
+                epitope.setEpitopeTopologies(epitopeTopologies);
             }
         }
-
         return epitopes;
     }
 
-    public static List<Epitope> associateTopologies(List<Epitope> epitopes, List<EpitopeTopology> topologies) {
-        Map<Long, Epitope> epitopeMap = epitopes.stream()
-                .collect(Collectors.toMap(Epitope::getN, e -> e));
-
-        for (EpitopeTopology topology : topologies) {
-            Epitope epitope = epitopeMap.get(topology.getN());
-            if (epitope != null) {
-                if (epitope.getEpitopeTopologies() == null) {
-                    epitope.setEpitopeTopologies(new ArrayList<>());
-                }
-                topology.setEpitope(epitope);
-                epitope.getEpitopeTopologies().add(topology);
+    /**
+     * Associates BLAST results with epitopes.
+     *
+     * @param epitopes list of epitopes
+     * @param blasts   list of BLAST results
+     */
+    private void associateBlasts(List<Epitope> epitopes, List<Blast> blasts) {
+        Map<Long, List<Blast>> blastMap = blasts.stream()
+                .collect(Collectors.groupingBy(Blast::getN));
+        for (Epitope epitope : epitopes) {
+            List<Blast> epitopeBlasts = blastMap.get(epitope.getN());
+            if (epitopeBlasts != null) {
+                epitope.setBlasts(epitopeBlasts);
             }
         }
-
-        return epitopes;
-    }
-
-    private boolean isProcessRunning(long pid) {
-        return ProcessHandle.of(pid).map(ProcessHandle::isAlive).orElse(false);
     }
 }
