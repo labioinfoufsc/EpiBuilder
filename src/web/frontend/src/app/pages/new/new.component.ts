@@ -13,6 +13,9 @@ import { LoginService } from "../../services/login/login.service";
   styleUrls: ["./new.component.scss"],
 })
 export class NewComponent {
+  isValidSequence: boolean = true;
+  validationMessage: string | null = null;
+  isValidating: boolean = false;
   myForm: FormGroup;
   messages: { category: string; text: string }[] = [];
   databases: Database[] = [];
@@ -116,6 +119,53 @@ export class NewComponent {
     });
   }
 
+  validateInput(): void {
+    const inputType = this.myForm.get('inputType')?.value;
+    const formData = new FormData();
+    let hasData = false;
+
+    if (inputType === 'file' && this.selectedFile) {
+      formData.append('file', this.selectedFile);
+      hasData = true;
+    } else if (inputType === 'manual') {
+      const seq = this.myForm.get('manualSequence')?.value;
+      if (seq) {
+        formData.append('sequence', seq);
+        hasData = true;
+      }
+    }
+
+    if (!hasData) {
+      this.resetValidation();
+      return;
+    }
+
+    this.isValidating = true;
+    this.epitopesService.validateSequence(formData).subscribe({
+      next: (res) => {
+        this.isValidating = false;
+        this.isValidSequence = res.valid;
+        this.validationMessage = res.valid ? null : res.message;
+
+        if (!res.valid) {
+          this.myForm.setErrors({ 'invalidSequence': true });
+        } else {
+          this.myForm.setErrors(null);
+        }
+      },
+      error: (err) => {
+        this.isValidating = false;
+        console.error(err);
+      }
+    });
+  }
+
+  resetValidation(): void {
+    this.isValidSequence = true;
+    this.validationMessage = null;
+    this.myForm.setErrors(null);
+  }
+
   loadDatabases() {
     this.databasesService.getDatabases().subscribe({
       next: (databases) => {
@@ -202,12 +252,12 @@ export class NewComponent {
     const proteomeGroup = this.fb.group({
       sourceType: ['database'],
       proteomeAlias: [''],
-      databaseFile: [null, Validators.required], // Adicione validação
+      databaseFile: [null, Validators.required],
       fastaFile: [null]
     });
 
     this.proteomes.push(proteomeGroup);
-    this.uploadedDBFiles.push(undefined); // Mantenha sincronizado com os proteomas
+    this.uploadedDBFiles.push(undefined); 
   }
 
   removeProteome(index: number): void {
@@ -216,7 +266,6 @@ export class NewComponent {
     }
   }
 
-  // Método auxiliar para acessar os controles do FormArray
   get proteomes(): FormArray {
     return this.myForm.get("proteomes") as FormArray;
   }
@@ -262,9 +311,6 @@ export class NewComponent {
       }
     }
 
-
-
-    // Criação do objeto `EpitopeTaskData` que será enviado como 'data'
     const taskData: any = {
       user: this.loginService.getUser(),
       runName: this.myForm.get('runName')?.value,
@@ -272,7 +318,6 @@ export class NewComponent {
       doBlast: this.myForm.get('doBlast')?.value === 'no_search' ? false : true,
     };
 
-    // Configuração dos parâmetros padrão ou personalizados
     if (this.myForm.get('actionType')?.value === 'default') {
       taskData.bepipredThreshold = 0.1512;
       taskData.minEpitopeLength = 10;
@@ -294,7 +339,6 @@ export class NewComponent {
 
     const formData = new FormData();
     if (taskData.doBlast == true) {
-      // Valida parâmetros do BLAST
       if (!this.validateBlastParameters()) {
         return;
       }
@@ -319,7 +363,6 @@ export class NewComponent {
       });
     }
 
-    // Adiciona o objeto 'taskData' como um JSON Blob
     formData.append('data', new Blob([JSON.stringify(taskData)], { type: 'application/json' }));
 
     if (this.selectedFile) {
@@ -330,8 +373,6 @@ export class NewComponent {
       formData.append('file', fileFromManual, fileFromManual.name);
     }
 
-
-    // Envia a requisição
     this.epitopesService.submitForm(formData).subscribe({
       next: (success) => {
         this.showMessage({
@@ -391,7 +432,6 @@ export class NewComponent {
     for (let i = 0; i < this.proteomes.length; i++) {
       const proteomeGroup = this.proteomes.at(i) as FormGroup;
 
-      // Verifica se o grupo tem dados válidos antes de processar
       if (this.isProteomeGroupValid(proteomeGroup)) {
         const sourceType = proteomeGroup.get('sourceType')?.value;
         const alias = proteomeGroup.get('proteomeAlias')?.value;
@@ -426,7 +466,6 @@ export class NewComponent {
     }
 
     if (!hasValidProteome) {
-      // Mensagem genérica que cobre ambos os casos (database e FASTA)
       this.showMessage({
         text: 'Please configure at least one valid proteome (database or FASTA file) for BLAST.',
         category: 'danger'
@@ -438,7 +477,6 @@ export class NewComponent {
     return { proteomeFiles, proteomeMeta };
   }
 
-  // Novo método auxiliar para verificar validade do grupo
   private isProteomeGroupValid(group: FormGroup): boolean {
     const sourceType = group.get('sourceType')?.value;
 
@@ -518,6 +556,10 @@ export class NewComponent {
         this.myForm.get('fileToProcess')?.setValue(null);
         event.target.value = '';
       }
+    }
+
+    if (this.selectedFile) {
+      this.validateInput();
     }
   }
 
@@ -618,29 +660,33 @@ export class NewComponent {
   }
 
   loadExampleFile(event: Event) {
-    event.preventDefault(); // evita recarregar a página
+    event.preventDefault();
 
     fetch('assets/example.fasta')
       .then(response => response.blob())
       .then(blob => {
         const file = new File([blob], 'example.fasta', { type: blob.type });
+
+        this.selectedFile = file;
+        this.myForm.patchValue({ fileToProcess: file });
+
         const dataTransfer = new DataTransfer();
         dataTransfer.items.add(file);
-
         const fileInput = document.getElementById('fileToProcess') as HTMLInputElement;
         if (fileInput) {
           fileInput.files = dataTransfer.files;
-
-          // Dispara o evento (change) manualmente
-          fileInput.dispatchEvent(new Event('change'));
         }
 
-
         const reader = new FileReader();
-
-        //Show the content file
         reader.onload = () => {
           const content = reader.result as string;
+
+          this.fileType = 'fasta';
+          const lines = content.split('\n');
+          const count = lines.filter(line => line.trim().startsWith('>')).length;
+          this.sequenceCount = count;
+
+          this.validateInput();
         };
 
         reader.onerror = () => {
@@ -651,11 +697,12 @@ export class NewComponent {
       })
       .catch(error => {
         console.error('Error while loading example file:', error);
+        this.showMessage({ text: 'Failed to load example file.', category: 'danger' });
       });
   }
 
   loadExampleManual(event: Event): void {
-    event.preventDefault(); // evita recarregar a página
+    event.preventDefault();
 
     fetch('assets/example.fasta')
       .then(response => response.text())
@@ -663,7 +710,12 @@ export class NewComponent {
         const manualControl = this.myForm.get('manualSequence');
         if (manualControl) {
           manualControl.setValue(text);
+          manualControl.markAsDirty();
         }
+
+        this.createFastaFile();
+
+        this.validateInput();
       })
       .catch(error => {
         console.error('Error while loading example file:', error);

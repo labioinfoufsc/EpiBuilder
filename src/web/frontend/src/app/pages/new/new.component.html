@@ -48,30 +48,50 @@
                       </div>
 
 
-                      <!-- Se "Upload File" for escolhido -->
-                      <!-- Se "Default" (arquivo) for escolhido -->
-                      <div *ngIf="myForm.get('inputType')?.value === 'file'">
-                        <label for="fileToProcess" class="form-label fw-bold">File to Process:</label>
-                        <input type="file" class="form-control" id="fileToProcess" accept=".csv,.fasta,.fa,.faa,.fna"
-                          (change)="onFileChange($event)" required />
-                        <small class="text-muted d-block mt-1">
-                          <i style="color: #ffc107 !important" class="fa-solid fa-circle-info"></i>
-                          Allowed Formats: CSV, FASTA,
-                          <a href="#" (click)="loadExampleFile($event)">Load FASTA example</a>
-                        </small>
+                      <!-- FILE -->
+                    <div *ngIf="myForm.get('inputType')?.value === 'file'">
+                      <label for="fileToProcess" class="form-label fw-bold">File to Process:</label>
+                    
+                      <input type="file" class="form-control" [class.is-invalid]="!isValidSequence && !isValidating" id="fileToProcess"
+                        accept=".csv,.fasta,.fa,.faa,.fna" (change)="onFileChange($event)" required />
+                    
+                      <div *ngIf="isValidating" class="text-muted small mt-1">
+                        <span class="spinner-border spinner-border-sm" role="status"></span> Validating sequence...
                       </div>
+                    
+                      <div *ngIf="!isValidSequence && !isValidating" class="invalid-feedback d-block">
+                        <i class="fa-solid fa-triangle-exclamation"></i> {{ validationMessage }}
+                      </div>
+                    
+                      <small class="text-muted d-block mt-1">
+                        <i style="color: #ffc107 !important" class="fa-solid fa-circle-info"></i>
+                        Allowed Formats: CSV, FASTA...
+                        <a href="#" (click)="loadExampleFile($event)">Load FASTA example</a>
+                      </small>
+                    </div>
 
-                      <!-- Se "Sequence" (manual) for escolhido -->
+                      <!-- MANUAL -->
                       <div *ngIf="myForm.get('inputType')?.value === 'manual'">
                         <label for="manualSequence" class="form-label fw-bold">Write Sequence:</label>
-                        <textarea class="form-control" id="manualSequence" rows="5" formControlName="manualSequence"
-                          (blur)="createFastaFile()"></textarea>
+                      
+                        <textarea class="form-control" [class.is-invalid]="!isValidSequence && !isValidating" id="manualSequence" rows="5"
+                          formControlName="manualSequence" (blur)="createFastaFile(); validateInput()"></textarea>
+                      
                         <small class="text-muted d-block mt-1">
                           <i style="color: #ffc107 !important" class="fa-solid fa-circle-info"></i>
                           Write your sequence in FASTA format, or
                           <a href="#" (click)="loadExampleManual($event)">load example</a>.
                         </small>
+                      
+                        <div *ngIf="isValidating" class="text-muted small mt-1">
+                          <span class="spinner-border spinner-border-sm" role="status"></span> Validating...
+                        </div>
+                      
+                        <div *ngIf="!isValidSequence && !isValidating" class="invalid-feedback d-block">
+                          <i class="fa-solid fa-triangle-exclamation"></i> {{ validationMessage }}
+                        </div>
                       </div>
+
 
                       <div class="mt-3" *ngIf="sequenceCount !== null">
                         <strong *ngIf="fileType === 'fasta'">FASTA Info:</strong>
@@ -113,28 +133,28 @@
                           <!-- Cell Type -->
                           <strong>Cell Type</strong>
                           <div class="form-check" *ngFor="let type of cellTypes">
-                            <input class="form-check-input" type="radio" [value]="type.value" formControlName="cellType" name="cellType"
-                              [id]="type.value" />
+                            <input class="form-check-input" type="radio" [value]="type.value" formControlName="cellType"
+                              name="cellType" [id]="type.value" />
                             <label class="form-check-label" [for]="type.value">{{ type.label }}</label>
                           </div>
-                        
+
                           <!-- Eukaryote Subtypes -->
                           <div *ngIf="myForm.get('biologicalClassification.cellType')?.value === 'EUKARYOTE'">
                             <strong>Eukaryote Subtype (optional)</strong>
                             <div class="form-check" *ngFor="let org of organisms">
-                              <input class="form-check-input" type="radio" [value]="org.value" formControlName="organism" name="organism"
-                                [id]="org.value" />
+                              <input class="form-check-input" type="radio" [value]="org.value"
+                                formControlName="organism" name="organism" [id]="org.value" />
                               <label class="form-check-label" [for]="org.value">{{ org.label }}</label>
                             </div>
                             <small class="text-muted">Leave blank to select general Eukaryote.</small>
                           </div>
-                        
+
                           <!-- Bacterial Type (required) -->
                           <div *ngIf="myForm.get('biologicalClassification.cellType')?.value === 'BACTERIA'">
                             <strong>Bacterial Type</strong>
                             <div class="form-check" *ngFor="let bac of bacteriaTypes">
-                              <input class="form-check-input" type="radio" [value]="bac.value" formControlName="bacterialType"
-                                name="bacterialType" [id]="bac.value" />
+                              <input class="form-check-input" type="radio" [value]="bac.value"
+                                formControlName="bacterialType" name="bacterialType" [id]="bac.value" />
                               <label class="form-check-label" [for]="bac.value">{{ bac.label }}</label>
                             </div>
                           </div>
@@ -259,7 +279,7 @@
                       <div *ngIf="myForm.get('doBlast')?.value === 'BLAST_search'" class="mt-3">
                         <label class="form-label fw-bold">Minimum identity cutoff</label>
                         <input type="number" class="form-control" formControlName="minIdentityCutoff"
-                             placeholder="90" />
+                          placeholder="90" />
 
                         <label class="form-label fw-bold mt-2">Minimum cover cutoff</label>
                         <input type="number" class="form-control" formControlName="minCoverCutoff" placeholder="90" />
@@ -348,7 +368,8 @@
           <!-- Submit Button -->
           <div class="row justify-content-center submitButton">
             <div class="col-4 d-flex justify-content-end">
-              <button type="submit" class="submitButton btn btn-primary btn-lg w-100" [disabled]="isLoading">
+              <button type="submit" class="submitButton btn btn-primary btn-lg w-100"
+                [disabled]="isLoading || isValidating || !isValidSequence">
 
                 <span *ngIf="!isLoading"><i class="fa-solid fa-rocket"
                     style="color: white !important"></i>&nbsp;Run</span>

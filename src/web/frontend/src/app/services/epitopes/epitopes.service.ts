@@ -41,6 +41,10 @@ export class EpitopesService {
 
   constructor(private http: HttpClient) { }
 
+  validateSequence(data: FormData): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/validate/fasta`, data);
+  }
+
   /**
  * Sends a request to stop a running task by its ID.
  */
