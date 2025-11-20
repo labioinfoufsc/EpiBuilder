@@ -210,17 +210,17 @@ export class RealtimeExecutionsComponent implements OnInit, OnDestroy {
 
           if (
             this.currentProcess &&
-            logText.includes('Your results are in') &&
+            logText.includes('Pipeline finished') &&
             this.currentProcess.status !== 'COMPLETED'
           ) {
-
             const taskId = this.currentProcess.id;
             if (typeof taskId === 'number') {
+              this.currentProcess.status = 'COMPLETED';
+
               this.epitopesService.markTaskAsCompleted(taskId).subscribe({
                 next: () => {
-                  this.currentProcess!.status = 'COMPLETED';
                   this.cleanUpLogInterval();
-                  this.loadTasks();
+                  this.loadTasks(); 
                   this.startTableUpdates();
                   this.startElapsedTimeUpdates();
                 },
@@ -245,6 +245,7 @@ export class RealtimeExecutionsComponent implements OnInit, OnDestroy {
       }
     });
   }
+
 
   loadTasks(): void {
     if (this.userId === undefined) {

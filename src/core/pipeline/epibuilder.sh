@@ -25,6 +25,7 @@ show_help() {
     echo "  --identity INT             BLAST minimum identity cutoff (default: 90)"
     echo "  --bepipred_batch INT       Maximum number of proteins submitted for Bepipred processing (default: 100)"
     echo "  --bepipred_gpu             Enable GPU acceleration for Bepipred (default: false)"
+    echo "  --task_id INT              Internal task identifier"
     echo "  --help                     Show this help message and exit"
     echo ""
     echo "Available databases:"
@@ -59,6 +60,7 @@ SCRIPT_PATH="$(readlink -f "$0")"
 SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
 MAIN_NF="$SCRIPT_DIR/main.nf"
 JAR_PATH="$SCRIPT_DIR/epibuilder-core.jar"
+TASK_ID=""
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -66,6 +68,11 @@ while [[ $# -gt 0 ]]; do
     case $key in
         --input_file)
             INPUT_FILE="$2"
+            shift
+            shift
+            ;;
+        --task_id)                
+            TASK_ID="$2"
             shift
             shift
             ;;
@@ -172,5 +179,15 @@ NF_CMD+=" --bepipred_gpu \"$BEPIPRED_GPU\""
     -with-timeline $OUTPUT_DIR/reports/timeline.html \
     -with-dag $OUTPUT_DIR/reports/flowchart.png"
 
-# Execute
+# Execute pipeline
 eval $NF_CMD
+EXIT_CODE=$?
+
+if [[ $EXIT_CODE -eq 0 ]]; then
+    echo "Pipeline finished successfully"
+    if [[ -n "$TASK_ID" ]]; then
+        curl -X POST "http://epibuilder-web:8080/epitopes/tasks/${TASK_ID}/complete"
+    fi
+else
+    echo "Pipeline failed with exit code $EXIT_CODE"
+fi

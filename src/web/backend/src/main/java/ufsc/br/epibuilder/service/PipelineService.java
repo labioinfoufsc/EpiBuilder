@@ -171,8 +171,8 @@ public class PipelineService {
                 .append(String.format("-e EPIBUILDER_VOLUME=%s ", epibuilderVolume))
                 .append("bioinfoufsc/epibuilder-core:latest epibuilder ")
                 .append("--input_file ").append(taskData.getFile().getAbsolutePath()).append(" ")
-                .append("--output ").append(taskData.getCompleteBasename()).append(" ");
-               // .append("--task_id ").append(taskData.getId()).append(" ");
+                .append("--output ").append(taskData.getCompleteBasename()).append(" ")
+                .append("--task_id ").append(taskData.getId()).append(" ");
 
         addDefaultParameters(taskData);
         addClassificationParameter(taskData, cmd);
@@ -465,11 +465,17 @@ public class PipelineService {
             managedEpitopes.addAll(completeEpitopes);
 
             int proteomeSize = countProteins(proteinSummary.toString());
-            managedTask.setProteomeSize(proteomeSize);
+
+            if (proteomeSize > 0) {
+                managedTask.setProteomeSize(proteomeSize);
+            } else {
+                managedTask.setProteomeSize(0);
+            }
 
             if (managedTask.getTaskStatus().getStatus() != Status.IMPORTED) {
                 managedTask.getTaskStatus().setStatus(Status.COMPLETED);
-                managedTask.setFinishedDate(ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).toLocalDateTime());
+                managedTask.setFinishedDate(
+                        ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).toLocalDateTime());
             } else {
                 managedTask.setFinishedDate(null);
             }
