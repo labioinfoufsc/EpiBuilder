@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,6 +39,9 @@ import ufsc.br.epibuilder.model.TaskStatus;
 import ufsc.br.epibuilder.model.BiologicalClassification;
 import ufsc.br.epibuilder.model.BacterialType;
 import ufsc.br.epibuilder.model.CellType;
+
+import org.springframework.transaction.annotation.Transactional;
+import java.util.Set;
 
 /**
  * Service responsible for managing and executing epitope pipeline tasks.
@@ -93,6 +97,30 @@ public class PipelineService {
     }
 
     /**
+     * Checks if a Docker container with the given name is still running.
+     *
+     * @param containerName the name of the container
+     * @return true if the container is running, false otherwise
+     */
+    public boolean isContainerRunning(String containerName) {
+        try {
+            ProcessBuilder pb = new ProcessBuilder("docker", "ps", "--filter", "name=" + containerName, "--format",
+                    "{{.Names}}");
+            Process proc = pb.start();
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()))) {
+                String line = reader.readLine();
+                int exitCode = proc.waitFor();
+                if (exitCode == 0 && line != null && line.trim().equals(containerName)) {
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+            log.error("Error checking container {}: {}", containerName, e.getMessage(), e);
+        }
+        return false;
+    }
+
+    /**
      * Runs the pipeline using the provided {@link EpitopeTaskData}.
      *
      * @param taskData configuration for the pipeline execution
@@ -115,7 +143,7 @@ public class PipelineService {
             Process process = startProcess(processBuilder);
 
             String containerName = "epibuilder-task-" + taskData.getId();
-            updateTaskStatus(taskData, null, containerName);
+            updateTaskStatus(taskData, process.pid(), containerName);
 
             return process;
 
@@ -144,6 +172,7 @@ public class PipelineService {
                 .append("bioinfoufsc/epibuilder-core:latest epibuilder ")
                 .append("--input_file ").append(taskData.getFile().getAbsolutePath()).append(" ")
                 .append("--output ").append(taskData.getCompleteBasename()).append(" ");
+               // .append("--task_id ").append(taskData.getId()).append(" ");
 
         addDefaultParameters(taskData);
         addClassificationParameter(taskData, cmd);
@@ -292,31 +321,56 @@ public class PipelineService {
     }
 
     /**
-     * Monitors running tasks every minute. If a process is no longer running,
+     * Monitors running tasks every minute. If a container is no longer running,
      * updates the task status accordingly.
      */
-    @Scheduled(fixedRate = 60_000)
+    @Scheduled(fixedRate = 5000)
+    @Transactional
     public void monitorRunningTasks() {
-        log.info("Monitoring running tasks...");
+        log.debug("Monitoring running tasks...");
         try {
             List<EpitopeTaskData> runningTasks = epitopeTaskDataService.findTasksByTaskStatusStatus(Status.RUNNING);
-            log.info("Found {} running tasks", runningTasks.size());
-            for (EpitopeTaskData task : runningTasks) {
-                Long pid = task.getTaskStatus().getPid();
-                if (pid == null) {
-                    log.warn("Task {} has no PID assigned. Skipping monitoring.", task.getId());
-                    continue;
-                }
+            if (runningTasks.isEmpty())
+                return;
 
-                boolean isRunning = isProcessRunning(pid);
-                if (!isRunning) {
-                    log.info("PID {} is not running anymore. Processing task ID {}", pid, task.getId());
+            Set<String> runningContainers = getRunningContainers();
+
+            for (EpitopeTaskData task : runningTasks) {
+                TaskStatus status = task.getTaskStatus();
+                if (status == null || status.getContainerName() == null)
+                    continue;
+
+                if (!runningContainers.contains(status.getContainerName())) {
+                    log.info("Container {} finished. Processing task {}", status.getContainerName(), task.getId());
                     processCompletedTask(task);
                 }
             }
         } catch (Exception e) {
-            log.error("Error in monitorRunningTasks: {}", e.getMessage());
+            log.error("Error in monitorRunningTasks", e);
         }
+    }
+
+    private Set<String> getRunningContainers() {
+        Set<String> running = new HashSet<>();
+        try {
+            ProcessBuilder pb = new ProcessBuilder("docker", "ps", "--format", "{{.Names}}");
+            Process proc = pb.start();
+
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    running.add(line.trim());
+                }
+            }
+
+            proc.waitFor();
+        } catch (IOException e) {
+            log.error("Error while checking running containers", e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("Interrupted while waiting for docker ps", e);
+        }
+        return running;
     }
 
     /**
@@ -329,20 +383,20 @@ public class PipelineService {
         return ProcessHandle.of(pid).map(ProcessHandle::isAlive).orElse(false);
     }
 
-    /**
-     * Processes completed tasks by validating result files, parsing epitope and
-     * topology data,
-     * associating BLAST results, and updating task status.
-     *
-     * @param task the completed task
-     */
+    @Transactional
     public void processCompletedTask(EpitopeTaskData task) {
-        Path completePath = Paths.get(task.getCompleteBasename());
+        EpitopeTaskData managedTask = epitopeTaskDataService.findById(task.getId()).get();
+        if (managedTask == null) {
+            log.error("Task {} not found when processing completion.", task.getId());
+            return;
+        }
+
+        Path completePath = Paths.get(managedTask.getCompleteBasename());
 
         if (!Files.exists(completePath)) {
-            log.error("Complete directory not found for task {}: {}", task.getId(), completePath);
-            task.getTaskStatus().setStatus(Status.FAILED);
-            epitopeTaskDataService.save(task);
+            log.error("Complete directory not found for task {}: {}", managedTask.getId(), completePath);
+            managedTask.getTaskStatus().setStatus(Status.FAILED);
+            epitopeTaskDataService.save(managedTask);
             return;
         }
 
@@ -352,7 +406,7 @@ public class PipelineService {
             Path proteinSummary = completePath.resolve("protein-summary.tsv");
 
             Path localizationPath = null;
-            if (task.getLocalizationParam() != null) {
+            if (managedTask.getLocalizationParam() != null) {
                 localizationPath = completePath.resolve("localization.tsv");
             }
 
@@ -363,18 +417,17 @@ public class PipelineService {
                 missingFiles.add("epitopePath");
             if (!Files.exists(proteinSummary))
                 missingFiles.add("proteinSummary");
-            if (localizationPath != null && !Files.exists(localizationPath)) {
+            if (localizationPath != null && !Files.exists(localizationPath))
                 missingFiles.add("localizationPath");
-            }
 
             if (!missingFiles.isEmpty()) {
-                log.error("Missing result files for task {}: {}", task.getId(), String.join(", ", missingFiles));
-                task.getTaskStatus().setStatus(Status.FAILED);
-                epitopeTaskDataService.save(task);
+                log.error("Missing result files for task {}: {}", managedTask.getId(), String.join(", ", missingFiles));
+                managedTask.getTaskStatus().setStatus(Status.FAILED);
+                epitopeTaskDataService.save(managedTask);
                 return;
             }
 
-            List<Epitope> epitopes = convertTsvToEpitopes(epitopePath.toString(), task);
+            List<Epitope> epitopes = convertTsvToEpitopes(epitopePath.toString(), managedTask);
             List<EpitopeTopology> topologies = parseEpitopeTopology(topologyPath.toString());
             List<Epitope> completeEpitopes = associateTopologies(epitopes, topologies);
 
@@ -403,31 +456,30 @@ public class PipelineService {
                 associateBlasts(completeEpitopes, convertedBlasts);
             }
 
-            List<Epitope> managedEpitopes = task.getEpitopes();
+            List<Epitope> managedEpitopes = managedTask.getEpitopes();
             if (managedEpitopes == null) {
                 managedEpitopes = new ArrayList<>();
-                task.setEpitopes(managedEpitopes);
+                managedTask.setEpitopes(managedEpitopes);
             }
             managedEpitopes.clear();
             managedEpitopes.addAll(completeEpitopes);
 
             int proteomeSize = countProteins(proteinSummary.toString());
-            task.setProteomeSize(proteomeSize);
+            managedTask.setProteomeSize(proteomeSize);
 
-            if (task.getTaskStatus().getStatus() != Status.IMPORTED) {
-                task.getTaskStatus().setStatus(Status.COMPLETED);
-                LocalDateTime now = ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).toLocalDateTime();
-                task.setFinishedDate(now);
+            if (managedTask.getTaskStatus().getStatus() != Status.IMPORTED) {
+                managedTask.getTaskStatus().setStatus(Status.COMPLETED);
+                managedTask.setFinishedDate(ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).toLocalDateTime());
             } else {
-                task.setFinishedDate(null);
+                managedTask.setFinishedDate(null);
             }
 
-            epitopeTaskDataService.save(task);
+            epitopeTaskDataService.save(managedTask);
 
         } catch (IOException e) {
-            log.error("Error processing result files for task {}: {}", task.getId(), e.getMessage());
-            task.getTaskStatus().setStatus(Status.FAILED);
-            epitopeTaskDataService.save(task);
+            log.error("Error processing result files for task {}: {}", managedTask.getId(), e.getMessage());
+            managedTask.getTaskStatus().setStatus(Status.FAILED);
+            epitopeTaskDataService.save(managedTask);
         }
     }
 
@@ -528,7 +580,7 @@ public class PipelineService {
      */
     public static int countProteins(String pathFile) throws IOException {
         try (BufferedReader br = new BufferedReader(new FileReader(pathFile))) {
-            br.readLine(); // skip header
+            br.readLine();
             int countProtein = 0;
             while (br.readLine() != null) {
                 countProtein++;
@@ -548,7 +600,7 @@ public class PipelineService {
     public static List<Epitope> convertTsvToEpitopes(String filePath, EpitopeTaskData task) throws IOException {
         List<Epitope> epitopes = new ArrayList<>();
         try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
-            reader.readLine(); // skip header
+            reader.readLine();
             String line;
             while ((line = reader.readLine()) != null) {
                 String[] columns = line.split("\t");
