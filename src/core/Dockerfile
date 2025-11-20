@@ -15,8 +15,6 @@ RUN apt-get update && \
     dpkg-reconfigure --frontend noninteractive tzdata && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-RUN useradd -ms /bin/bash epibuilderuser
-
 RUN mkdir -p /db && \
     curl -L -o /db/uniprot_sprot.fasta.gz https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz && \
     gzip -d /db/uniprot_sprot.fasta.gz && \
@@ -39,9 +37,5 @@ RUN cp /epibuilder/pipeline/fasta/ebola.fasta /fasta/ebola.fasta
 
 RUN chmod +x /epibuilder/pipeline/epibuilder.sh
 RUN ln -s /epibuilder/pipeline/epibuilder.sh /usr/local/bin/epibuilder
-
-RUN chown -R epibuilderuser:epibuilderuser /epibuilder /fasta /db /tmp
-
-USER epibuilderuser
 
 WORKDIR /

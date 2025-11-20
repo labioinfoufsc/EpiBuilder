@@ -513,7 +513,7 @@ public class EpitopeController {
     public ResponseEntity<Map<String, Object>> stopTask(@PathVariable Long id) {
         log.info("Received request to stop task with ID: {}", id);
         try {
-            EpitopeTaskData taskData = epitopeTaskDataService.findById(id);
+            EpitopeTaskData taskData = epitopeTaskDataService.findById(id).get();
             if (taskData == null) {
                 return errorResponse("Task not found", HttpStatus.NOT_FOUND);
             }
@@ -588,7 +588,7 @@ public class EpitopeController {
     @GetMapping("/tasks/{id}/download")
     public ResponseEntity<Resource> downloadFile(@PathVariable Long id) {
         try {
-            EpitopeTaskData task = epitopeTaskDataService.findById(id);
+            EpitopeTaskData task = epitopeTaskDataService.findById(id).get();
             Path taskDir = Paths.get(task.getCompleteBasename()).normalize();
 
             if (!Files.exists(taskDir)) {
@@ -644,7 +644,7 @@ public class EpitopeController {
      */
     @GetMapping("/tasks/{id}/log")
     public ResponseEntity<?> getTaskLog(@PathVariable Long id) {
-        EpitopeTaskData task = epitopeTaskDataService.findById(id);
+        EpitopeTaskData task = epitopeTaskDataService.findById(id).get();
         if (task == null) {
             return ResponseEntity.notFound().build();
         }
@@ -663,7 +663,7 @@ public class EpitopeController {
         try {
             String logContent = Files.readString(logFile);
 
-            if (logContent.contains("Your results are")) {
+            if (logContent.contains("Pipeline finished")) {
                 this.monitorRunningTasksAsync();
             }
 
@@ -708,7 +708,7 @@ public class EpitopeController {
     @DeleteMapping("/tasks/{id}")
     public ResponseEntity<Map<String, String>> deleteTask(@PathVariable Long id) {
         try {
-            EpitopeTaskData taskFound = epitopeTaskDataService.findById(id);
+            EpitopeTaskData taskFound = epitopeTaskDataService.findById(id).get();
             if (taskFound == null) {
                 return ResponseEntity.notFound().build();
             }
@@ -732,42 +732,22 @@ public class EpitopeController {
      */
     @PutMapping("/tasks/{id}/complete")
     public ResponseEntity<Void> markTaskAsCompleted(@PathVariable Long id) {
-        EpitopeTaskData task = epitopeTaskDataService.findById(id);
-        if (task == null) {
+        EpitopeTaskData task = epitopeTaskDataService.findById(id).orElse(null);
+        if (task == null)
             return ResponseEntity.notFound().build();
-        }
 
         TaskStatus status = task.getTaskStatus();
-        if (status == null) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
-        }
-
-        try {
-            boolean processRunning = pipelineService.isProcessRunning(status.getPid());
-
-            if (!processRunning) {
-                Path logFile = Paths.get(task.getCompleteBasename(), "pipeline.log");
-                if (Files.exists(logFile)) {
-                    String logContent = Files.readString(logFile);
-                    if (logContent.contains("Your results are in")) {
-                        status.setStatus(Status.COMPLETED);
-                        task.setFinishedDate(LocalDateTime.now());
-                        epitopeTaskDataService.save(task);
-                        return ResponseEntity.ok().build();
-                    }
-                }
-                status.setStatus(Status.STOPPED);
-                task.setFinishedDate(LocalDateTime.now());
-                epitopeTaskDataService.save(task);
-                return ResponseEntity.ok().build();
-            }
-
+        if (status == null)
             return ResponseEntity.status(HttpStatus.CONFLICT).build();
 
-        } catch (IOException e) {
-            log.error("Error while verifying task {} log: {}", id, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        if (status.getStatus() != Status.IMPORTED) {
+            status.setStatus(Status.COMPLETED);
+            task.setFinishedDate(LocalDateTime.now());
+            epitopeTaskDataService.save(task);
+            return ResponseEntity.ok().build();
         }
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).build();
     }
 
     /**

@@ -76,7 +76,7 @@ public class EpitopeTaskData {
     @JsonBackReference
     private User user;
 
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @JoinColumn(name = "task_status_id", referencedColumnName = "id")
     @JsonManagedReference
     private TaskStatus taskStatus;

@@ -54,13 +54,6 @@ export class EpitopesService {
     });
   }
 
-  getTaskStatus(taskId: number): Observable<APIResponse<EpitopeTaskData>> {
-    return this.http.get<APIResponse<EpitopeTaskData>>(
-      `${this.apiUrl}/tasks/status/${taskId}`,
-      { withCredentials: true }
-    );
-  }
-
   deleteTask(taskId: number): Observable<APIResponse<void>> {
     return this.http
       .delete<APIResponse<void>>(`${this.apiUrl}/tasks/${taskId}`)
@@ -141,7 +134,7 @@ export class EpitopesService {
   getExecutedTasksByUserId(userId: number): Observable<EpitopeTaskData[]> {
     return this.http
       .get<EpitopeTaskData[]>(
-        `${this.apiUrl}/tasks/user/${userId}`, // Note the /epitopes prefix
+        `${this.apiUrl}/tasks/user/${userId}`,
         { withCredentials: true }
       )
       .pipe(
