@@ -8,6 +8,7 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 import ufsc.br.epibuilder.model.Status;
+import java.util.Optional;
 
 /**
  * Service layer for handling operations related to EpitopeTaskData.
@@ -36,10 +37,14 @@ public class EpitopeTaskDataService {
         return epitopeTaskDataRepository.save(epitopeTaskData);
     }
 
-    public EpitopeTaskData findById(Long id) {
+    public Optional<EpitopeTaskData> findById(Long id) {
 
         System.out.println("Epitope Task: " + id);
 
+        return epitopeTaskDataRepository.findById(id);
+    }
+
+    public Optional<EpitopeTaskData> findByIdWithEpitopes(Long id) {
         return epitopeTaskDataRepository.findById(id);
     }
 

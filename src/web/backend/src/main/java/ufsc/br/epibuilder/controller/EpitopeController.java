@@ -513,7 +513,7 @@ public class EpitopeController {
     public ResponseEntity<Map<String, Object>> stopTask(@PathVariable Long id) {
         log.info("Received request to stop task with ID: {}", id);
         try {
-            EpitopeTaskData taskData = epitopeTaskDataService.findById(id);
+            EpitopeTaskData taskData = epitopeTaskDataService.findById(id).get();
             if (taskData == null) {
                 return errorResponse("Task not found", HttpStatus.NOT_FOUND);
             }
@@ -588,7 +588,7 @@ public class EpitopeController {
     @GetMapping("/tasks/{id}/download")
     public ResponseEntity<Resource> downloadFile(@PathVariable Long id) {
         try {
-            EpitopeTaskData task = epitopeTaskDataService.findById(id);
+            EpitopeTaskData task = epitopeTaskDataService.findById(id).get();
             Path taskDir = Paths.get(task.getCompleteBasename()).normalize();
 
             if (!Files.exists(taskDir)) {
@@ -644,7 +644,7 @@ public class EpitopeController {
      */
     @GetMapping("/tasks/{id}/log")
     public ResponseEntity<?> getTaskLog(@PathVariable Long id) {
-        EpitopeTaskData task = epitopeTaskDataService.findById(id);
+        EpitopeTaskData task = epitopeTaskDataService.findById(id).get();
         if (task == null) {
             return ResponseEntity.notFound().build();
         }
@@ -708,7 +708,7 @@ public class EpitopeController {
     @DeleteMapping("/tasks/{id}")
     public ResponseEntity<Map<String, String>> deleteTask(@PathVariable Long id) {
         try {
-            EpitopeTaskData taskFound = epitopeTaskDataService.findById(id);
+            EpitopeTaskData taskFound = epitopeTaskDataService.findById(id).get();
             if (taskFound == null) {
                 return ResponseEntity.notFound().build();
             }
@@ -732,7 +732,7 @@ public class EpitopeController {
      */
     @PutMapping("/tasks/{id}/complete")
     public ResponseEntity<Void> markTaskAsCompleted(@PathVariable Long id) {
-        EpitopeTaskData task = epitopeTaskDataService.findById(id);
+        EpitopeTaskData task = epitopeTaskDataService.findById(id).get();
         if (task == null) {
             return ResponseEntity.notFound().build();
         }
