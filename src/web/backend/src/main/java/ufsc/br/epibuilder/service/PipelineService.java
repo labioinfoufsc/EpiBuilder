@@ -427,12 +427,24 @@ public class PipelineService {
                 return;
             }
 
+            log.info("Parsing epitopes from epitope-detail.tsv...");
             List<Epitope> epitopes = convertTsvToEpitopes(epitopePath.toString(), managedTask);
+            log.info("Parsed {} epitopes", epitopes.size());
+
+            log.info("Parsing topologies from topology.tsv...");
             List<EpitopeTopology> topologies = parseEpitopeTopology(topologyPath.toString());
+            log.info("Parsed {} topologies", topologies.size());
+
+            log.info("Associating topologies with epitopes...");
             List<Epitope> completeEpitopes = associateTopologies(epitopes, topologies);
+            log.info("Topologies associated with epitopes. Total epitopes after association: {}",
+                    completeEpitopes.size());
 
             if (localizationPath != null) {
+                log.info("Parsing localization data from localization.tsv...");
                 List<Protein> proteins = convertTsvToProteins(localizationPath.toString());
+                log.info("Parsed {} proteins with localization info", proteins.size());
+
                 Map<String, String> localizationMap = proteins.stream()
                         .collect(Collectors.toMap(Protein::getProteinId, Protein::getLocalization));
 
@@ -445,17 +457,24 @@ public class PipelineService {
                         }
                     }
                 }
+                log.info("Localization data associated with epitopes");
             }
 
+            log.info("Searching for BLAST result files (*.blast.csv)...");
             List<Path> blastFiles = Files.list(completePath)
                     .filter(path -> path.getFileName().toString().endsWith("blast.csv"))
                     .collect(Collectors.toList());
+            log.info("Found {} BLAST files", blastFiles.size());
 
             for (Path searchPath : blastFiles) {
+                log.info("Parsing BLAST file: {}", searchPath.getFileName());
                 List<Blast> convertedBlasts = parseBlastCsv(searchPath.toString());
+                log.info("Parsed {} BLAST entries from {}", convertedBlasts.size(), searchPath.getFileName());
                 associateBlasts(completeEpitopes, convertedBlasts);
+                log.info("Associated BLAST results with epitopes");
             }
 
+            log.info("Updating managed epitopes for task {}", managedTask.getId());
             List<Epitope> managedEpitopes = managedTask.getEpitopes();
             if (managedEpitopes == null) {
                 managedEpitopes = new ArrayList<>();
@@ -463,8 +482,11 @@ public class PipelineService {
             }
             managedEpitopes.clear();
             managedEpitopes.addAll(completeEpitopes);
+            log.info("Managed epitopes updated. Total epitopes: {}", managedEpitopes.size());
 
+            log.info("Counting proteins from protein-summary.tsv...");
             int proteomeSize = countProteins(proteinSummary.toString());
+            log.info("Proteome size counted: {}", proteomeSize);
 
             if (proteomeSize > 0) {
                 managedTask.setProteomeSize(proteomeSize);
@@ -476,11 +498,14 @@ public class PipelineService {
                 managedTask.getTaskStatus().setStatus(Status.COMPLETED);
                 managedTask.setFinishedDate(
                         ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).toLocalDateTime());
+                log.info("Task {} marked as COMPLETED", managedTask.getId());
             } else {
                 managedTask.setFinishedDate(null);
+                log.info("Task {} remains IMPORTED, finishedDate set to null", managedTask.getId());
             }
 
             epitopeTaskDataService.save(managedTask);
+            log.info("Task {} saved successfully with updated epitope and topology data", managedTask.getId());
 
         } catch (IOException e) {
             log.error("Error processing result files for task {}: {}", managedTask.getId(), e.getMessage());
@@ -722,9 +747,13 @@ public class PipelineService {
     private List<Epitope> associateTopologies(List<Epitope> epitopes, List<EpitopeTopology> topologies) {
         Map<Long, List<EpitopeTopology>> topologyMap = topologies.stream()
                 .collect(Collectors.groupingBy(EpitopeTopology::getN));
+
         for (Epitope epitope : epitopes) {
             List<EpitopeTopology> epitopeTopologies = topologyMap.get(epitope.getN());
             if (epitopeTopologies != null) {
+                for (EpitopeTopology topo : epitopeTopologies) {
+                    topo.setEpitope(epitope);
+                }
                 epitope.setEpitopeTopologies(epitopeTopologies);
             }
         }
@@ -743,8 +772,12 @@ public class PipelineService {
         for (Epitope epitope : epitopes) {
             List<Blast> epitopeBlasts = blastMap.get(epitope.getN());
             if (epitopeBlasts != null) {
+                for (Blast blast : epitopeBlasts) {
+                    blast.setEpitope(epitope);
+                }
                 epitope.setBlasts(epitopeBlasts);
             }
         }
     }
+
 }
