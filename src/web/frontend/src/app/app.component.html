@@ -1,6 +1,13 @@
-<div *ngIf="!isBackendReady" class="d-flex justify-content-center align-items-center vh-100">
-    <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Loading...</span>
+<div *ngIf="!isBackendReady" class="d-flex justify-content-center align-items-center vh-100 bg-light">
+    <div class="text-center">
+        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+
+        <h4 class="mt-4 text-primary">Critical System Initialization</h4>
+        <p class="text-muted" style="max-width: 500px; margin-top: 15px;">
+            {{ initializationMessage }}
+        </p>
     </div>
 </div>
 
