@@ -9,21 +9,39 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 
-import java.io.IOException;
+import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Date;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.io.BufferedReader;
-import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.time.format.DateTimeFormatter;
+import java.util.stream.Stream;
+import java.util.zip.GZIPInputStream;
 
+/**
+ * Component responsible for the initial system setup and data seeding.
+ * *
+ * <p>
+ * This runner executes on startup before the application signals that it is
+ * ready.
+ * It performs the following critical tasks:
+ * <ol>
+ * <li>Creates default administrative and regular users.</li>
+ * <li>Downloads and decompresses the UniProt Swiss-Prot database if
+ * missing.</li>
+ * <li>Registers local FASTA files into the database.</li>
+ * </ol>
+ * *
+ * <p>
+ * <strong>Note:</strong> The application startup is blocked during the UniProt
+ * download process.
+ */
 @Component
 @Order(1)
 public class DataLoader implements CommandLineRunner {
@@ -33,110 +51,236 @@ public class DataLoader implements CommandLineRunner {
 
     private final PasswordEncoder passwordEncoder;
 
+    private static final String UNIPROT_URL = "https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz";
+    private static final String DB_DIRECTORY = "/tmp/epibuilder/db";
+    private static final String TIMEZONE = "America/Sao_Paulo";
+    private static final int BUFFER_SIZE = 8192; // 8KB buffer for streams
+    private static final long LOG_THRESHOLD_BYTES = 10 * 1024 * 1024; // Log progress every 10MB
+
     public DataLoader(PasswordEncoder passwordEncoder) {
         this.passwordEncoder = passwordEncoder;
     }
 
+    /**
+     * Entry point for the initialization logic.
+     * Blocks the main thread, effectively preventing the application from accepting
+     * requests until the download and setup are complete.
+     */
     @Override
     @Transactional
     public void run(String... args) throws Exception {
-
-        if (shouldSkipDataLoading(args)) {
-            System.out.println("DataLoader: Initial data loading disabled by argument");
+        if (shouldSkip(args)) {
+            log("Skipping data loader via arguments.");
             return;
         }
 
-        Long userCount = (Long) entityManager.createQuery("SELECT COUNT(u) FROM User u").getSingleResult();
+        long userCount = (long) entityManager.createQuery("SELECT COUNT(u) FROM User u").getSingleResult();
 
         if (userCount == 0) {
-            System.out.println("DataLoader: Starting initial data loading...");
-            loadInitialData();
-            System.out.println("DataLoader: Initial data loaded successfully!");
+            log("System is empty. Starting strict initialization sequence...");
+            log("WARNING: Application startup is PAUSED until resources are downloaded.");
+
+            initializeSystem();
+
+            log("Initialization finished. Application is now RESUMING startup.");
         } else {
-            System.out.println("DataLoader: Database already contains data. No initial data was loaded.");
+            log("System data found. Skipping initialization.");
         }
     }
 
-    private boolean shouldSkipDataLoading(String... args) {
+    private boolean shouldSkip(String... args) {
         for (String arg : args) {
-            if (arg.equalsIgnoreCase("--skipDataLoader")) {
+            if ("--skipDataLoader".equalsIgnoreCase(arg))
                 return true;
-            }
         }
         return false;
     }
 
-    private void loadInitialData() {
-        User admin = createUser("Admin", "admin", "admin", Role.ADMIN);
-        User regularUser = createUser("User", "user", "user", Role.USER);
+    private void initializeSystem() {
+        createDefaultUsers();
+        downloadUniProtIfMissing();
+        registerLocalDatabases();
+    }
 
-        Path dir = Paths.get("/tmp/epibuilder/db");
+    private void createDefaultUsers() {
+        persistUser("Admin", "admin", "admin", Role.ADMIN);
+        persistUser("User", "user", "user", Role.USER);
+        log("Default users created.");
+    }
 
-        if (!Files.exists(dir)) {
-            System.err.println("Directory not found: " + dir);
+    /**
+     * Checks if a UniProt database exists locally. If not, initiates the download
+     * stream.
+     * The file is named with the current date (versioning).
+     */
+    private void downloadUniProtIfMissing() {
+        String today = LocalDate.now().format(DateTimeFormatter.ISO_DATE);
+        String fileName = "uniprot_sprot_" + today + ".fasta";
+        Path targetPath = Paths.get(DB_DIRECTORY, fileName);
+        Path directory = Paths.get(DB_DIRECTORY);
+
+        ensureDirectoryExists(directory);
+
+        if (checkIfUniProtExists(directory)) {
+            log("UniProt database already exists locally. Skipping download.");
             return;
         }
 
+        log("UniProt not found. Starting download/decompression stream from: " + UNIPROT_URL);
         try {
-            Files.list(dir)
-                    .filter(Files::isRegularFile)
-                    .filter(path -> path.toString().endsWith(".fasta"))
-                    .forEach(path -> {
-                        System.out.println("Loading " + path);
-                        loadDatabaseFile(path.toString(), path.getFileName().toString().replace(".fasta", ""));
-                    });
+            downloadAndDecompress(UNIPROT_URL, targetPath);
         } catch (IOException e) {
-            e.printStackTrace();
+            logError("Failed to download UniProt. The system may lack essential data.", e);
         }
     }
 
-    private User createUser(String name, String username, String password, Role role) {
-        User user = new User();
-        user.setName(name);
-        user.setUsername(username);
-        user.setPassword(passwordEncoder.encode(password));
-        user.setRole(role);
-        entityManager.persist(user);
-        return user;
+    private void ensureDirectoryExists(Path dir) {
+        if (!Files.exists(dir)) {
+            try {
+                Files.createDirectories(dir);
+            } catch (IOException e) {
+                logError("Failed to create directory: " + dir, e);
+            }
+        }
     }
 
-    private int countSequences(Path filePath) throws IOException {
-        try (BufferedReader reader = Files.newBufferedReader(filePath)) {
+    private boolean checkIfUniProtExists(Path dir) {
+        try (Stream<Path> files = Files.list(dir)) {
+            return files.anyMatch(p -> p.getFileName().toString().startsWith("uniprot_sprot_"));
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Downloads a GZIP file and decompresses it on-the-fly to the target path.
+     * Uses a temporary file (.tmp) to ensure atomicity; the file is only renamed
+     * to .fasta upon successful completion.
+     */
+    private void downloadAndDecompress(String urlString, Path targetPath) throws IOException {
+        URL url = new URL(urlString);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+
+        Path tempPath = targetPath.resolveSibling(targetPath.getFileName() + ".tmp");
+
+        try (InputStream in = conn.getInputStream();
+                GZIPInputStream gzipIn = new GZIPInputStream(in);
+                FileOutputStream out = new FileOutputStream(tempPath.toFile())) {
+
+            byte[] buffer = new byte[BUFFER_SIZE];
+            int bytesRead;
+            long totalBytes = 0;
+            long lastLogBytes = 0;
+            long startTime = System.currentTimeMillis();
+
+            log("Download started. Please wait...");
+
+            while ((bytesRead = gzipIn.read(buffer)) != -1) {
+                out.write(buffer, 0, bytesRead);
+                totalBytes += bytesRead;
+
+                if (totalBytes - lastLogBytes > LOG_THRESHOLD_BYTES) {
+                    double mb = totalBytes / (1024.0 * 1024.0);
+                    log(String.format("Downloading & Decompressing: %.2f MB processed...", mb));
+                    lastLogBytes = totalBytes;
+                }
+            }
+
+            long duration = (System.currentTimeMillis() - startTime) / 1000;
+            log(String.format("Download completed in %d seconds. Finalizing file...", duration));
+        }
+
+        Files.move(tempPath, targetPath, StandardCopyOption.REPLACE_EXISTING);
+        log("UniProt Swiss-Prot saved successfully at: " + targetPath);
+    }
+
+    /**
+     * Scans the database directory for valid FASTA files and registers them.
+     */
+    private void registerLocalDatabases() {
+        Path dir = Paths.get(DB_DIRECTORY);
+        if (!Files.exists(dir))
+            return;
+
+        try (Stream<Path> files = Files.list(dir)) {
+            files.filter(Files::isRegularFile)
+                    .filter(p -> p.toString().endsWith(".fasta"))
+                    .forEach(this::processAndPersistDatabase);
+        } catch (IOException e) {
+            logError("Error scanning database directory", e);
+        }
+    }
+
+    private void processAndPersistDatabase(Path path) {
+        String fileName = path.getFileName().toString();
+        String alias = fileName.replace(".fasta", "");
+
+        // Applies specific naming convention for the auto-downloaded UniProt file
+        if (fileName.startsWith("uniprot_sprot_")) {
+            // Extract date: uniprot_sprot_2025-11-27.fasta -> 2025-11-27
+            String datePart = fileName.substring(14, 24);
+            alias = "UniProt Swiss-Prot (Reviewed) - " + datePart;
+        }
+
+        persistDatabaseMetadata(path.toString(), alias);
+    }
+
+    private void persistDatabaseMetadata(String filePath, String alias) {
+        File file = new File(filePath);
+
+        long exists = (long) entityManager.createQuery("SELECT COUNT(d) FROM Database d WHERE d.absolutePath = :path")
+                .setParameter("path", file.getAbsolutePath())
+                .getSingleResult();
+
+        if (exists > 0)
+            return;
+
+        if (file.exists()) {
+            try {
+                Database db = new Database();
+                db.setAlias(alias);
+                db.setFileName(file.getName());
+                db.setAbsolutePath(file.getAbsolutePath());
+                db.setDate(ZonedDateTime.now(ZoneId.of(TIMEZONE)).toLocalDateTime());
+
+                log("Counting sequences for: " + alias);
+                db.setAmountSequences(countSequences(file.toPath()));
+
+                entityManager.persist(db);
+                log("Registered database: " + alias);
+            } catch (IOException e) {
+                logError("Failed to process file: " + file.getName(), e);
+            }
+        }
+    }
+
+    private int countSequences(Path path) throws IOException {
+        try (BufferedReader reader = new BufferedReader(new FileReader(path.toFile()), BUFFER_SIZE * 4)) {
             int count = 0;
             String line;
             while ((line = reader.readLine()) != null) {
-                if (line.startsWith(">")) {
+                if (line.startsWith(">"))
                     count++;
-                }
             }
             return count;
         }
     }
 
-    private void loadDatabaseFile(String filePath, String alias) {
-        File file = new File(filePath);
+    private void persistUser(String name, String username, String pass, Role role) {
+        User user = new User();
+        user.setName(name);
+        user.setUsername(username);
+        user.setPassword(passwordEncoder.encode(pass));
+        user.setRole(role);
+        entityManager.persist(user);
+    }
 
-        if (file.exists() && file.isFile()) {
+    private void log(String message) {
+        System.out.println("[DataLoader] " + message);
+    }
 
-            try {
-                Database database = new Database();
-                database.setAlias(alias);
-                database.setFileName(file.getName());
-                database.setAbsolutePath(file.getAbsolutePath());
-                LocalDateTime now = ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).toLocalDateTime();
-                database.setDate(now);
-
-                database.setAmountSequences(countSequences(file.toPath()));
-
-                entityManager.persist(database);
-                System.out.println("DataLoader: File loaded and persisted: " + file.getName());
-            } catch (IOException e) {
-                System.err.println("Error counting sequences from file: " + file.getName());
-                e.printStackTrace();
-            }
-
-        } else {
-            System.out.println("DataLoader: File does not exist: " + filePath);
-        }
+    private void logError(String message, Exception e) {
+        System.err.println("[DataLoader] ERROR: " + message);
+        e.printStackTrace();
     }
 }
