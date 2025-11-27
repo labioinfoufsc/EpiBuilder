@@ -121,6 +121,13 @@ export class NewComponent {
 
   validateInput(): void {
     const inputType = this.myForm.get('inputType')?.value;
+    
+    if (inputType === 'file' && this.fileType === 'csv') {
+      this.resetValidation(); 
+      this.isValidSequence = true; 
+      return; 
+    }
+
     const formData = new FormData();
     let hasData = false;
 
