@@ -18,6 +18,7 @@ export class DatabasesComponent {
   alertMessage: string | null = null;
   alertType: "success" | "danger" | null = null;
   fileToDelete: Database | null = null;
+  databaseAlias: string = '';
   @ViewChild('fileInput') fileInput?: ElementRef;
 
   @ViewChild("deleteModal") deleteModal!: ElementRef;
@@ -45,6 +46,11 @@ export class DatabasesComponent {
     const target = event.target as HTMLInputElement;
     if (target.files && target.files.length > 0) {
       this.selectedFile = target.files[0];
+
+      const fileName = this.selectedFile.name;
+      const nameWithoutExt = fileName.substring(0, fileName.lastIndexOf('.')) || fileName;
+
+      this.databaseAlias = nameWithoutExt;
     }
   }
 
@@ -75,7 +81,10 @@ export class DatabasesComponent {
         if (res) {
           this.showAlert("Database successfully uploaded!", "success");
           this.loadDatabases();
+
           this.resetForm();
+
+          databaseForm.resetForm();
         }
       },
       error: (err) => {
@@ -90,6 +99,7 @@ export class DatabasesComponent {
     this.newDatabase = new Database();
     this.selectedFile = undefined!;
     this.alertMessage = null;
+    this.databaseAlias = '';
 
     if (this.fileInput) {
       this.fileInput.nativeElement.value = '';

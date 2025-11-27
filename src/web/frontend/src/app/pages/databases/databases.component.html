@@ -19,16 +19,16 @@
               Allowed Formats: CSV, FASTA
             </small>
           </div>
-
+        
           <div class="mb-3">
             <label for="alias" class="form-label" style="font-weight: bold;">Alias</label>
-            <input type="text" class="form-control" id="alias" name="alias" ngModel required maxlength="30">
+            <input type="text" class="form-control" id="alias" name="alias" [(ngModel)]="databaseAlias" required maxlength="30">
             <small class="text-muted d-block mt-1">
               <i style="color: #ffc107 !important" class="fa-solid fa-circle-info"></i>
               Provide a descriptive alias for the uploaded file
             </small>
           </div>
-
+        
           <button type="submit" class="btn btn-primary" [disabled]="!databaseForm.form.valid || isLoading">
             <i class="fa-solid fa-floppy-disk"></i>&nbsp;
             <span *ngIf="!isLoading">Save</span>
