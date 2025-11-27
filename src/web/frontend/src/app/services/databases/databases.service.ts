@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Database } from '../../models/Database';
-
+import { UniProtDownloadStatus } from '../../models/UniProtDownloadStatus';
 @Injectable({
   providedIn: 'root',
 })
@@ -16,7 +16,7 @@ export class DatabasesService {
     const url = `${this.apiUrl}/download/${encodeURIComponent(fileName)}`;
     return this.http.get(url, { responseType: 'blob' });
   }
-  
+
   getDatabases(): Observable<Database[]> {
     return this.http.get<Database[]>(this.apiUrl);
   }
@@ -40,4 +40,24 @@ export class DatabasesService {
     return this.http.post<Database>(this.apiUrl, formData);
   }
 
+  /**
+   * Triggers the asynchronous download of the latest UniProt database.
+   * Sends a POST request to initiate the background task.
+   * Assumes the backend returns status 202 (Accepted) and a body message.
+   */
+  triggerUniProtDownload(): Observable<string> {
+    const url = `${this.apiUrl}/download/uniprot`;
+    return this.http.post(url, {}, { responseType: 'text' });
+  }
+
+
+  /**
+   * Gets the current status and progress message for the UniProt download.
+   * Used by the DatabasesComponent for polling.
+   */
+  getUniProtDownloadStatus(): Observable<UniProtDownloadStatus> {
+    const url = `${this.apiUrl}/download/uniprot/status`;
+    // Use the defined interface for type safety
+    return this.http.get<UniProtDownloadStatus>(url);
+  }
 }

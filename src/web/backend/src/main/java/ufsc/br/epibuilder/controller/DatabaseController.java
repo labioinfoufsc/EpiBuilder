@@ -3,52 +3,29 @@ package ufsc.br.epibuilder.controller;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.List;
-import java.util.Optional;
-
-import java.util.HashMap;
-import java.util.Map;
-import ufsc.br.epibuilder.model.Status;
-import ufsc.br.epibuilder.model.TaskStatus;
 
 import lombok.extern.slf4j.Slf4j;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.UUID;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import org.springframework.http.MediaType;
-import org.springframework.web.multipart.MultipartFile;
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.LocalDateTime;
-import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 
 import ufsc.br.epibuilder.model.Database;
 import ufsc.br.epibuilder.service.DatabaseService;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestBody;
-
-import java.nio.file.StandardCopyOption;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-
-import java.util.Comparator;
-import java.time.ZonedDateTime;
+import ufsc.br.epibuilder.service.UniProtService;
+import ufsc.br.epibuilder.dto.UniProtDownloadStatus;
+import ufsc.br.epibuilder.helper.HelperMethods;
 
 @RestController
 @Slf4j
@@ -56,19 +33,15 @@ import java.time.ZonedDateTime;
 public class DatabaseController {
 
     private final DatabaseService databaseService;
+    private final UniProtService uniProtService;
 
-    private final String DB_DIRECTORY = System.getenv().getOrDefault("EPIBUILDER_DB", "/tmp/epibuilder/db");
+    private static final String DB_DIRECTORY = "/tmp/epibuilder/db";
 
-    public DatabaseController(DatabaseService databaseService) {
+    public DatabaseController(DatabaseService databaseService, UniProtService uniProtService) {
         this.databaseService = databaseService;
+        this.uniProtService = uniProtService;
     }
 
-    /**
-     * Retrieves a list of all databases.
-     *
-     * @return a ResponseEntity containing the list of databases or an internal
-     *         server error status
-     */
     @GetMapping
     public ResponseEntity<List<Database>> getAll() {
         try {
@@ -85,33 +58,18 @@ public class DatabaseController {
     public ResponseEntity<byte[]> downloadFile(@PathVariable String fileName) {
         try {
             Path filePath = Paths.get(DB_DIRECTORY, fileName);
-
             if (!Files.exists(filePath)) {
+                log.warn("Attempt to download non-existent file: {}", fileName);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
             }
-
             byte[] fileBytes = Files.readAllBytes(filePath);
-
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_OCTET_STREAM)
                     .header("Content-Disposition", "attachment; filename=\"" + fileName + "\"")
                     .body(fileBytes);
         } catch (IOException e) {
-            log.error("Erro ao baixar o arquivo: {}", e.getMessage());
+            log.error("Error downloading file {}: {}", fileName, e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-
-    private int countSequences(Path filePath) throws IOException {
-        try (BufferedReader reader = Files.newBufferedReader(filePath)) {
-            int count = 0;
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (line.startsWith(">")) {
-                    count++;
-                }
-            }
-            return count;
         }
     }
 
@@ -120,34 +78,40 @@ public class DatabaseController {
             @RequestPart("data") Database database,
             @RequestPart("file") MultipartFile file) {
         try {
-            log.info("Attempting to create a new database with name: {}", database.getFileName());
+            log.info("Attempting to create a new database with alias: {}", database.getAlias());
 
             Path databasesDir = Paths.get(DB_DIRECTORY);
             if (Files.notExists(databasesDir)) {
                 Files.createDirectories(databasesDir);
             }
 
-            String sanitizedFilename = Paths.get(file.getOriginalFilename()).getFileName().toString();
+            String originalFilename = file.getOriginalFilename();
+            if (originalFilename == null) {
+                return ResponseEntity.badRequest().build();
+            }
+            String sanitizedFilename = Paths.get(originalFilename).getFileName().toString();
             Path destinationFile = databasesDir.resolve(sanitizedFilename);
 
             Files.copy(file.getInputStream(), destinationFile, StandardCopyOption.REPLACE_EXISTING);
-            log.info("File saved to: {}", destinationFile.toAbsolutePath());
-
             database.setAbsolutePath(destinationFile.toString());
             LocalDateTime now = ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).toLocalDateTime();
             database.setDate(now);
             database.setFileName(sanitizedFilename);
 
-            int sequenceCount = countSequences(destinationFile);
+            int sequenceCount = HelperMethods.countSequences(destinationFile);
             database.setAmountSequences(sequenceCount);
 
-            log.info("Saving database {}", database.getAlias());
             Database createdDatabase = databaseService.save(database);
-            log.info("Database saved!");
+            log.info("Database saved with ID: {}", createdDatabase.getId());
 
+            // --- Start BLAST database creation (Asynchronous or background) ---
             log.info("Creating BLAST database for file: {}", destinationFile);
-            ProcessBuilder pb = new ProcessBuilder("makeblastdb", "-in", destinationFile.toString(), "-dbtype", "prot",
-                    "-out", destinationFile.toString());
+            ProcessBuilder pb = new ProcessBuilder(
+                    "makeblastdb",
+                    "-in", destinationFile.toString(),
+                    "-dbtype", "prot",
+                    "-out", destinationFile.toString()
+            );
             Process process = pb.start();
             log.info("BLAST database process started with PID: {}", process.pid());
 
@@ -170,26 +134,32 @@ public class DatabaseController {
             String absolutePath = db.getAbsolutePath();
 
             if (absolutePath != null) {
+                Path filePath = Paths.get(absolutePath);
+
+                String baseName = filePath.toString();
+
                 try {
-                    Path path = Path.of(absolutePath);
-                    if (Files.exists(path)) {
-                        Files.walk(path)
-                                .sorted(Comparator.reverseOrder())
-                                .forEach(p -> {
-                                    try {
-                                        Files.delete(p);
-                                    } catch (IOException e) {
-                                        throw new RuntimeException("Error while deleting: " + p, e);
-                                    }
-                                });
+                    if (Files.exists(filePath)) {
+                        Files.delete(filePath);
+                        log.info("Deleted main FASTA file: {}", filePath);
                     }
-                } catch (Exception e) {
-                    log.error("Error while deleting directory: {}", e.getMessage());
-                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+
+                    String[] blastExtensions = { ".phr", ".pin", ".psq" };
+                    for (String ext : blastExtensions) {
+                        Path blastFilePath = Paths.get(baseName + ext);
+                        if (Files.exists(blastFilePath)) {
+                            Files.delete(blastFilePath);
+                            log.info("Deleted associated BLAST index file: {}", blastFilePath);
+                        }
+                    }
+
+                } catch (IOException e) {
+                    log.error("Error while deleting physical files for database {}: {}", id, e.getMessage());
                 }
             }
 
             databaseService.deleteById(id);
+            log.info("Database record deleted successfully for ID: {}", id);
 
             return ResponseEntity.noContent().build();
         } catch (Exception e) {
@@ -198,4 +168,25 @@ public class DatabaseController {
         }
     }
 
+    // --- UniProt Download Endpoints ---
+
+    @PostMapping("/download/uniprot")
+    public ResponseEntity<String> triggerUniProtDownload() {
+        UniProtDownloadStatus status = uniProtService.getStatus();
+        if (status.isInProgress()) {
+            return new ResponseEntity<>("UniProt download is already in progress.", HttpStatus.ACCEPTED);
+        }
+
+        uniProtService.startDownload();
+        log.info("Manual UniProt download initiated by user.");
+
+        return new ResponseEntity<>("UniProt download initiated successfully.", HttpStatus.ACCEPTED);
+    }
+
+    @GetMapping("/download/uniprot/status")
+    public ResponseEntity<UniProtDownloadStatus> getUniProtDownloadStatus() {
+        return ResponseEntity.ok(uniProtService.getStatus());
+    }
+
 }
+            

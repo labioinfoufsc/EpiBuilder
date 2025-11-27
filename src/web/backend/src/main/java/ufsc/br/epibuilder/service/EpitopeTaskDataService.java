@@ -38,9 +38,6 @@ public class EpitopeTaskDataService {
     }
 
     public Optional<EpitopeTaskData> findById(Long id) {
-
-        System.out.println("Epitope Task: " + id);
-
         return epitopeTaskDataRepository.findById(id);
     }
 

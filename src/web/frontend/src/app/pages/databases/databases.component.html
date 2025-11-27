@@ -5,10 +5,30 @@
     <div class="card col-7 mx-auto">
       <div class="card-header custom-header"><b>Databases Management</b></div>
       <div class="card-body">
+        <!-- Alert messages -->
         <div *ngIf="alertMessage" class="alert alert-{{ alertType }} alert-dismissible fade show" role="alert">
           {{ alertMessage }}
           <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
+
+        <!-- UniProt Download Section -->
+        <div class="d-grid gap-2 mb-4">
+          <button class="btn btn-warning" type="button" (click)="startUniProtDownload()"
+            [disabled]="isDownloadInProgress">
+            <i class="fa-solid fa-cloud-arrow-down"></i>&nbsp;
+            <span *ngIf="!isDownloadInProgress">Download Latest UniProt Database</span>
+            <span *ngIf="isDownloadInProgress">UniProt Download in Progress...</span>
+          </button>
+
+          <div *ngIf="isDownloadInProgress" class="alert alert-info py-2 m-0 d-flex align-items-center" role="alert">
+            <div class="spinner-border spinner-border-sm me-2" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+            <small>{{ downloadMessage }}</small>
+          </div>
+        </div>
+        <!-- End UniProt Download Section -->
+
         <form (ngSubmit)="onSubmit(databaseForm)" #databaseForm="ngForm">
           <div class="mb-3">
             <label for="file" class="form-label" style="font-weight: bold;">Upload FASTA File</label>
@@ -19,16 +39,17 @@
               Allowed Formats: CSV, FASTA
             </small>
           </div>
-        
+
           <div class="mb-3">
             <label for="alias" class="form-label" style="font-weight: bold;">Alias</label>
-            <input type="text" class="form-control" id="alias" name="alias" [(ngModel)]="databaseAlias" required maxlength="30">
+            <input type="text" class="form-control" id="alias" name="alias" [(ngModel)]="databaseAlias" required
+              maxlength="30">
             <small class="text-muted d-block mt-1">
               <i style="color: #ffc107 !important" class="fa-solid fa-circle-info"></i>
               Provide a descriptive alias for the uploaded file
             </small>
           </div>
-        
+
           <button type="submit" class="btn btn-primary" [disabled]="!databaseForm.form.valid || isLoading">
             <i class="fa-solid fa-floppy-disk"></i>&nbsp;
             <span *ngIf="!isLoading">Save</span>
@@ -36,12 +57,11 @@
           </button>
         </form>
 
-
         <table class="table table-striped mt-3" style="text-align: center;">
           <thead>
             <tr>
               <th *ngFor="let column of columns">{{ column }}</th>
-              <th>Download</th> <!-- Nova coluna -->
+              <th>Download</th>
             </tr>
           </thead>
           <tbody>
@@ -58,22 +78,18 @@
                 <ng-container *ngIf="file.fileName.includes('iedb') && file.alias?.includes('iedb'); else showDelete">
                   <p>None<br><span style="font-style: italic;">Default database</span></p>
                 </ng-container>
-
                 <ng-template #showDelete>
                   <a (click)="confirmDelete(file)" title="Delete task">
                     <i class="fas fa-trash" style="color: #dc3545 !important; cursor: pointer;"></i>
                   </a>
                 </ng-template>
               </td>
-
               <td>
                 <button class="btn p-0" style="background: transparent !important; border: none !important;"
                   (click)="downloadFile(file)" title="Download file">
                   <i class="fas fa-download" style="color: #0d6efd; cursor: pointer;"></i>
                 </button>
               </td>
-
-
             </tr>
           </tbody>
         </table>
@@ -95,11 +111,11 @@
         Are you sure you want to delete file <strong>{{ fileToDelete?.fileName }}</strong>?
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" (click)="hideDeleteModal()">
-          Cancel
-        </button>
         <button type="button" class="btn force-bootstrap-danger" (click)="deleteDatabase()">
           Delete
+        </button>
+        <button type="button" class="btn btn-secondary" (click)="hideDeleteModal()">
+          Cancel
         </button>
       </div>
     </div>
