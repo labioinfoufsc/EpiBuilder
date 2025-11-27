@@ -293,8 +293,8 @@
                             <div class="mb-3">
                               <!-- Opção: Selecionar banco de dados -->
                               <div class="form-check">
-                                <input type="radio" class="form-check-input" formControlName="sourceType"
-                                  [value]="'database'" id="selectDBRadio{{ i }}" />
+                                <input type="radio" class="form-check-input" formControlName="sourceType" [value]="'database'"
+                                  id="selectDBRadio{{ i }}" (change)="onSourceTypeChange(i, 'database')" />
                                 <label class="form-check-label" for="selectDBRadio{{ i }}">
                                   Select a database (Proteome {{ i + 1 }})
                                 </label>
@@ -310,13 +310,12 @@
 
                               <!-- Opção: Upload de FASTA -->
                               <div class="form-check mt-3">
-                                <input type="radio" class="form-check-input" formControlName="sourceType"
-                                  [value]="'fasta_blast'" id="fastaUploadRadio{{ i }}" />
+                                <input type="radio" class="form-check-input" formControlName="sourceType" [value]="'fasta_blast'"
+                                  id="fastaUploadRadio{{ i }}" (change)="onSourceTypeChange(i, 'fasta_blast')" />
                                 <label class="form-check-label" for="fastaUploadRadio{{ i }}">
                                   Upload a FASTA database file (Proteome {{ i + 1 }})
                                 </label>
                               </div>
-
                               <!-- Upload de arquivo -->
                               <input *ngIf="proteome.get('sourceType')?.value === 'fasta_blast'" type="file"
                                 class="form-control mt-2" id="fastaDBFile{{ i }}" accept=".fasta,.csv,.tsv"

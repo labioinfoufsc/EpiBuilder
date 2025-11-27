@@ -236,11 +236,38 @@ export class NewComponent {
     this.addProteome();
   }
 
-  onDBFileChange(event: any, index: number) {
-    const file = event.target.files[0];
+  onSourceTypeChange(index: number, type: string): void {
+    const group = this.proteomes.at(index);
+
+    if (type === 'database') {
+      this.uploadedDBFiles[index] = undefined; 
+
+      group.patchValue({
+        fastaFile: null,     
+        proteomeAlias: '',   
+      });
+
+    } else if (type === 'fasta_blast') {
+      group.patchValue({
+        databaseFile: null
+      });
+    }
+  }
+
+  onDBFileChange(event: Event, index: number) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files ? input.files[0] : null;
+
     if (file) {
       this.uploadedDBFiles[index] = file;
+
       const proteomeGroup = this.proteomes.at(index) as FormGroup;
+
+      const currentAlias = proteomeGroup.get('proteomeAlias')?.value;
+      if (!currentAlias || currentAlias.trim() === '') {
+        proteomeGroup.patchValue({ proteomeAlias: file.name });
+      }
+
       proteomeGroup.patchValue({
         fastaFile: file.name,
         sourceType: 'fasta_blast'
@@ -257,12 +284,13 @@ export class NewComponent {
     });
 
     this.proteomes.push(proteomeGroup);
-    this.uploadedDBFiles.push(undefined); 
+    this.uploadedDBFiles.push(undefined);
   }
 
   removeProteome(index: number): void {
     if (this.proteomes.length > 0) {
       this.proteomes.removeAt(index);
+      this.uploadedDBFiles.splice(index, 1);
     }
   }
 
@@ -280,7 +308,6 @@ export class NewComponent {
 
 
   onSubmit() {
-
     this.isLoading = true;
 
     if (!this.myForm.get('runName')?.value) {
@@ -302,11 +329,12 @@ export class NewComponent {
         this.isLoading = false;
         return;
       }
-
     } else if (inputType === 'manual') {
       const seq = this.myForm.get('manualSequence')?.value;
       if (!seq || !seq.startsWith('>')) {
         console.error('Invalid sequence format.');
+        this.showMessage({ text: 'Invalid manual sequence format.', category: 'danger' }); // Feedback visual adicionado
+        this.isLoading = false;
         return;
       }
     }
@@ -338,8 +366,10 @@ export class NewComponent {
     }
 
     const formData = new FormData();
+
     if (taskData.doBlast == true) {
       if (!this.validateBlastParameters()) {
+        this.isLoading = false;
         return;
       }
 
@@ -353,13 +383,32 @@ export class NewComponent {
           text: 'Please select at least one proteome for BLAST.',
           category: 'danger'
         });
+        this.isLoading = false;
         return;
       }
 
-      taskData.proteomes = proteomesResult.proteomeMeta;
+      let fileUploadIndex = 0;
 
-      proteomesResult?.proteomeFiles.forEach(file => {
-        formData.append('proteomes', file, file.name);
+      taskData.proteomes = proteomesResult.proteomeMeta.map((meta: any) => {
+
+        if (meta.sourceType === 'fasta_blast') {
+          const file = proteomesResult.proteomeFiles[fileUploadIndex];
+
+          if (file) {
+            const uniqueFileName = `${Date.now()}_${fileUploadIndex}_${file.name}`;
+
+            formData.append('proteomes', file, uniqueFileName);
+
+            fileUploadIndex++;
+
+            return {
+              ...meta,
+              originalName: uniqueFileName
+            };
+          }
+        }
+
+        return meta;
       });
     }
 
@@ -370,24 +419,27 @@ export class NewComponent {
     } else if (this.myForm.get('manualSequence')?.value) {
       const manualSequence = this.myForm.get('manualSequence')?.value;
       const fileFromManual = new File([manualSequence], 'manual_sequence.fasta', { type: 'text/plain' });
-      formData.append('file', fileFromManual, fileFromManual.name);
+      formData.append('file', fileFromManual, 'manual_sequence.fasta');
     }
 
     this.epitopesService.submitForm(formData).subscribe({
       next: (success) => {
         this.showMessage({
-
           text: 'Task submitted successfully!',
           category: 'success'
         });
         this.sequenceCount = null;
         this.resetForm();
-
       },
       error: (error) => {
         console.error('Submission failed:', error);
 
-        if (error.toLowerCase().includes('Login expired')) {
+        if (error.error && error.error.message && error.error.message.toLowerCase().includes('expired')) {
+
+          this.loginService.logout();
+          this.router.navigate(["/"]);
+        }
+        else if (error.toString().toLowerCase().includes('login expired')) {
           this.loginService.logout();
           this.router.navigate(["/"]);
         }
