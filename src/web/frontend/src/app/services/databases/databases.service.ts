@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Database } from '../../models/Database';
+import { IedbDownloadStatus } from '../../models/IedbDownloadStatus';
 import { UniProtDownloadStatus } from '../../models/UniProtDownloadStatus';
 @Injectable({
   providedIn: 'root',
@@ -11,6 +12,16 @@ export class DatabasesService {
   private apiUrl = environment.apiUrl + '/dbs';
 
   constructor(private http: HttpClient) { }
+
+  triggerIedbDownload(): Observable<any> {
+    const url = `${this.apiUrl}/download/iedb`;
+    return this.http.post(url, {});
+  }
+
+  getIedbDownloadStatus(): Observable<IedbDownloadStatus> {
+    const url = `${this.apiUrl}/download/iedb/status`;
+    return this.http.get<IedbDownloadStatus>(url);
+  }
 
   download(fileName: string): Observable<Blob> {
     const url = `${this.apiUrl}/download/${encodeURIComponent(fileName)}`;

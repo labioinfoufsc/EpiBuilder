@@ -2,50 +2,34 @@
 
 <div class="container mt-4">
   <div class="d-flex justify-content-center">
-    <div class="card col-7 mx-auto">
+    <div class="card col-8 mx-auto">
       <div class="card-header custom-header"><b>Databases Management</b></div>
       <div class="card-body">
+
         <!-- Alert messages -->
-        <div *ngIf="alertMessage" class="alert alert-{{ alertType }} alert-dismissible fade show" role="alert">
+        <div *ngIf="alertMessage" class="alert alert-{{ alertType }} alert-dismissible fade show mb-4" role="alert">
           {{ alertMessage }}
           <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
 
-        <!-- UniProt Download Section -->
-        <div class="d-grid gap-2 mb-4">
-          <button class="btn btn-warning" type="button" (click)="startUniProtDownload()"
-            [disabled]="isDownloadInProgress">
-            <i class="fa-solid fa-cloud-arrow-down"></i>&nbsp;
-            <span *ngIf="!isDownloadInProgress">Download Latest UniProt Database</span>
-            <span *ngIf="isDownloadInProgress">UniProt Download in Progress...</span>
-          </button>
-
-          <div *ngIf="isDownloadInProgress" class="alert alert-info py-2 m-0 d-flex align-items-center" role="alert">
-            <div class="spinner-border spinner-border-sm me-2" role="status">
-              <span class="visually-hidden">Loading...</span>
-            </div>
-            <small>{{ downloadMessage }}</small>
-          </div>
-        </div>
-        <!-- End UniProt Download Section -->
-
-        <form (ngSubmit)="onSubmit(databaseForm)" #databaseForm="ngForm">
+        <!-- Upload Form -->
+        <form (ngSubmit)="onSubmit(databaseForm)" #databaseForm="ngForm" class="mb-4">
           <div class="mb-3">
-            <label for="file" class="form-label" style="font-weight: bold;">Upload FASTA File</label>
+            <label for="file" class="form-label fw-bold">Upload FASTA File</label>
             <input #fileInput type="file" class="form-control" id="file" (change)="onFileChange($event)" required
               accept=".fasta,.csv,.tsv" name="file" ngModel>
             <small class="text-muted d-block mt-1">
-              <i style="color: #ffc107 !important" class="fa-solid fa-circle-info"></i>
+              <i class="fa-solid fa-circle-info text-warning"></i>
               Allowed Formats: CSV, FASTA
             </small>
           </div>
 
           <div class="mb-3">
-            <label for="alias" class="form-label" style="font-weight: bold;">Alias</label>
+            <label for="alias" class="form-label fw-bold">Alias</label>
             <input type="text" class="form-control" id="alias" name="alias" [(ngModel)]="databaseAlias" required
               maxlength="30">
             <small class="text-muted d-block mt-1">
-              <i style="color: #ffc107 !important" class="fa-solid fa-circle-info"></i>
+              <i class="fa-solid fa-circle-info text-warning"></i>
               Provide a descriptive alias for the uploaded file
             </small>
           </div>
@@ -56,43 +40,55 @@
             <span *ngIf="isLoading">Saving...</span>
           </button>
         </form>
+        <!-- End Upload Form -->
 
-        <table class="table table-striped mt-3" style="text-align: center;">
-          <thead>
-            <tr>
-              <th *ngFor="let column of columns">{{ column }}</th>
-              <th>Download</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngIf="files.length === 0">
-              <td class="text-center text-muted" [attr.colspan]="columns.length + 1">
-                No data available
-              </td>
-            </tr>
-            <tr *ngFor="let file of files">
-              <td style="word-break: break-word; max-width: 200px;">{{ file.alias }}</td>
-              <td>{{ file.date | date: 'dd-MM-yyyy' }}</td>
-              <td>{{ file.amountSequences }}</td>
-              <td>
-                <ng-container *ngIf="file.fileName.includes('iedb') && file.alias?.includes('iedb'); else showDelete">
-                  <p>None<br><span style="font-style: italic;">Default database</span></p>
-                </ng-container>
-                <ng-template #showDelete>
+        <!-- Databases Table -->
+        <div class="table-responsive">
+          <table class="table table-striped text-center align-middle">
+            <thead>
+              <tr>
+                <th *ngFor="let column of columns">{{ column }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngIf="files.length === 0">
+                <td class="text-center text-muted" [attr.colspan]="columns.length + 2">
+                  No data available
+                </td>
+              </tr>
+              <tr *ngFor="let file of files">
+                <td style="word-break: break-word; max-width: 200px;">{{ file.alias }}</td>
+                <td>{{ file.date | date: 'dd-MM-yyyy' }}</td>
+                <td>{{ file.amountSequences }}</td>
+                <!-- Show update button only for UniProt or IEDB -->
+                <td>
+                  <button *ngIf="file.alias && file.alias.toLowerCase().includes('uniprot')" class="btn btn-warning btn-sm"
+                    (click)="startUniProtDownload()" [disabled]="isUniProtDownloadInProgress">
+                    <i class="fa-solid fa-cloud-arrow-down"></i>
+                  </button>
+                  <button *ngIf="file.alias && file.alias.toLowerCase().includes('iedb')" class="btn btn-success btn-sm"
+                    (click)="startIedbDownload()" [disabled]="isIedbDownloadInProgress">
+                    <i class="fa-solid fa-cloud-arrow-down"></i>
+                  </button>
+                </td>
+                <td>
                   <a (click)="confirmDelete(file)" title="Delete task">
-                    <i class="fas fa-trash" style="color: #dc3545 !important; cursor: pointer;"></i>
+                    <i class="fas fa-trash text-danger" style="cursor: pointer;"></i>
                   </a>
-                </ng-template>
-              </td>
-              <td>
-                <button class="btn p-0" style="background: transparent !important; border: none !important;"
-                  (click)="downloadFile(file)" title="Download file">
-                  <i class="fas fa-download" style="color: #0d6efd; cursor: pointer;"></i>
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                </td>
+                <td>
+                  <button class="btn p-0 border-0 bg-transparent" (click)="downloadFile(file)" title="Download file">
+                    <i class="fas fa-download text-primary" style="cursor: pointer;"></i>
+                  </button>
+                </td>
+                 
+
+
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- End Databases Table -->
 
       </div>
     </div>
@@ -111,12 +107,8 @@
         Are you sure you want to delete file <strong>{{ fileToDelete?.fileName }}</strong>?
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn force-bootstrap-danger" (click)="deleteDatabase()">
-          Delete
-        </button>
-        <button type="button" class="btn btn-secondary" (click)="hideDeleteModal()">
-          Cancel
-        </button>
+        <button type="button" class="btn force-bootstrap-danger" (click)="deleteDatabase()">Delete</button>
+        <button type="button" class="btn btn-secondary" (click)="hideDeleteModal()">Cancel</button>
       </div>
     </div>
   </div>

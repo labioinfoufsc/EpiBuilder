@@ -5,6 +5,7 @@ import { saveAs } from 'file-saver';
 import { Subscription, interval } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 import { Database } from '../../models/Database';
+import { IedbDownloadStatus } from '../../models/IedbDownloadStatus';
 import { UniProtDownloadStatus } from '../../models/UniProtDownloadStatus';
 import { DatabasesService } from '../../services/databases/databases.service';
 
@@ -18,100 +19,157 @@ export class DatabasesComponent implements OnInit, OnDestroy {
   newDatabase?: Database;
   selectedFile!: File;
   files: Database[] = [];
-  columns: string[] = ['Database', 'Creation Date', 'Number of Sequences', 'Action'];
+  columns: string[] = ['Database', 'Creation Date', 'Number of Sequences', 'Update', 'Delete', 'Download'];
   alertMessage: string | null = null;
   alertType: "success" | "danger" | null = null;
   fileToDelete: Database | null = null;
   databaseAlias: string = '';
 
-  // State variables for the Asynchronous Download
-  isDownloadInProgress: boolean = false;
-  downloadMessage: string | null = null;
-  private downloadSubscription: Subscription | undefined;
+  // UniProt download state
+  isUniProtDownloadInProgress = false;
+  uniProtDownloadMessage: string | null = null;
+  private uniProtDownloadSubscription?: Subscription;
+
+  // IEDB download state
+  isIedbDownloadInProgress = false;
+  iedbDownloadMessage: string | null = null;
+  private iedbDownloadSubscription?: Subscription;
 
   @ViewChild('fileInput') fileInput?: ElementRef;
   @ViewChild("deleteModal") deleteModal!: ElementRef;
   private deleteModalInstance!: Modal;
-  isLoading: boolean = false;
+  isLoading = false;
 
   constructor(private databasesService: DatabasesService) { }
 
   ngOnInit(): void {
     this.loadDatabases();
-    this.checkInitialDownloadStatus();
+    this.checkInitialUniProtStatus();
+    this.checkInitialIedbStatus();
   }
 
   ngOnDestroy(): void {
-    if (this.downloadSubscription) {
-      this.downloadSubscription.unsubscribe();
-    }
+    this.uniProtDownloadSubscription?.unsubscribe();
+    this.iedbDownloadSubscription?.unsubscribe();
   }
 
-  checkInitialDownloadStatus(): void {
+  // --- UniProt ---
+  checkInitialUniProtStatus(): void {
     this.databasesService.getUniProtDownloadStatus().subscribe((status: UniProtDownloadStatus) => {
       if (status.inProgress) {
-        this.downloadMessage = status.progressMessage;
-        this.startDownloadStatusPolling();
-      } else if (status.success === false) {
+        this.uniProtDownloadMessage = status.progressMessage;
+        this.startUniProtPolling();
+      } else if (status.success === false && status.progressMessage?.toLowerCase().includes("failed")) {
         this.showAlert("Last UniProt update failed. Check backend logs.", "danger");
       }
     });
   }
 
-  startUniProtDownload(): void {
-    this.isDownloadInProgress = true;
-    this.downloadMessage = "Initiating UniProt download...";
 
-    this.databasesService.triggerUniProtDownload().subscribe({
-      next: () => {
-        this.showAlert("UniProt download initiated in the background.", "success");
-        this.startDownloadStatusPolling();
+  startUniProtDownload(): void {
+    this.isUniProtDownloadInProgress = true;
+    this.uniProtDownloadMessage = "Initiating UniProt download...";
+    this.databasesService.triggerIedbDownload().subscribe({
+      next: (res) => {
+        this.showAlert(res.message || "IEDB download initiated in the background.", "success");
+        this.startIedbPolling();
       },
       error: (err) => {
-        this.isDownloadInProgress = false;
-        const errorMessage = err.error || "Failed to start UniProt download.";
-        this.showAlert(errorMessage, "danger");
-        this.downloadMessage = null;
+        this.isIedbDownloadInProgress = false;
+        this.showAlert(err.error || "Failed to start IEDB download.", "danger");
+        this.iedbDownloadMessage = null;
       }
     });
+
   }
 
-  startDownloadStatusPolling(): void {
-    this.isDownloadInProgress = true;
-
-    if (this.downloadSubscription) {
-      this.downloadSubscription.unsubscribe();
-    }
-
-    this.downloadSubscription = interval(5000)
+  private startUniProtPolling(): void {
+    this.isUniProtDownloadInProgress = true;
+    this.uniProtDownloadSubscription?.unsubscribe();
+    this.uniProtDownloadSubscription = interval(5000)
       .pipe(switchMap(() => this.databasesService.getUniProtDownloadStatus()))
       .subscribe({
         next: (status: UniProtDownloadStatus) => {
-          this.downloadMessage = status.progressMessage;
-
+          this.uniProtDownloadMessage = status.progressMessage;
           if (!status.inProgress) {
-            this.isDownloadInProgress = false;
-            this.downloadSubscription?.unsubscribe();
+            this.isUniProtDownloadInProgress = false;
+            this.uniProtDownloadSubscription?.unsubscribe();
             this.loadDatabases();
-
             if (status.success) {
               this.showAlert("UniProt updated successfully!", "success");
-              this.downloadMessage = null;
             } else {
               this.showAlert("UniProt update failed! Check logs.", "danger");
-              this.downloadMessage = null;
             }
+            this.uniProtDownloadMessage = null;
           }
         },
         error: () => {
-          this.isDownloadInProgress = false;
-          this.downloadSubscription?.unsubscribe();
-          this.showAlert("Failed to get download status.", "danger");
-          this.downloadMessage = null;
+          this.isUniProtDownloadInProgress = false;
+          this.uniProtDownloadSubscription?.unsubscribe();
+          this.showAlert("Failed to get UniProt download status.", "danger");
+          this.uniProtDownloadMessage = null;
         }
       });
   }
 
+  // --- IEDB ---
+  checkInitialIedbStatus(): void {
+    this.databasesService.getIedbDownloadStatus().subscribe((status: IedbDownloadStatus) => {
+      if (status.inProgress) {
+        this.iedbDownloadMessage = status.progressMessage;
+        this.startIedbPolling();
+      } else if (status.success === false) {
+        this.showAlert("Last IEDB update failed. Check backend logs.", "danger");
+      }
+    });
+  }
+
+  startIedbDownload(): void {
+    this.isIedbDownloadInProgress = true;
+    this.iedbDownloadMessage = "Initiating IEDB download...";
+    this.databasesService.triggerIedbDownload().subscribe({
+      next: () => {
+        this.showAlert("IEDB download initiated in the background.", "success");
+        this.startIedbPolling();
+      },
+      error: (err) => {
+        this.isIedbDownloadInProgress = false;
+        this.showAlert(err.error || "Failed to start IEDB download.", "danger");
+        this.iedbDownloadMessage = null;
+      }
+    });
+  }
+
+  private startIedbPolling(): void {
+    this.isIedbDownloadInProgress = true;
+    this.iedbDownloadSubscription?.unsubscribe();
+    this.iedbDownloadSubscription = interval(5000)
+      .pipe(switchMap(() => this.databasesService.getIedbDownloadStatus()))
+      .subscribe({
+        next: (status: IedbDownloadStatus) => {
+          this.iedbDownloadMessage = status.progressMessage;
+          if (!status.inProgress) {
+            this.isIedbDownloadInProgress = false;
+            this.iedbDownloadSubscription?.unsubscribe();
+            this.loadDatabases();
+            if (status.success) {
+              this.showAlert("IEDB updated successfully!", "success");
+            } else {
+              this.showAlert("IEDB update failed! Check logs.", "danger");
+            }
+            this.iedbDownloadMessage = null;
+          }
+        },
+        error: () => {
+          this.isIedbDownloadInProgress = false;
+          this.iedbDownloadSubscription?.unsubscribe();
+          this.showAlert("Failed to get IEDB download status.", "danger");
+          this.iedbDownloadMessage = null;
+        }
+      });
+  }
+
+  // --- Common ---
   downloadFile(file: Database): void {
     this.databasesService.download(file.fileName).subscribe({
       next: (blob: Blob) => saveAs(blob, file.fileName),
@@ -128,29 +186,25 @@ export class DatabasesComponent implements OnInit, OnDestroy {
       this.selectedFile = target.files[0];
       const fileName = this.selectedFile.name;
       const lastDotIndex = fileName.lastIndexOf('.');
-      const nameWithoutExt = lastDotIndex !== -1 ? fileName.substring(0, lastDotIndex) : fileName;
-      this.databaseAlias = nameWithoutExt;
+      this.databaseAlias = lastDotIndex !== -1 ? fileName.substring(0, lastDotIndex) : fileName;
     }
   }
 
   onSubmit(databaseForm: NgForm): void {
     this.isLoading = true;
-
     if (!this.selectedFile || !databaseForm.value.alias) {
       this.showAlert("Please select a file and provide an alias", "danger");
       this.isLoading = false;
       return;
     }
-
-    const alias = databaseForm.value.alias.trim();
-    const sanitizedAlias = alias
+    const alias = databaseForm.value.alias.trim()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-zA-Z0-9_-]/g, '_')
       .toLowerCase();
 
     const databaseToUpload: Partial<Database> = {
-      alias: sanitizedAlias,
+      alias,
       fileName: this.selectedFile.name,
     };
 
@@ -192,33 +246,32 @@ export class DatabasesComponent implements OnInit, OnDestroy {
         this.showAlert("Database deleted successfully", "success");
       },
       error: (err: any) => {
-        this.showAlert(err, "danger");
+        this.showAlert("Error deleting database", "danger");
+        console.error(err);
       },
     });
   }
-
   confirmDelete(file: Database): void {
     this.fileToDelete = file;
     this.showDeleteModal();
   }
 
-  showDeleteModal() {
+  showDeleteModal(): void {
     if (this.deleteModal) {
       this.deleteModalInstance = new Modal(this.deleteModal.nativeElement);
       this.deleteModalInstance.show();
     }
   }
 
-  hideDeleteModal() {
+  hideDeleteModal(): void {
     if (this.deleteModalInstance) {
       this.deleteModalInstance.hide();
     }
   }
 
-  showAlert(message: string, type: "success" | "danger" | null) {
+  showAlert(message: string, type: "success" | "danger" | null): void {
     this.alertMessage = message;
     this.alertType = type;
-    // Mantém alertas temporários, mas não interfere no downloadMessage
     setTimeout(() => {
       this.alertMessage = null;
     }, 5000);
