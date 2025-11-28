@@ -24,8 +24,12 @@ import java.nio.file.StandardCopyOption;
 import ufsc.br.epibuilder.model.Database;
 import ufsc.br.epibuilder.service.DatabaseService;
 import ufsc.br.epibuilder.service.UniProtService;
+import ufsc.br.epibuilder.dto.IedbDownloadStatus;
 import ufsc.br.epibuilder.dto.UniProtDownloadStatus;
 import ufsc.br.epibuilder.helper.HelperMethods;
+
+import ufsc.br.epibuilder.service.IedbService;
+import java.util.Map;
 
 @RestController
 @Slf4j
@@ -34,12 +38,14 @@ public class DatabaseController {
 
     private final DatabaseService databaseService;
     private final UniProtService uniProtService;
+    private final IedbService iedbService;
 
     private static final String DB_DIRECTORY = "/tmp/epibuilder/db";
 
-    public DatabaseController(DatabaseService databaseService, UniProtService uniProtService) {
+    public DatabaseController(DatabaseService databaseService, UniProtService uniProtService, IedbService iedbService) {
         this.databaseService = databaseService;
         this.uniProtService = uniProtService;
+        this.iedbService = iedbService;
     }
 
     @GetMapping
@@ -110,8 +116,7 @@ public class DatabaseController {
                     "makeblastdb",
                     "-in", destinationFile.toString(),
                     "-dbtype", "prot",
-                    "-out", destinationFile.toString()
-            );
+                    "-out", destinationFile.toString());
             Process process = pb.start();
             log.info("BLAST database process started with PID: {}", process.pid());
 
@@ -168,8 +173,6 @@ public class DatabaseController {
         }
     }
 
-    // --- UniProt Download Endpoints ---
-
     @PostMapping("/download/uniprot")
     public ResponseEntity<String> triggerUniProtDownload() {
         UniProtDownloadStatus status = uniProtService.getStatus();
@@ -188,5 +191,21 @@ public class DatabaseController {
         return ResponseEntity.ok(uniProtService.getStatus());
     }
 
+    @PostMapping("/download/iedb")
+    public ResponseEntity<Map<String, String>> triggerIedbDownload() {
+        IedbDownloadStatus status = iedbService.getStatus();
+        if (status.isInProgress()) {
+            return ResponseEntity.status(HttpStatus.ACCEPTED)
+                    .body(Map.of("message", "IEDB download is already in progress."));
+        }
+        iedbService.startDownload();
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+                .body(Map.of("message", "IEDB download initiated successfully."));
+    }
+
+    @GetMapping("/download/iedb/status")
+    public ResponseEntity<IedbDownloadStatus> getIedbDownloadStatus() {
+        return ResponseEntity.ok(iedbService.getStatus());
+    }
+
 }
-            

@@ -6,6 +6,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import ufsc.br.epibuilder.model.*;
 import ufsc.br.epibuilder.service.SystemStatusService;
+import ufsc.br.epibuilder.service.UniProtService;
+import ufsc.br.epibuilder.service.IedbService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
@@ -20,18 +22,14 @@ import java.time.ZonedDateTime;
 import java.util.stream.Stream;
 
 /**
- * Component responsible for the initial system setup and data seeding.
- *
- * This runner executes on startup before the application signals that it is
- * ready.
- * It performs the following critical tasks:
+ * Component responsible for initial system setup and data seeding.
+ * 
+ * Tasks performed:
  * <ol>
- * <li>Creates default administrative and regular users if the system is
- * empty.</li>
- * <li>Registers local FASTA files (pre-downloaded by entrypoint.sh or manually
- * uploaded) into the database.</li>
+ * <li>Create default admin and user accounts if the system is empty.</li>
+ * <li>Trigger UniProt download if no UniProt database is present.</li>
+ * <li>Register local FASTA files into the database.</li>
  * </ol>
- *
  */
 @Component
 @Slf4j
@@ -43,26 +41,28 @@ public class DataLoader implements CommandLineRunner {
 
     private final PasswordEncoder passwordEncoder;
     private final SystemStatusService systemStatusService;
+    private final UniProtService uniProtService;
+    private final IedbService iedbService;
 
-    // Database directory where the entrypoint.sh saves the file and local files are
-    // stored
     private static final String DB_DIRECTORY = "/tmp/epibuilder/db";
     private static final String TIMEZONE = "America/Sao_Paulo";
-    private static final int BUFFER_SIZE = 8192; // 8KB buffer for streams
+    private static final int BUFFER_SIZE = 8192;
 
-    public DataLoader(PasswordEncoder passwordEncoder, SystemStatusService systemStatusService) {
+    public DataLoader(PasswordEncoder passwordEncoder,
+            SystemStatusService systemStatusService,
+            UniProtService uniProtService,
+            IedbService iedbService) {
         this.passwordEncoder = passwordEncoder;
         this.systemStatusService = systemStatusService;
+        this.uniProtService = uniProtService;
+        this.iedbService = iedbService;
     }
 
-    /**
-     * Entry point for the initialization logic.
-     */
     @Override
     @Transactional
     public void run(String... args) {
         if (shouldSkip(args)) {
-            log.info("Skipping data loader via arguments.");
+            log.info("Skipping DataLoader via arguments.");
             return;
         }
 
@@ -72,21 +72,40 @@ public class DataLoader implements CommandLineRunner {
 
         try {
             if (userCount == 0) {
-                log.info("System is empty. Starting strict initialization sequence...");
-
+                log.info("System is empty. Starting initialization sequence...");
                 initializeSystem();
-
-                log.info("Initialization finished. Application is now RESUMING startup.");
+                log.info("Initialization finished. Application is now resuming startup.");
             } else {
                 log.info("System data found. Skipping user initialization.");
             }
-            // Database registration should always run to catch files added by entrypoint or
-            // manual updates
+
+            // Trigger UniProt download if not present
+            triggerUniProtDownloadIfNeeded();
+
+            // Trigger IEDB download if not present
+            triggerIedbDownloadIfNeeded();
+
+            // Register local databases (entrypoint or manual uploads)
             registerLocalDatabases();
         } catch (Exception e) {
-            log.info("Fatal error during data loading.", e);
+            log.error("Fatal error during data loading.", e);
         } finally {
             systemStatusService.setStatus("READY", "System is fully operational.");
+        }
+    }
+
+    private void triggerIedbDownloadIfNeeded() {
+        Path dir = Paths.get(DB_DIRECTORY);
+        try {
+            if (!Files.exists(dir)
+                    || Files.list(dir).noneMatch(p -> p.getFileName().toString().contains("iedb_linear"))) {
+                log.info("No IEDB database found. Triggering automatic download...");
+                iedbService.startDownload();
+            } else {
+                log.info("IEDB database already present. Skipping automatic download.");
+            }
+        } catch (IOException e) {
+            log.error("Error checking IEDB directory: {}", e.getMessage());
         }
     }
 
@@ -108,14 +127,25 @@ public class DataLoader implements CommandLineRunner {
         log.info("Default users created.");
     }
 
-    /**
-     * Scans the database directory for valid FASTA files and registers them if not
-     * already in the DB.
-     */
+    private void triggerUniProtDownloadIfNeeded() {
+        Path dir = Paths.get(DB_DIRECTORY);
+        try {
+            if (!Files.exists(dir)
+                    || Files.list(dir).noneMatch(p -> p.getFileName().toString().contains("uniprot_sprot"))) {
+                log.info("No UniProt database found. Triggering automatic download...");
+                uniProtService.startDownload();
+            } else {
+                log.info("UniProt database already present. Skipping automatic download.");
+            }
+        } catch (IOException e) {
+            log.error("Error checking UniProt directory: {}", e.getMessage());
+        }
+    }
+
     private void registerLocalDatabases() {
         Path dir = Paths.get(DB_DIRECTORY);
         if (!Files.exists(dir)) {
-            log.info("Database directory /db does not exist. Skipping file registration.");
+            log.info("Database directory does not exist. Skipping file registration.");
             return;
         }
 
@@ -124,7 +154,7 @@ public class DataLoader implements CommandLineRunner {
                     .filter(p -> p.toString().endsWith(".fasta"))
                     .forEach(this::processAndPersistDatabase);
         } catch (IOException e) {
-            log.info("Error scanning database directory: " + dir, e);
+            log.error("Error scanning database directory: {}", dir, e);
         }
     }
 
@@ -132,9 +162,7 @@ public class DataLoader implements CommandLineRunner {
         String fileName = path.getFileName().toString();
         String alias = fileName.replace(".fasta", "");
 
-        // Applies specific naming convention for the auto-downloaded UniProt file
         if (fileName.startsWith("uniprot_sprot_")) {
-            // Extract date: uniprot_sprot_2025-11-27.fasta -> 2025-11-27
             String datePart = fileName.substring(14, 24);
             alias = "UniProt Swiss-Prot (Reviewed) - " + datePart;
         }
@@ -160,13 +188,13 @@ public class DataLoader implements CommandLineRunner {
                 db.setAbsolutePath(file.getAbsolutePath());
                 db.setDate(ZonedDateTime.now(ZoneId.of(TIMEZONE)).toLocalDateTime());
 
-                log.info("Counting sequences for: " + alias);
+                log.info("Counting sequences for: {}", alias);
                 db.setAmountSequences(countSequences(file.toPath()));
 
                 entityManager.persist(db);
-                log.info("Registered database: " + alias);
+                log.info("Registered database: {}", alias);
             } catch (IOException e) {
-                log.info("Failed to process file: " + file.getName(), e);
+                log.error("Failed to process file: {}", file.getName(), e);
             }
         }
     }
@@ -191,5 +219,4 @@ public class DataLoader implements CommandLineRunner {
         user.setRole(role);
         entityManager.persist(user);
     }
-
 }
