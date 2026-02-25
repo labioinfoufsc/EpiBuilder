@@ -49,6 +49,7 @@ Run the command below **only once** to create the container. This will also star
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v epibuilder-data:/tmp/epibuilder \
   -e EPIBUILDER_VOLUME=epibuilder-data \
+  -e DOCKER_API_VERSION=1.44 \
   -p 80:80 \
   -p 8080:8080 \
   -p 5435:5432 \
