@@ -37,6 +37,8 @@ RUN curl -f -L \
     -o /db/uniprot_release_notes.txt \
     https://ftp.uniprot.org/pub/databases/uniprot/current_release/relnotes.txt
 
+ENV NXF_VER=24.10.5
+
 RUN curl -s https://get.nextflow.io | bash && \
     mv nextflow /usr/local/bin/nextflow && \
     chmod +x /usr/local/bin/nextflow
