@@ -21,14 +21,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
     dpkg-reconfigure --frontend noninteractive tzdata
 
-RUN mkdir /db
-COPY db/ /db/
+RUN mkdir -p /tmp/epibuilder/db
+
+COPY db/ /tmp/epibuilder/db/
 
 RUN aria2c --continue=true --max-connection-per-server=8 --min-split-size=2M \
-    -d /db https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz && \
-    gzip -d /db/uniprot_sprot.fasta.gz && \
+    -d /tmp/epibuilder/db \
+    https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz && \
+    gunzip -f /tmp/epibuilder/db/uniprot_sprot.fasta.gz && \
     DATE=$(date +%Y_%m_%d) && \
-    mv /db/uniprot_sprot.fasta /db/uniprot_sprot_${DATE}.fasta
+    mv /tmp/epibuilder/db/uniprot_sprot.fasta \
+       /tmp/epibuilder/db/uniprot_sprot_${DATE}.fasta
 
 # --- Instala NPM
 

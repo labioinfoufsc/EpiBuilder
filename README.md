@@ -2,41 +2,41 @@
 
 # EpiBuilder
 
-![logo](https://github.com/labioinfoufsc/EpiBuilder/blob/main/src/web/frontend/src/assets/epibuilder-logo.png)
+![logo](./src/web/frontend/src/assets/epibuilder-logo.png)
 
 ## What is EpiBuilder?
 
 EpiBuilder is a scientific software for assembling, searching, and classifying linear B-cell epitopes, for research using approaches with partial or complete proteomes.
 
-It runs as a self-contained web application inside a single Docker container (monolith), which includes:
-
-- A graphical user interface (`frontend`)
-- Analysis and processing logic (`backend` and `core`)
-- Workflow with NextFlow to use BepiPred 3.0 and BLAST
-- A database (PostgreSQL) to persist users and task data
+The software is designed as a multi-container application using Docker to execute a reproductible immunoinformatics workflow.
 
 ## Who should use EpiBuilder?
 
-The platform is designed for researchers and professionals working at the intersection of immunology, proteomics, and bioinformatics. It is ideal for anyone who needs to perform *in silico* analysis of epitopes to accelerate their research.
+The platform is designed for researchers and professionals working at the intersection of immunology, proteomics, and bioinformatics. It is ideal for anyone who needs to perform *in silico* analysis of epitopes to accelerate their research and particularly suited for proteome-wide epitope discovery.
 
 Key application areas include:
-- **Infectious Diseases:** identify target epitopes in pathogens, accelerating the development of vaccines and diagnostic tests;
-- **Oncology:** identify epitopes in tumor proteins, enabling the selection of precise targets for the development of immunotherapies and cancer vaccines;
-- **Neuroscience:** predict epitopes in nervous system proteins, facilitating the search for autoantibody biomarkers for the diagnosis of neurodegenerative diseases.
+- **Infectious Diseases**: identify target epitopes in pathogens, accelerating the development of vaccines and diagnostic tests;
+- **Oncology**: identify epitopes in tumor proteins, enabling the selection of precise targets for the development of immunotherapies and cancer vaccines;
+- **Neuroscience**: predict epitopes in nervous system proteins, facilitating the search for autoantibody biomarkers for the diagnosis of neurodegenerative diseases.
+
+---
 
 ## Requirements
 
 - [Docker](https://www.docker.com/) must be installed on your computer.
   - No need to install programming languages, databases, or libraries separately.
   - Suitable for use on personal machines, lab computers, or servers.
+- Linux environment recommended
 
 ## Step 1: Download the Docker Image (Only Once)
 
-Run this command only once to download the EpiBuilder image:
+EpiBuilder is distributed as Docker images. If you are an end user, run this command only once to download the EpiBuilder image:
 
 ```bash
 docker pull bioinfoufsc/epibuilder:latest
 ````
+
+> For development setup and guidelines, see [README.dev.md](./README.dev.md)
 
 ## Step 2: Create and Start the EpiBuilder Container (Only Once)
 
@@ -94,13 +94,22 @@ Use the following to log in for the first time:
 
 > **Note:** The admin account can create other users.
 
-## 📖 Citation
+## Contributing
 
-If you use **EpiBuilder** in your research, please cite our article:
+Contributions are welcome.
 
-> Moreira RS, Filho VB, Calomeno NA, Wagner G, Miletti LC.  
-> **EpiBuilder: A Tool for Assembling, Searching, and Classifying B-Cell Epitopes.**  
-> *Bioinformatics and Biology Insights*, 2022 May 11;16:11779322221095221.  
-> [https://doi.org/10.1177/11779322221095221](https://doi.org/10.1177/11779322221095221)  
-> PMID: [35571557](https://pubmed.ncbi.nlm.nih.gov/35571557/) — PMCID: PMC9102138
+* Bug fixes, improvements, and new features must be submitted via Pull Request (PR)
+* Please ensure your changes are tested before submission
+* Follow the existing project structure and conventions
 
+> For development setup and guidelines, see [README.dev.md](./README.dev.md)
+
+---
+
+## Citation
+
+If you use EpiBuilder in your research, please cite:
+>Moreira RS, Filho VB, Calomeno NA, Wagner G, Miletti LC.
+>EpiBuilder: A Tool for Assembling, Searching, and Classifying B-Cell Epitopes.
+>Bioinformatics and Biology Insights, 2022.
+>https://doi.org/10.1177/11779322221095221
