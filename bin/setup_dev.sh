@@ -31,22 +31,5 @@ else
 fi
 
 echo
-echo "Checking JWT_SECRET..."
-
-if grep -q "export JWT_SECRET=" ~/.bashrc; then
-    echo "JWT_SECRET already configured."
-else
-    JWT_SECRET=$(openssl rand -base64 32)
-
-    echo "" >> ~/.bashrc
-    echo "# EpiBuilder JWT secret" >> ~/.bashrc
-    echo "export JWT_SECRET=\"$JWT_SECRET\"" >> ~/.bashrc
-
-    export JWT_SECRET="$JWT_SECRET"
-
-    echo "JWT_SECRET generated and added to ~/.bashrc"
-fi
-
-echo
 echo "Development databases ready in:"
 echo "$DEV_DB_DIR"
