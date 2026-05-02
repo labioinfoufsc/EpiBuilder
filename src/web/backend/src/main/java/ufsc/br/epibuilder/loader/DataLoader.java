@@ -6,8 +6,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import ufsc.br.epibuilder.model.*;
 import ufsc.br.epibuilder.service.SystemStatusService;
-import ufsc.br.epibuilder.service.UniProtService;
-import ufsc.br.epibuilder.service.IedbService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
@@ -41,21 +39,15 @@ public class DataLoader implements CommandLineRunner {
 
     private final PasswordEncoder passwordEncoder;
     private final SystemStatusService systemStatusService;
-    private final UniProtService uniProtService;
-    private final IedbService iedbService;
 
     private static final String DB_DIRECTORY = "/tmp/epibuilder/db";
     private static final String TIMEZONE = "America/Sao_Paulo";
     private static final int BUFFER_SIZE = 8192;
 
     public DataLoader(PasswordEncoder passwordEncoder,
-            SystemStatusService systemStatusService,
-            UniProtService uniProtService,
-            IedbService iedbService) {
+            SystemStatusService systemStatusService) {
         this.passwordEncoder = passwordEncoder;
         this.systemStatusService = systemStatusService;
-        this.uniProtService = uniProtService;
-        this.iedbService = iedbService;
     }
 
     @Override
@@ -71,41 +63,19 @@ public class DataLoader implements CommandLineRunner {
         systemStatusService.setStatus("STARTING", "Checking required initial data.");
 
         try {
-            if (userCount == 0) {
-                log.info("System is empty. Starting initialization sequence...");
-                initializeSystem();
-                log.info("Initialization finished. Application is now resuming startup.");
-            } else {
-                log.info("System data found. Skipping user initialization.");
-            }
+           if (userCount == 0) {
+            log.info("System is empty. Creating default users...");
+            createDefaultUsers();
+        } else {
+            log.info("System data found. Skipping user initialization.");
+        }
 
-            // Trigger UniProt download if not present
-            triggerUniProtDownloadIfNeeded();
+        registerLocalDatabases();     
 
-            // Trigger IEDB download if not present
-            triggerIedbDownloadIfNeeded();
-
-            // Register local databases (entrypoint or manual uploads)
-            registerLocalDatabases();
         } catch (Exception e) {
             log.error("Fatal error during data loading.", e);
         } finally {
             systemStatusService.setStatus("READY", "System is fully operational.");
-        }
-    }
-
-    private void triggerIedbDownloadIfNeeded() {
-        Path dir = Paths.get(DB_DIRECTORY);
-        try {
-            if (!Files.exists(dir)
-                    || Files.list(dir).noneMatch(p -> p.getFileName().toString().contains("iedb_linear"))) {
-                log.info("No IEDB database found. Triggering automatic download...");
-                iedbService.startDownload();
-            } else {
-                log.info("IEDB database already present. Skipping automatic download.");
-            }
-        } catch (IOException e) {
-            log.error("Error checking IEDB directory: {}", e.getMessage());
         }
     }
 
@@ -117,29 +87,10 @@ public class DataLoader implements CommandLineRunner {
         return false;
     }
 
-    private void initializeSystem() {
-        createDefaultUsers();
-    }
-
     private void createDefaultUsers() {
         persistUser("Admin", "admin", "admin", Role.ADMIN);
         persistUser("User", "user", "user", Role.USER);
         log.info("Default users created.");
-    }
-
-    private void triggerUniProtDownloadIfNeeded() {
-        Path dir = Paths.get(DB_DIRECTORY);
-        try {
-            if (!Files.exists(dir)
-                    || Files.list(dir).noneMatch(p -> p.getFileName().toString().contains("uniprot_sprot"))) {
-                log.info("No UniProt database found. Triggering automatic download...");
-                uniProtService.startDownload();
-            } else {
-                log.info("UniProt database already present. Skipping automatic download.");
-            }
-        } catch (IOException e) {
-            log.error("Error checking UniProt directory: {}", e.getMessage());
-        }
     }
 
     private void registerLocalDatabases() {

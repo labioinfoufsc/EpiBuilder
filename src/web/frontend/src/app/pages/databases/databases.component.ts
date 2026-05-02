@@ -2,11 +2,7 @@ import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/co
 import { NgForm } from '@angular/forms';
 import { Modal } from 'bootstrap';
 import { saveAs } from 'file-saver';
-import { Subscription, interval } from 'rxjs';
-import { switchMap } from 'rxjs/operators';
 import { Database } from '../../models/Database';
-import { IedbDownloadStatus } from '../../models/IedbDownloadStatus';
-import { UniProtDownloadStatus } from '../../models/UniProtDownloadStatus';
 import { DatabasesService } from '../../services/databases/databases.service';
 
 @Component({
@@ -19,21 +15,11 @@ export class DatabasesComponent implements OnInit, OnDestroy {
   newDatabase?: Database;
   selectedFile!: File;
   files: Database[] = [];
-  columns: string[] = ['Database', 'Creation Date', 'Number of Sequences', 'Update', 'Delete', 'Download'];
+  columns: string[] = ['Database', 'Creation Date', 'Number of Sequences', 'Delete', 'Download'];
   alertMessage: string | null = null;
   alertType: "success" | "danger" | null = null;
   fileToDelete: Database | null = null;
   databaseAlias: string = '';
-
-  // UniProt download state
-  isUniProtDownloadInProgress = false;
-  uniProtDownloadMessage: string | null = null;
-  private uniProtDownloadSubscription?: Subscription;
-
-  // IEDB download state
-  isIedbDownloadInProgress = false;
-  iedbDownloadMessage: string | null = null;
-  private iedbDownloadSubscription?: Subscription;
 
   @ViewChild('fileInput') fileInput?: ElementRef;
   @ViewChild("deleteModal") deleteModal!: ElementRef;
@@ -44,129 +30,9 @@ export class DatabasesComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadDatabases();
-    this.checkInitialUniProtStatus();
-    this.checkInitialIedbStatus();
   }
 
   ngOnDestroy(): void {
-    this.uniProtDownloadSubscription?.unsubscribe();
-    this.iedbDownloadSubscription?.unsubscribe();
-  }
-
-  // --- UniProt ---
-  checkInitialUniProtStatus(): void {
-    this.databasesService.getUniProtDownloadStatus().subscribe((status: UniProtDownloadStatus) => {
-      if (status.inProgress) {
-        this.uniProtDownloadMessage = status.progressMessage;
-        this.startUniProtPolling();
-      } else if (status.success === false && status.progressMessage?.toLowerCase().includes("failed")) {
-        this.showAlert("Last UniProt update failed. Check backend logs.", "danger");
-      }
-    });
-  }
-
-
-  startUniProtDownload(): void {
-    this.isUniProtDownloadInProgress = true;
-    this.uniProtDownloadMessage = "Initiating UniProt download...";
-    this.databasesService.triggerIedbDownload().subscribe({
-      next: (res) => {
-        this.showAlert(res.message || "IEDB download initiated in the background.", "success");
-        this.startIedbPolling();
-      },
-      error: (err) => {
-        this.isIedbDownloadInProgress = false;
-        this.showAlert(err.error || "Failed to start IEDB download.", "danger");
-        this.iedbDownloadMessage = null;
-      }
-    });
-
-  }
-
-  private startUniProtPolling(): void {
-    this.isUniProtDownloadInProgress = true;
-    this.uniProtDownloadSubscription?.unsubscribe();
-    this.uniProtDownloadSubscription = interval(5000)
-      .pipe(switchMap(() => this.databasesService.getUniProtDownloadStatus()))
-      .subscribe({
-        next: (status: UniProtDownloadStatus) => {
-          this.uniProtDownloadMessage = status.progressMessage;
-          if (!status.inProgress) {
-            this.isUniProtDownloadInProgress = false;
-            this.uniProtDownloadSubscription?.unsubscribe();
-            this.loadDatabases();
-            if (status.success) {
-              this.showAlert("UniProt updated successfully!", "success");
-            } else {
-              this.showAlert("UniProt update failed! Check logs.", "danger");
-            }
-            this.uniProtDownloadMessage = null;
-          }
-        },
-        error: () => {
-          this.isUniProtDownloadInProgress = false;
-          this.uniProtDownloadSubscription?.unsubscribe();
-          this.showAlert("Failed to get UniProt download status.", "danger");
-          this.uniProtDownloadMessage = null;
-        }
-      });
-  }
-
-  // --- IEDB ---
-  checkInitialIedbStatus(): void {
-    this.databasesService.getIedbDownloadStatus().subscribe((status: IedbDownloadStatus) => {
-      if (status.inProgress) {
-        this.iedbDownloadMessage = status.progressMessage;
-        this.startIedbPolling();
-      } else if (status.success === false) {
-        this.showAlert("Last IEDB update failed. Check backend logs.", "danger");
-      }
-    });
-  }
-
-  startIedbDownload(): void {
-    this.isIedbDownloadInProgress = true;
-    this.iedbDownloadMessage = "Initiating IEDB download...";
-    this.databasesService.triggerIedbDownload().subscribe({
-      next: () => {
-        this.showAlert("IEDB download initiated in the background.", "success");
-        this.startIedbPolling();
-      },
-      error: (err) => {
-        this.isIedbDownloadInProgress = false;
-        this.showAlert(err.error || "Failed to start IEDB download.", "danger");
-        this.iedbDownloadMessage = null;
-      }
-    });
-  }
-
-  private startIedbPolling(): void {
-    this.isIedbDownloadInProgress = true;
-    this.iedbDownloadSubscription?.unsubscribe();
-    this.iedbDownloadSubscription = interval(5000)
-      .pipe(switchMap(() => this.databasesService.getIedbDownloadStatus()))
-      .subscribe({
-        next: (status: IedbDownloadStatus) => {
-          this.iedbDownloadMessage = status.progressMessage;
-          if (!status.inProgress) {
-            this.isIedbDownloadInProgress = false;
-            this.iedbDownloadSubscription?.unsubscribe();
-            this.loadDatabases();
-            if (status.success) {
-              this.showAlert("IEDB updated successfully!", "success");
-            } else {
-              this.showAlert("IEDB update failed! Check logs.", "danger");
-            }
-            this.iedbDownloadMessage = null;
-          }
-        },
-        error: () => {
-          this.isIedbDownloadInProgress = false;
-          this.iedbDownloadSubscription?.unsubscribe();
-          this.showAlert("Failed to get IEDB download status.", "danger");
-          this.iedbDownloadMessage = null;
-        }
-      });
   }
 
   // --- Common ---
