@@ -2,13 +2,13 @@
 
 # EpiBuilder
 
-![logo](https://github.com/labioinfoufsc/EpiBuilder/blob/main/src/web/frontend/src/assets/epibuilder-logo.png)
+![logo](./src/web/frontend/src/assets/epibuilder-logo.png)
 
 ## What is EpiBuilder?
 
 EpiBuilder is a scientific software for assembling, searching, and classifying linear B-cell epitopes, for research using approaches with partial or complete proteomes.
 
-The software is designed as a multi-container application using Docker to execute a reproducible immunoinformatics workflow.
+The software is designed as a multi-container application using Docker to execute a reproductible immunoinformatics workflow.
 
 ## Who should use EpiBuilder?
 
