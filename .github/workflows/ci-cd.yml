@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      service:
+        description: "Service to build (bepipred3, core, web, all)"
+        required: true
+        default: "all"
 
 jobs:
   detect-changes:
@@ -13,17 +18,18 @@ jobs:
       core: ${{ steps.filter.outputs.core }}
       web: ${{ steps.filter.outputs.web }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - name: Detect changes in src modules
-        id: filter
+      - id: filter
         run: |
-          git fetch origin main
-          CHANGED=$(git diff --name-only origin/main ${{ github.sha }})
-          echo "Changed files: $CHANGED"
+          BEFORE=${{ github.event.before }}
+          AFTER=${{ github.sha }}
+
+          echo "Diff: $BEFORE -> $AFTER"
+
+          CHANGED=$(git diff --name-only $BEFORE $AFTER)
 
           echo "bepipred3=$(echo "$CHANGED" | grep -q '^src/bepipred3/' && echo true || echo false)" >> $GITHUB_OUTPUT
           echo "core=$(echo "$CHANGED" | grep -q '^src/core/' && echo true || echo false)" >> $GITHUB_OUTPUT
@@ -31,8 +37,10 @@ jobs:
 
   build-bepipred3:
     needs: detect-changes
-    if: github.event_name == 'workflow_dispatch' || needs.detect-changes.outputs.bepipred3 == 'true'
     runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'push' && needs.detect-changes.outputs.bepipred3 == 'true') ||
+      (github.event_name == 'workflow_dispatch' && (inputs.service == 'bepipred3' || inputs.service == 'all'))
     steps:
       - uses: actions/checkout@v3
       - uses: docker/setup-buildx-action@v3
@@ -40,17 +48,19 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-      - name: Build & push bepipred3 image
-        run: |
+      - run: |
           docker buildx build --push \
             -f src/bepipred3/Dockerfile \
+            -t bioinfoufsc/bepipred3:${{ github.sha }} \
             -t bioinfoufsc/bepipred3:latest \
             src/bepipred3
 
   build-core:
-    needs: [detect-changes, build-bepipred3]
-    if: github.event_name == 'workflow_dispatch' || needs.detect-changes.outputs.core == 'true'
+    needs: detect-changes
     runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'push' && needs.detect-changes.outputs.core == 'true') ||
+      (github.event_name == 'workflow_dispatch' && (inputs.service == 'core' || inputs.service == 'all'))
     steps:
       - uses: actions/checkout@v3
       - uses: docker/setup-buildx-action@v3
@@ -58,17 +68,19 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-      - name: Build & push core image
-        run: |
+      - run: |
           docker buildx build --push \
             -f src/core/Dockerfile \
+            -t bioinfoufsc/epibuilder-core:${{ github.sha }} \
             -t bioinfoufsc/epibuilder-core:latest \
             src/core
 
   build-web:
-    needs: [detect-changes, build-core]
-    if: github.event_name == 'workflow_dispatch' || needs.detect-changes.outputs.web == 'true'
+    needs: detect-changes
     runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'push' && needs.detect-changes.outputs.web == 'true') ||
+      (github.event_name == 'workflow_dispatch' && (inputs.service == 'web' || inputs.service == 'all'))
     steps:
       - uses: actions/checkout@v3
       - uses: docker/setup-buildx-action@v3
@@ -76,9 +88,9 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-      - name: Build & push web image
-        run: |
+      - run: |
           docker buildx build --push \
             -f src/web/Dockerfile \
+            -t bioinfoufsc/epibuilder:${{ github.sha }} \
             -t bioinfoufsc/epibuilder:latest \
             src/web
