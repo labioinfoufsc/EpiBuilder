@@ -55,9 +55,9 @@ COPY backend/ /epibuilder/backend
 
 WORKDIR /epibuilder/backend
 
-#RUN mvn clean package -DskipTests
+RUN mvn clean package -DskipTests
 
-RUN mv /epibuilder/backend/epibuilder-backend.jar /epibuilder/epibuilder-backend.jar
+RUN mv target/*.jar /epibuilder/epibuilder-backend.jar
 
 WORKDIR /
 
