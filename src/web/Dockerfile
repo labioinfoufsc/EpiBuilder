@@ -51,12 +51,18 @@ RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 WORKDIR /opt/tools
 
 # Copy application files
+COPY core/ /epibuilder/core
 COPY backend/ /epibuilder/backend
 
-WORKDIR /epibuilder/backend
+# Build core first
+WORKDIR /epibuilder/core
+RUN mvn clean install -DskipTests
 
+# Later backend
+WORKDIR /epibuilder/backend
 RUN mvn clean package -DskipTests
 
+# Move jar final
 RUN mv target/*.jar /epibuilder/epibuilder-backend.jar
 
 WORKDIR /
