@@ -53,7 +53,7 @@ jobs:
             -f src/bepipred3/Dockerfile \
             -t bioinfoufsc/bepipred3:${{ github.sha }} \
             -t bioinfoufsc/bepipred3:latest \
-            src/bepipred3
+            .
 
   build-core:
     needs: detect-changes
@@ -73,7 +73,7 @@ jobs:
             -f src/core/Dockerfile \
             -t bioinfoufsc/epibuilder-core:${{ github.sha }} \
             -t bioinfoufsc/epibuilder-core:latest \
-            src/core
+            .
 
   build-web:
     needs: detect-changes
@@ -93,4 +93,4 @@ jobs:
             -f src/web/Dockerfile \
             -t bioinfoufsc/epibuilder:${{ github.sha }} \
             -t bioinfoufsc/epibuilder:latest \
-            src/web
+            .
