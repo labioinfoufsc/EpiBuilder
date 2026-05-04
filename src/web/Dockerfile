@@ -7,7 +7,7 @@ LABEL description="Bioinformatics tool environment for epitope prediction"
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=America/Sao_Paulo
 
-# Atualiza pacotes e instala dependências básicas
+# Install system dependencies in a single layer
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     gnupg2 \
@@ -15,78 +15,96 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     lsb-release \
     ca-certificates \
     curl \
-    docker.io \
     maven \
-    aria2 libgomp1 && \
-    ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
-    dpkg-reconfigure --frontend noninteractive tzdata
+    aria2 \
+    libgomp1 \
+    nginx \
+    && ln -fs /usr/share/zoneinfo/$TZ /etc/localtime \
+    && dpkg-reconfigure --frontend noninteractive tzdata \
+    && rm -rf /var/lib/apt/lists/*
 
+# Install Node.js and Angular CLI
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get update && apt-get install -y nodejs \
+    && npm install -g @angular/cli \
+    && rm -rf /var/lib/apt/lists/*
+
+# Prepare database directory
 RUN mkdir -p /tmp/epibuilder/db
-
 COPY db/ /tmp/epibuilder/db/
 
+# Download and prepare UniProt dataset (external dependency)
 RUN aria2c --continue=true --max-connection-per-server=8 --min-split-size=2M \
     -d /tmp/epibuilder/db \
-    https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz && \
-    gunzip -f /tmp/epibuilder/db/uniprot_sprot.fasta.gz && \
-    DATE=$(date +%Y_%m_%d) && \
-    mv /tmp/epibuilder/db/uniprot_sprot.fasta \
+    https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz \
+    && gunzip -f /tmp/epibuilder/db/uniprot_sprot.fasta.gz \
+    && DATE=$(date +%Y_%m_%d) \
+    && mv /tmp/epibuilder/db/uniprot_sprot.fasta \
        /tmp/epibuilder/db/uniprot_sprot_${DATE}.fasta
 
-# --- Instala NPM
+# ------------------------
+# BACKEND BUILD
+# ------------------------
 
-# Instala Node.js v20 e npm (oficial NodeSource)
-RUN apt-get update && apt-get install -y curl \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs \
-    && npm install -g @angular/cli
+WORKDIR /epibuilder
 
-# --- Instala NGINX mainline ---
-RUN apt-get install -y --no-install-recommends nginx
+# Copy only pom files first to leverage Docker cache
+COPY core/pom.xml core/pom.xml
+COPY backend/pom.xml backend/pom.xml
 
-# Limpa cache do apt
-RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+# Pre-download Maven dependencies (cacheable layer)
+WORKDIR /epibuilder/core
+RUN mvn -B -q -DskipTests dependency:go-offline
 
-# Working directory
-WORKDIR /opt/tools
+WORKDIR /epibuilder/backend
+RUN mvn -B -q -DskipTests dependency:go-offline
 
-# Copy application files
-COPY core/ /epibuilder/core
-COPY backend/ /epibuilder/backend
+# Copy full source code
+COPY core/ core/
+COPY backend/ backend/
 
-# Build core first
+# Build core module and install to local Maven repository
 WORKDIR /epibuilder/core
 RUN mvn clean install -DskipTests
 
-# Later backend
+# Build backend module
 WORKDIR /epibuilder/backend
 RUN mvn clean package -DskipTests
 
-# Move jar final
+# Move final jar to a stable location
 RUN mv target/*.jar /epibuilder/epibuilder-backend.jar
 
-WORKDIR /
+# ------------------------
+# FRONTEND BUILD
+# ------------------------
 
-COPY frontend/ /epibuilder/frontend
-
+# Cache npm dependencies
+COPY frontend/package*.json /epibuilder/frontend/
 WORKDIR /epibuilder/frontend
 RUN npm ci
-RUN npm run build
-RUN mkdir -p /var/www/html/
-RUN cp -r dist/frontend/browser/* /usr/share/nginx/html/
 
-# NGINX configuration
+# Copy frontend source and build
+COPY frontend/ /epibuilder/frontend
+RUN npm run build
+
+# Deploy frontend to nginx
+RUN rm -rf /usr/share/nginx/html/* \
+    && cp -r dist/frontend/browser/* /usr/share/nginx/html/
+
+# ------------------------
+# NGINX + ENTRYPOINT
+# ------------------------
+
+# Replace default nginx config
 RUN rm -f /etc/nginx/sites-enabled/default
 COPY frontend/nginx.conf /etc/nginx/sites-enabled/default
 
-# Entrypoint setup
+# Setup entrypoint
 COPY bin/entrypoint.sh /entrypoint.sh
-
 RUN chmod +x /entrypoint.sh
-# Ports
-EXPOSE 80
-EXPOSE 8080
-EXPOSE 5432
+
+# Expose ports
+EXPOSE 80 8080 5432
 
 WORKDIR /
 ENTRYPOINT ["/entrypoint.sh"]
