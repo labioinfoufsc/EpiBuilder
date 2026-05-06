@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     aria2 \
     libgomp1 \
     nginx \
+    docker.io \
     && ln -fs /usr/share/zoneinfo/$TZ /etc/localtime \
     && dpkg-reconfigure --frontend noninteractive tzdata \
     && rm -rf /var/lib/apt/lists/*
