@@ -13,12 +13,15 @@ RUN apt-get update && \
 
 RUN ln -sf /usr/bin/python3 /usr/bin/python
 
-COPY bepipred3.zip /tmp/bepipred3.zip
-RUN unzip /tmp/bepipred3.zip -d / && rm -f /tmp/bepipred3.zip
+COPY src/bepipred3/bepipred3.zip /tmp/bepipred3.zip
 
-COPY bepipred3_custom.py /
+RUN unzip /tmp/bepipred3.zip -d / && \
+    rm -f /tmp/bepipred3.zip
+
+COPY src/bepipred3/bepipred3_custom.py /
 
 RUN python3 -m venv /venv
+
 ENV PATH="/venv/bin:$PATH"
 
 RUN printf "fair-esm==1.0.3\n\
@@ -34,19 +37,23 @@ torch==2.2.2\n\
 typing-extensions>=4.8.0\n\
 zipp==3.8.0\n" > /tmp/requirements.txt
 
-RUN pip install --no-cache-dir -r /tmp/requirements.txt && rm -f /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt && \
+    rm -f /tmp/requirements.txt
 
 ENV PATH=/usr/local/cuda/bin:$PATH
 ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
 
 RUN mkdir -p /models && \
-    curl -o /models/esm2_t33_650M_UR50D-contact-regression.pt https://dl.fbaipublicfiles.com/fair-esm/regression/esm2_t33_650M_UR50D-contact-regression.pt && \
-    curl -o /models/esm2_t33_650M_UR50D.pt https://dl.fbaipublicfiles.com/fair-esm/models/esm2_t33_650M_UR50D.pt
+    curl -o /models/esm2_t33_650M_UR50D-contact-regression.pt \
+    https://dl.fbaipublicfiles.com/fair-esm/regression/esm2_t33_650M_UR50D-contact-regression.pt && \
+    curl -o /models/esm2_t33_650M_UR50D.pt \
+    https://dl.fbaipublicfiles.com/fair-esm/models/esm2_t33_650M_UR50D.pt
 
 WORKDIR /
 
 RUN apt-get remove --purge -y unzip curl && \
     apt-get autoremove -y && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 ENTRYPOINT []

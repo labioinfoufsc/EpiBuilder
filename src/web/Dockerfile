@@ -29,11 +29,16 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && npm install -g @angular/cli \
     && rm -rf /var/lib/apt/lists/*
 
+# ------------------------
+# DATABASE
+# ------------------------
+
 # Prepare database directory
 RUN mkdir -p /tmp/epibuilder/db
-COPY db/ /tmp/epibuilder/db/
 
-# Download and prepare UniProt dataset (external dependency)
+COPY src/web/db/ /tmp/epibuilder/db/
+
+# Download and prepare UniProt dataset
 RUN aria2c --continue=true --max-connection-per-server=8 --min-split-size=2M \
     -d /tmp/epibuilder/db \
     https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz \
@@ -49,21 +54,18 @@ RUN aria2c --continue=true --max-connection-per-server=8 --min-split-size=2M \
 WORKDIR /epibuilder
 
 # Copy only pom files first to leverage Docker cache
-COPY core/pom.xml core/pom.xml
-COPY backend/pom.xml backend/pom.xml
+COPY src/core/pom.xml core/pom.xml
+COPY src/web/backend/pom.xml backend/pom.xml
 
-# Pre-download Maven dependencies (cacheable layer)
+# Pre-download Maven dependencies
 WORKDIR /epibuilder/core
 RUN mvn -B -q -DskipTests dependency:go-offline
 
-WORKDIR /epibuilder/backend
-RUN mvn -B -q -DskipTests dependency:go-offline
+# Copy full source
+COPY src/core/ core/
+COPY src/web/backend/ backend/
 
-# Copy full source code
-COPY core/ core/
-COPY backend/ backend/
-
-# Build core module and install to local Maven repository
+# Build core module
 WORKDIR /epibuilder/core
 RUN mvn clean install -DskipTests
 
@@ -79,12 +81,15 @@ RUN mv target/*.jar /epibuilder/epibuilder-backend.jar
 # ------------------------
 
 # Cache npm dependencies
-COPY frontend/package*.json /epibuilder/frontend/
+COPY src/web/frontend/package*.json /epibuilder/frontend/
+
 WORKDIR /epibuilder/frontend
+
 RUN npm ci
 
 # Copy frontend source and build
-COPY frontend/ /epibuilder/frontend
+COPY src/web/frontend/ /epibuilder/frontend/
+
 RUN npm run build
 
 # Deploy frontend to nginx
@@ -95,16 +100,21 @@ RUN rm -rf /usr/share/nginx/html/* \
 # NGINX + ENTRYPOINT
 # ------------------------
 
+WORKDIR /epibuilder
+
 # Replace default nginx config
 RUN rm -f /etc/nginx/sites-enabled/default
-COPY frontend/nginx.conf /etc/nginx/sites-enabled/default
+
+COPY src/web/frontend/nginx.conf /etc/nginx/sites-enabled/default
 
 # Setup entrypoint
-COPY bin/entrypoint.sh /entrypoint.sh
+COPY src/web/bin/entrypoint.sh /entrypoint.sh
+
 RUN chmod +x /entrypoint.sh
 
 # Expose ports
 EXPOSE 80 8080 5432
 
 WORKDIR /
+
 ENTRYPOINT ["/entrypoint.sh"]

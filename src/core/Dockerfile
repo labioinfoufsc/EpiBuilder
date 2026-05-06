@@ -6,7 +6,9 @@ LABEL description="Bioinformatics tool environment for epitope prediction"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=America/Sao_Paulo
+ENV NXF_VER=24.10.5
 
+# Install system dependencies
 RUN apt-get update && \
     apt-get install --no-install-recommends -y \
     ncbi-blast+ \
@@ -18,12 +20,18 @@ RUN apt-get update && \
     libgomp1 && \
     ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
     dpkg-reconfigure --frontend noninteractive tzdata && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# ------------------------
+# DATABASE
+# ------------------------
 
 RUN mkdir -p /db
 
-COPY db/ /db/
+COPY src/web/db/ /db/
 
+# Download and prepare UniProt dataset
 RUN aria2c --continue=true \
     --max-connection-per-server=8 \
     --min-split-size=2M \
@@ -33,15 +41,22 @@ RUN aria2c --continue=true \
     DATE=$(date +%Y_%m_%d) && \
     mv /db/uniprot_sprot.fasta /db/uniprot_sprot_${DATE}.fasta
 
+# Download UniProt release notes
 RUN curl -f -L \
     -o /db/uniprot_release_notes.txt \
     https://ftp.uniprot.org/pub/databases/uniprot/current_release/relnotes.txt
 
-ENV NXF_VER=24.10.5
+# ------------------------
+# NEXTFLOW
+# ------------------------
 
 RUN curl -s https://get.nextflow.io | bash && \
     mv nextflow /usr/local/bin/nextflow && \
     chmod +x /usr/local/bin/nextflow
+
+# ------------------------
+# APPLICATION
+# ------------------------
 
 RUN mkdir -p /epibuilder
 
@@ -49,10 +64,12 @@ COPY . /epibuilder
 
 WORKDIR /epibuilder
 
+# Prepare example FASTA
 RUN mkdir -p /fasta && \
-    cp /epibuilder/pipeline/fasta/ebola.fasta /fasta/ebola.fasta
+    cp /epibuilder/src/core/pipeline/fasta/ebola.fasta /fasta/ebola.fasta
 
-RUN chmod +x /epibuilder/pipeline/epibuilder.sh && \
-    ln -s /epibuilder/pipeline/epibuilder.sh /usr/local/bin/epibuilder
+# Setup CLI command
+RUN chmod +x /epibuilder/src/core/pipeline/epibuilder.sh && \
+    ln -s /epibuilder/src/core/pipeline/epibuilder.sh /usr/local/bin/epibuilder
 
 WORKDIR /
