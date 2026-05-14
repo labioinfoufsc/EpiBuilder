@@ -17,9 +17,6 @@ log "Generating JWT_SECRET..."
 JWT_SECRET=$(openssl rand -base64 32 | tr -d '\n')
 export JWT_SECRET
 
-log "Pulling EpiBuilder Core image..."
-docker pull bioinfoufsc/epibuilder-core:latest
-
 log "Updating NGINX configuration..."
 
 NGINX_CONF="/etc/nginx/sites-enabled/default"
