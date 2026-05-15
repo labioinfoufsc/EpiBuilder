@@ -22,6 +22,18 @@ Key application areas include:
 
 ---
 
+## How EpiBuilder Works
+
+EpiBuilder orchestrates a [Nextflow](https://www.nextflow.io/) pipeline that integrates the following dockerized tools:
+
+- **[BepiPred-3.0](https://services.healthtech.dtu.dk/services/BepiPred-3.0/)** — deep learning-based B-cell epitope prediction from protein sequences;
+- **[WolfPSORT](https://wolfpsort.hgc.jp/)** — subcellular localization prediction for eukaryotic organisms (`animal`, `fungi`, `plant`);
+- **[PSORTb](https://www.psort.org/psortb/)** — subcellular localization prediction for prokaryotic organisms (`arch`, `gram_pos`, `gram_neg`);
+- **[NCBI BLAST+](https://blast.ncbi.nlm.nih.gov/Blast.cgi)** — sequence similarity search against UniProt proteomes (optional, used when proteome filtering is enabled);
+- **EpiBuilder Core** - custom Java modules for FASTA validation, epitope filtering, topology analysis, and Sheets export.
+
+---
+
 ## Requirements
 
 - [Docker](https://www.docker.com/) must be installed on your computer.
@@ -31,73 +43,50 @@ Key application areas include:
 
 ---
 
-## Step 1: Create and Start EpiBuilder (Only Once)
+## Usage Modes
 
-Run the commands below **only once** to create and start all required containers.
+EpiBuilder can be used in two ways depending on your needs:
 
-### 1.1 — Database
-
-```bash
-docker run -d \
-  --name epibuilder-db \
-  -e POSTGRES_DB=epibuilder \
-  -e POSTGRES_USER=epiuser \
-  -e POSTGRES_PASSWORD=epiuser \
-  -v epibuilder-pgdata:/var/lib/postgresql/data \
-  -p 5432:5432 \
-  postgres:16
-```
-
-### 1.2 — Application
-
-```bash
-docker run -d \
-  --name epibuilder-web \
-  --add-host=host.docker.internal:host-gateway \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -v epibuilder-data:/tmp/epibuilder \
-  -e EPIBUILDER_VOLUME=epibuilder-data \
-  -p 80:80 \
-  -p 8080:8080 \
-  -p 5005:5005 \
-  bioinfoufsc/epibuilder:latest
-```
-
-> **Note:** The `epibuilder-core` and `bepipred3` images are pulled and managed automatically by the application when needed. No additional setup is required.
-
-> For development setup and guidelines, see [README.dev.md](./README.dev.md)
+| Mode | Description |
+|------|-------------|
+| **Web** | Graphical interface with database, user management, and result storage |
+| **CLI** | Command-line execution, ideal for scripting and automation |
 
 ---
 
-## Step 2: Access the Web Interface
+## Web Interface (Recommended)
 
-After starting the containers, open your browser and go to:
+### Step 1: Start EpiBuilder
+
+Download the [`docker-compose.yml`](https://github.com/labioinfoufsc/EpiBuilder/blob/main/docker-compose.yml) file and run from the directory where it was saved:
+
+```bash
+docker compose up -d
+```
+
+This will automatically download all required images and start the application. The first run may take longer than usual since `bepipred3` docker image will be downloaded.
+
+> For development setup and guidelines, see [README.dev.md](./README.dev.md)
+
+### Step 2: Access the Web Interface
+
+After starting, open your browser and go to:
 
 ```
 http://localhost
 ```
 
-You should see the EpiBuilder web interface.
-
----
-
-## Step 3: Reusing the Containers (Next Times)
-
-You do **not** need to run `docker run` again. To start and stop the containers:
+### Step 3: Reusing (Next Times)
 
 ```bash
 # Start
-docker start epibuilder-db
-docker start epibuilder-web
+docker compose up -d
 
 # Stop
-docker stop epibuilder-web
-docker stop epibuilder-db
+docker compose down
 ```
 
----
-
-## Login Credentials
+### Login Credentials
 
 Use the following to log in for the first time:
 
@@ -105,6 +94,34 @@ Use the following to log in for the first time:
 - **Password:** `admin`
 
 > **Note:** The admin account can create other users.
+
+---
+
+## CLI (Command-Line Interface)
+
+The CLI mode runs epitope prediction directly from the terminal without a graphical interface or database.
+
+### Step 1: Pull the images
+
+```bash
+docker pull bioinfoufsc/epibuilder-core:latest
+docker pull bioinfoufsc/bepipred3:latest
+```
+
+> **Note:** If not present, `bepipred3` docker it will be downloaded automatically. For this reason, the first run may take longer than usual.
+
+### Step 2: Run the analysis
+
+```bash
+docker run --rm \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v epibuilder-data:/tmp/epibuilder \
+  -e EPIBUILDER_VOLUME=epibuilder-data \
+  bioinfoufsc/epibuilder-core:latest \
+  epibuilder --input_file /tmp/epibuilder/your_file.fasta
+```
+
+Replace `/tmp/epibuilder/your_file.fasta` with the path to your FASTA file inside the mounted volume.
 
 ---
 
