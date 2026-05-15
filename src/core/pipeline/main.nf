@@ -152,8 +152,8 @@ process run_bepipred {
     path 'raw_output.csv', emit: output
 
     script:
-    // Define flags corretamente
     def gpuFlag = params.bepipred_gpu ? "--use-gpu" : ""
+    def cmd = "java -cp ${epibuilder_jar} Bepipred3 -i ${input_file} -o raw_output.csv -s ${params.bepipred_batch} ${gpuFlag} 2>&1 | tee /dev/stderr"
 
     """
     #!/bin/bash
@@ -161,13 +161,7 @@ process run_bepipred {
     echo "[INFO] Executando Bepipred3..." >&2
     echo "[INFO] Batch size: ${params.bepipred_batch}" >&2
     echo "[INFO] GPU enabled: ${params.bepipred_gpu}" >&2
-
-    java -cp ${epibuilder_jar} Bepipred3 \
-        -i ${input_file} \
-        -o raw_output.csv \
-        -s ${params.bepipred_batch} \
-        ${gpuFlag} \
-        2>&1 | tee /dev/stderr
+    ${cmd}
     """
 }
 
