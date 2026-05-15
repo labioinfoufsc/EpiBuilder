@@ -1,0 +1,59 @@
+services:
+
+  db:
+    image: postgres:16
+    container_name: epibuilder-db
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - epibuilder-pgdata:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT}:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  bepipred3-pull:
+    image: bioinfoufsc/bepipred3:latest
+    pull_policy: always
+    entrypoint: ["true"]
+    restart: "no"
+
+  web:
+    image: bioinfoufsc/epibuilder:latest
+    container_name: epibuilder-web
+    depends_on:
+      db:
+        condition: service_healthy
+      bepipred3-pull:
+        condition: service_completed_successfully
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - epibuilder-data:/tmp/epibuilder
+    environment:
+      EPIBUILDER_VOLUME: epibuilder-data
+      DB_HOST: host.docker.internal
+      DB_PORT: ${DB_PORT}
+      DB_NAME: ${DB_NAME}
+      DB_USERNAME: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      FRONTEND_PORT: ${FRONTEND_PORT}
+      BACKEND_PORT: ${BACKEND_PORT}
+    ports:
+      - "${FRONTEND_PORT}:80"
+      - "${BACKEND_PORT}:8080"
+      - "${DEBUG_PORT}:5005"
+    restart: unless-stopped
+
+volumes:
+  epibuilder-pgdata:
+    name: epibuilder-pgdata
+  epibuilder-data:
+    name: epibuilder-data
