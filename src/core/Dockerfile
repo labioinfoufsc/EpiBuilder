@@ -6,7 +6,7 @@ LABEL description="Bioinformatics tool environment for epitope prediction"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=America/Sao_Paulo
-ENV NXF_VER=24.10.5
+ENV NXF_VER=25.04.0
 
 # Install system dependencies
 RUN apt-get update && \
@@ -54,13 +54,21 @@ RUN curl -s https://get.nextflow.io | bash && \
     mv nextflow /usr/local/bin/nextflow && \
     chmod +x /usr/local/bin/nextflow
 
+COPY date_wrapper.sh /usr/local/bin/date
+RUN chmod +x /usr/local/bin/date
 # ------------------------
 # APPLICATION
 # ------------------------
-
 RUN mkdir -p /epibuilder
-
 COPY . /epibuilder
+WORKDIR /epibuilder
+
+# Build core jar
+RUN apt-get update && apt-get install -y --no-install-recommends maven && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /epibuilder/src/core
+RUN mvn clean package -DskipTests
 
 WORKDIR /epibuilder
 
