@@ -14,11 +14,9 @@ The software is designed as a multi-container application using Docker to execut
 
 The platform is designed for researchers and professionals working at the intersection of immunology, proteomics, and bioinformatics. It is ideal for anyone who needs to perform *in silico* analysis of epitopes to accelerate their research and particularly suited for proteome-wide epitope discovery.
 
-Key application areas include:
+Key application area include:
 
-- **Infectious Diseases**: identify target epitopes in pathogens, accelerating the development of vaccines and diagnostic tests;
-- **Oncology**: identify epitopes in tumor proteins, enabling the selection of precise targets for the development of immunotherapies and cancer vaccines;
-- **Neuroscience**: predict epitopes in nervous system proteins, facilitating the search for autoantibody biomarkers for the diagnosis of neurodegenerative diseases.
+- **Infectious Diseases**: identify target epitopes in pathogens, accelerating the development of vaccines and diagnostic tests
 
 ---
 
