@@ -48,11 +48,18 @@ export class DatabasesComponent implements OnInit, OnDestroy {
 
   onFileChange(event: Event): void {
     const target = event.target as HTMLInputElement;
+
     if (target.files && target.files.length > 0) {
       this.selectedFile = target.files[0];
+
       const fileName = this.selectedFile.name;
       const lastDotIndex = fileName.lastIndexOf('.');
-      this.databaseAlias = lastDotIndex !== -1 ? fileName.substring(0, lastDotIndex) : fileName;
+
+      const alias = lastDotIndex !== -1
+        ? fileName.substring(0, lastDotIndex)
+        : fileName;
+
+      this.databaseAlias = alias.substring(0, 30);
     }
   }
 
