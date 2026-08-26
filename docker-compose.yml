@@ -24,6 +24,12 @@ services:
     entrypoint: ["true"]
     restart: "no"
 
+  epibuilder-core-pull:
+    image: bioinfoufsc/epibuilder-core:latest
+    pull_policy: always
+    entrypoint: ["true"]
+    restart: "no"
+
   web:
     image: bioinfoufsc/epibuilder:latest
     pull_policy: always
@@ -32,6 +38,8 @@ services:
       db:
         condition: service_healthy
       bepipred3-pull:
+        condition: service_completed_successfully
+      epibuilder-core-pull:
         condition: service_completed_successfully
     extra_hosts:
       - "host.docker.internal:host-gateway"
