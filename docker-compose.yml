@@ -26,6 +26,7 @@ services:
 
   web:
     image: bioinfoufsc/epibuilder:latest
+    pull_policy: always
     container_name: epibuilder-web
     depends_on:
       db:
@@ -39,7 +40,7 @@ services:
       - epibuilder-data:/tmp/epibuilder
     environment:
       EPIBUILDER_VOLUME: epibuilder-data
-      DB_HOST: host.docker.internal
+      DB_HOST: db
       DB_PORT: ${DB_PORT:-5432}
       DB_NAME: ${DB_NAME:-epibuilder}
       DB_USERNAME: ${DB_USER:-epiuser}

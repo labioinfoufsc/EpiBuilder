@@ -19,7 +19,7 @@ public class Protein {
     @Column
     private String proteinId;
 
-    @Column
+    @Column (length = 6000)
     private String description;
 
     @Column

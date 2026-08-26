@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     gnupg2 \
     tzdata \
+    ncbi-blast+ \
     lsb-release \
     ca-certificates \
     curl \
