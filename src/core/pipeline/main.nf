@@ -336,6 +336,17 @@ workflow {
 
         def bepipred_out = run_bepipred(fasta_files.valid_proteins)
         epibuilder_input_ch = bepipred_out.output
+        //Teste INICIO
+        // Aguarda a conclusão de todas as tarefas do BepiPred
+        def bepipred_done_ch = bepipred_out.output
+            .collect()
+            .map { true }
+        
+        // Bloqueia a localização até o BepiPred terminar
+        valid_proteins_ch = valid_proteins_ch
+            .combine(bepipred_done_ch)
+            .map { proteins, done -> proteins }
+        //Teste FIM
 
     } else if (params.input_file.endsWith('.csv')) {
         // Para CSV: prepara -> valida -> epibuilder (sem bepipred)
