@@ -20,26 +20,6 @@ RUN unzip /tmp/bepipred3.zip -d / && \
 
 COPY src/bepipred3/bepipred3_custom.py /
 
-# ============================================================
-# BepiPred 3.0 - Memory optimization
-# ============================================================
-# Original batch_size = 10
-# Modified batch_size = 1
-#
-# Process one protein at a time during ESM-2 encoding.
-# This reduces RAM usage and avoids excessive memory
-# allocation caused by batching multiple long sequences.
-# ============================================================
-
-RUN grep -q 'def tuple_generator(self, data, batch_size=10):' \
-        /bp3/bepipred3.py && \
-    sed -i \
-        's/def tuple_generator(self, data, batch_size=10):/def tuple_generator(self, data, batch_size=5):/' \
-        /bp3/bepipred3.py && \
-    grep -q 'def tuple_generator(self, data, batch_size=5):' \
-        /bp3/bepipred3.py && \
-    echo "BepiPred batch_size successfully changed to 5"
-
 RUN python3 -m venv /venv
 
 ENV PATH="/venv/bin:$PATH"
