@@ -13,6 +13,7 @@ params.cover          = params.cover          ?: 90
 params.proteomes      = params.proteomes      ?: null
 params.bepipred_batch = params.bepipred_batch ?: 100
 params.bepipred_gpu   = params.bepipred_gpu ?: false
+params.desc_file      = params.desc_file    ?: null
 
 epibuilder_jar = params.jar ? file(params.jar) : file("${projectDir}/epibuilder-core.jar")
 
@@ -208,6 +209,9 @@ process run_epibuilder {
     }
     if (params.threshold) {
         args << "--threshold ${params.threshold}"
+    }
+    if (params.desc_file) {
+        args << "-desc_file ${params.desc_file}"
     }
 
     def descArg = desc_file ? "--description_file ${desc_file}" : ""
