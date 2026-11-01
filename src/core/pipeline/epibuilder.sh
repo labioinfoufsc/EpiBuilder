@@ -8,6 +8,7 @@ show_help() {
     echo "  --input_file PATH          Path to the input file"
     echo ""
     echo "Optional parameters:"
+    echo "  --desc_file PATH          Description protein: tsv file contains Id\tDescription"
     echo "  --loc                      Subcellular localization: 'animal', 'plant', 'fungi', 'arch', 'gram_pos', 'gram_neg'"
     echo "                              animal     - Eukaryote - Animal"
     echo "                              plant      - Eukaryote - Plant"
@@ -68,6 +69,11 @@ while [[ $# -gt 0 ]]; do
     case $key in
         --input_file)
             INPUT_FILE="$2"
+            shift
+            shift
+            ;;
+        --desc_file)
+            DESC_FILE="$2"
             shift
             shift
             ;;
@@ -159,6 +165,7 @@ fi
 # Build Nextflow command with all parameters
 NF_CMD="nextflow run \"$MAIN_NF\" --input_file \"$INPUT_FILE\" --search \"$SEARCH\""
 
+[[ -n "$DESC_FILE" ]] && NF_CMD+=" --desc_file \"$DESC_FILE\""
 [[ -n "$LOC" ]] && NF_CMD+=" --loc \"$LOC\""
 [[ -n "$MIN_LENGTH" ]] && NF_CMD+=" --min-length \"$MIN_LENGTH\""
 [[ -n "$MAX_LENGTH" ]] && NF_CMD+=" --max-length \"$MAX_LENGTH\""
