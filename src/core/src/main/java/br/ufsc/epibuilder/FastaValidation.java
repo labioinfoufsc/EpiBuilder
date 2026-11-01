@@ -137,7 +137,7 @@ public class FastaValidation implements Callable<Integer> {
 
             ProteinConverter proteinProcess = new ProteinConverter(proteinId, sequence);
 
-            if (FastaUtils.isSequenceValid(sequence) && sequence.length()<=6000) {
+            if (FastaUtils.isSequenceValid(sequence) && sequence.length()>=10 && sequence.length()<=6000) {
                 result.validProteins.add(proteinProcess);
                 result.mapDescription.put(proteinId, description);
             } else {
