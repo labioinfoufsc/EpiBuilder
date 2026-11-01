@@ -80,6 +80,8 @@ process export_excel {
 process prepare_csv {
     tag "prepare_csv"
 
+    stageInMode 'copy'
+
     publishDir "${params.output_dir}", mode: 'copy', overwrite: true
 
     input:
@@ -357,7 +359,9 @@ workflow {
         def csv_files = prepare_csv(input_file_path)
         def csv_validated = validate_fasta(csv_files.valid_proteins)
         valid_proteins_ch = csv_validated.valid_proteins
-        description_ch = csv_validated.description
+        description_ch = params.desc_file ?
+            Channel.value(file(params.desc_file)) :
+            csv_validated.description
         epibuilder_input_ch = input_file_path  // CSV vai direto para epibuilder
 
     } else {
