@@ -212,9 +212,6 @@ process run_epibuilder {
     if (params.threshold) {
         args << "--threshold ${params.threshold}"
     }
-    if (params.desc_file) {
-        args << "-desc_file ${params.desc_file}"
-    }
 
     def descArg = desc_file ? "--description_file ${desc_file}" : ""
     def localizationArg = localization_file ? "--localization_file ${localization_file}" : ""
@@ -253,6 +250,8 @@ process run_epibuilder_csv {
     if (params.threshold) {
         args << "--threshold ${params.threshold}"
     }
+    
+    def descArg = desc_file ? "--description_file ${desc_file}" : ""
 
     def localizationArg = localization_file ? "--localization_file ${localization_file}" : ""
 
