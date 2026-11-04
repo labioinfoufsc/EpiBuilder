@@ -1,24 +1,29 @@
-import br.ufsc.epibuilder.util.docker.BepiPred3Docker;
-import br.ufsc.epibuilder.util.docker.GPUChecker;
+import br.ufsc.epibuilder.util.EpidopeScoresConverter;
+import br.ufsc.epibuilder.util.docker.EpidopeDocker;
 import org.biojava.nbio.core.sequence.ProteinSequence;
 import org.biojava.nbio.core.sequence.io.FastaReaderHelper;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
-import java.io.*;
-import java.nio.file.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
 @Command(
-        name = "RunBepipred",
-        description = "Runs BepiPred3 Docker analysis on a FASTA file",
+        name = "RunEpidope",
+        description = "Runs Epidope Docker analysis on a FASTA file",
         mixinStandardHelpOptions = true,
         version = "1.0"
 )
-public class Bepipred3 implements Callable<Integer> {
+public class Epidope implements Callable<Integer> {
 
     @Option(names = {"-i", "--input"}, required = true, description = "Path to input FASTA file")
     private Path inputFile;
@@ -29,15 +34,8 @@ public class Bepipred3 implements Callable<Integer> {
     @Option(names = {"-s", "--size"}, required = false, description = "Protein sizes will be processed at the same time (split fasta). Default is 2^31-1.")
     private Integer size;
 
-    @Option(
-            names = {"--use-gpu"},
-            defaultValue = "false",
-            description = "Enable GPU acceleration (default: false)"
-    )
-    private boolean useGpu;
-
     public static void main(String[] args) {
-        int exitCode = new CommandLine(new Bepipred3()).execute(args);
+        int exitCode = new CommandLine(new Epidope()).execute(args);
         System.exit(exitCode);
     }
 
@@ -51,7 +49,7 @@ public class Bepipred3 implements Callable<Integer> {
             }
 
             // === 3. Define diretórios internos ===
-            Path baseDir = Paths.get("/tmp/epibuilder/bepipred");
+            Path baseDir = Paths.get("/tmp/epibuilder/epidope");
             String filename = inputFile.getFileName().toString();
 
             String randomId = UUID.randomUUID().toString();
@@ -63,15 +61,6 @@ public class Bepipred3 implements Callable<Integer> {
 
             System.out.println("[INFO] Copied " + inputFile + " to " + tmpFile);
 
-            // === 4. Testa GPU ===
-            System.out.println("Checking for GPU support...");
-            if(useGpu) {
-                useGpu = new GPUChecker().hasGpu();
-                if (useGpu)
-                    System.out.println("✅ GPU detected, running with GPU support...");
-                else
-                    System.out.println("⚠️ No GPU available or error occurred, running on CPU...");
-            }
 
             // === 5. Define volume ===
             HashMap<String, ProteinSequence> mapProtein = FastaReaderHelper.readFastaProteinSequence(tmpFile.toFile());
@@ -81,7 +70,7 @@ public class Bepipred3 implements Callable<Integer> {
             Integer batchSize = size != null ?  size : Integer.MAX_VALUE;
 
             StringBuilder bepipredOut = new StringBuilder();
-            bepipredOut.append("Accession,Residue,BepiPred-3.0 score,BepiPred-3.0 linear epitope score\n");
+            bepipredOut.append("Accession,Residue,Epidope-v0.3 score,Epidope-v0.3 linear epitope score\n");
             for (int i = 0; i < list.size(); i += batchSize) {
                 int end = Math.min(i + batchSize, list.size());
                 List<ProteinSequence> batch = list.subList(i, end);
@@ -98,10 +87,13 @@ public class Bepipred3 implements Callable<Integer> {
                 Files.writeString(inputTmp, sb);
                 System.out.println("[INFO] Running container...");
 
-                int exitCode = new BepiPred3Docker(inputTmp,useGpu).call();
+                int exitCode = new EpidopeDocker(inputTmp).call();
                 if(exitCode==0) {
-                    Path path = tmpDir.resolve("raw_output.csv");
-                    String resp = Files.lines(path)
+                    Path path = tmpDir.resolve("epidope_scores.csv");
+                    Path outputConverted = tmpDir.resolve("epidope_scores_converted.csv");
+                    EpidopeScoresConverter.convert(path, outputConverted);
+
+                    String resp = Files.lines(outputConverted)
                             .skip(1)
                             .collect(Collectors.joining(System.lineSeparator()));
                     bepipredOut.append(resp);
