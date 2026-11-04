@@ -98,7 +98,6 @@ public abstract class AbstractDockerExecutor implements Callable<Integer> {
             e.printStackTrace();
             return 1;
         }
-        return 0;
     }
 
     // public void log(String message, LogLevel logLevel) {
