@@ -9,7 +9,7 @@ public class GPUChecker extends AbstractDockerExecutor {
     public GPUChecker() {
         super("bioinfoufsc/bepipred3",
                 List.of("--rm",
-                        "--gpus all"),
+                        "--gpus", "all"),
                 List.of("python3","-u","bepipred3_custom.py","-v"),
                 false);
     }
