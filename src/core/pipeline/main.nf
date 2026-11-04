@@ -143,10 +143,13 @@ process validate_proteomes_fasta {
  * Outputs:
  *   - A CSV file with raw BepiPred output located at bepipred_output/raw_output.csv.
  */
+
 process run_bepipred {
     tag 'bepipred'
 
-    publishDir "${params.output_dir}", mode: 'copy', overwrite: true
+    publishDir "${params.output_dir}",
+        mode: 'copy',
+        overwrite: true
 
     input:
     path input_file
@@ -155,18 +158,26 @@ process run_bepipred {
     path 'raw_output.csv', emit: output
 
     script:
-    def gpuFlag = params.bepipred_gpu ? "--use-gpu" : ""
-    def cmd = "java -cp ${epibuilder_jar} Bepipred3 -i ${input_file} -o raw_output.csv -s ${params.bepipred_batch} ${gpuFlag} 2>&1 | tee /dev/stderr"
+    def gpuFlag = params.bepipred_gpu.toString().toBoolean() ? "--use-gpu" : ""
 
     """
     #!/bin/bash
-    set -e
-    echo "[INFO] Executando Bepipred3..." >&2
-    echo "[INFO] Batch size: ${params.bepipred_batch}" >&2
-    echo "[INFO] GPU enabled: ${params.bepipred_gpu}" >&2
-    ${cmd}
+    set -euo pipefail
+
+    mkdir -p "${params.output_dir}/reports"
+    LIVE_LOG="${params.output_dir}/reports/bepipred-live.log"
+
+    {
+        echo "[INFO] Starting BepiPred3..."
+        echo "[INFO] Batch size: ${params.bepipred_batch}"
+        echo "[INFO] GPU enabled: ${params.bepipred_gpu}"
+
+        java -cp ${epibuilder_jar} Bepipred3 -i ${input_file} -o raw_output.csv -s ${params.bepipred_batch} ${gpuFlag}
+
+    } 2>&1 | tee "\$LIVE_LOG" /proc/1/fd/1
     """
 }
+
 
 /*
  * Process: run_epibuilder
