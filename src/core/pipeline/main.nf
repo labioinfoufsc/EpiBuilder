@@ -11,7 +11,7 @@ params.output_dir     = params.output_dir     ?: null
 params.identity       = params.identity       ?: 90
 params.cover          = params.cover          ?: 90
 params.proteomes      = params.proteomes      ?: null
-params.bepipred_batch = params.bepipred_batch ?: 100
+params.bepipred_batch = params.bepipred_batch ?: null
 params.bepipred_gpu   = params.bepipred_gpu ?: false
 params.desc_file      = params.desc_file    ?: null
 
@@ -144,6 +144,7 @@ process validate_proteomes_fasta {
  *   - A CSV file with raw BepiPred output located at bepipred_output/raw_output.csv.
  */
 
+
 process run_bepipred {
     tag 'bepipred'
 
@@ -160,6 +161,13 @@ process run_bepipred {
     script:
     def gpuFlag = params.bepipred_gpu.toString().toBoolean() ? "--use-gpu" : ""
 
+    // Only pass batch size when explicitly provided
+    def batchFlag = params.bepipred_batch != null ?
+        "-s ${params.bepipred_batch}" : ""
+
+    def batchInfo = params.bepipred_batch != null ?
+        params.bepipred_batch : "Java default"
+
     """
     #!/bin/bash
     set -euo pipefail
@@ -169,14 +177,19 @@ process run_bepipred {
 
     {
         echo "[INFO] Starting BepiPred3..."
-        echo "[INFO] Batch size: ${params.bepipred_batch}"
+        echo "[INFO] Batch size: ${batchInfo}"
         echo "[INFO] GPU enabled: ${params.bepipred_gpu}"
 
-        java -cp ${epibuilder_jar} Bepipred3 -i ${input_file} -o raw_output.csv -s ${params.bepipred_batch} ${gpuFlag}
+        java -cp ${epibuilder_jar} Bepipred3 \
+            -i ${input_file} \
+            -o raw_output.csv \
+            ${batchFlag} \
+            ${gpuFlag}
 
     } 2>&1 | tee "\$LIVE_LOG" /proc/1/fd/1
     """
 }
+
 
 
 /*
