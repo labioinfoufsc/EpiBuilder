@@ -26,7 +26,7 @@ public class Bepipred3 implements Callable<Integer> {
     @Option(names = {"-o", "--output"}, required = true, description = "Path for output csv results")
     private Path output;
 
-    @Option(names = {"-s", "--size"}, required = false, description = "Protein sizes will be processed at the same time (split fasta). Default is 100.")
+    @Option(names = {"-s", "--size"}, required = false, description = "Protein sizes will be processed at the same time (split fasta). Default is 2^31-1.")
     private Integer size;
 
     @Option(
@@ -78,7 +78,7 @@ public class Bepipred3 implements Callable<Integer> {
             Collection<ProteinSequence> proteinsFasta = mapProtein.values();
             List<ProteinSequence> list = new ArrayList<>(proteinsFasta);
 
-            Integer batchSize = size != null ?  size : Integer.valueOf(100);
+            Integer batchSize = size != null ?  size : Integer.MAX_VALUE;
 
             StringBuilder bepipredOut = new StringBuilder();
             bepipredOut.append("Accession,Residue,BepiPred-3.0 score,BepiPred-3.0 linear epitope score\n");
