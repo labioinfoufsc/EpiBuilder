@@ -96,39 +96,95 @@ public abstract class AbstractDockerExecutor implements Callable<Integer> {
         } catch (Exception e) {
             log("Error while executing docker command.", ERROR);
             e.printStackTrace();
-            System.exit(1);
-        }
-        return 0;
-    }
-
-    public void log(String message, LogLevel logLevel) {
-            String msg = String.format("[%s] %s\n", logLevel, message);
-            //System.out.println(msg);
-            output.append(msg);
-        try {
-            fileWriter.write(msg);
-            fileWriter.flush();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-
-    }
-
-    public Integer call() {
-        try {
-            int exitCode = executeDockerCommand();
-            if (exitCode != 0) {
-                new Exception("Error executing "+container);
-            }else{
-                log("Success executing docker command: " + getCommandExecuted(), LogLevel.INFO);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            log("Error executing docker command: " + getCommandExecuted(), LogLevel.ERROR);
             return 1;
         }
         return 0;
     }
+
+    // public void log(String message, LogLevel logLevel) {
+    //         String msg = String.format("[%s] %s\n", logLevel, message);
+    //         //System.out.println(msg);
+    //         output.append(msg);
+    //     try {
+    //         fileWriter.write(msg);
+    //         fileWriter.flush();
+    //     } catch (IOException e) {
+    //         throw new RuntimeException(e);
+    //     }
+
+    // }
+
+public void log(String message, LogLevel logLevel) {
+    String msg = String.format("[%s] %s", logLevel, message);
+
+    // Print to console
+    System.out.println(msg);
+    System.out.flush();
+
+    // Store in memory
+    output.append(msg).append(System.lineSeparator());
+
+    // Save to file
+    if (fileWriter != null) {
+        try {
+            fileWriter.write(msg + System.lineSeparator());
+            fileWriter.flush();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+}
+
+    // public Integer call() {
+    //     try {
+    //         int exitCode = executeDockerCommand();
+    //         if (exitCode != 0) {
+    //             new Exception("Error executing "+container);
+    //         }else{
+    //             log("Success executing docker command: " + getCommandExecuted(), LogLevel.INFO);
+    //         }
+    //     } catch (Exception e) {
+    //         e.printStackTrace();
+    //         log("Error executing docker command: " + getCommandExecuted(), LogLevel.ERROR);
+    //         return 1;
+    //     }
+    //     return 0;
+    // }
+
+@Override
+public Integer call() {
+    try {
+        int exitCode = executeDockerCommand();
+
+        if (exitCode != 0) {
+            log("Error executing docker command: " +
+                getCommandExecuted(), LogLevel.ERROR);
+            return exitCode;
+        }
+
+        log("Success executing docker command: " +
+            getCommandExecuted(), LogLevel.INFO);
+
+        return 0;
+
+    } catch (Exception e) {
+        e.printStackTrace();
+        log("Error executing docker command: " +
+            getCommandExecuted(), LogLevel.ERROR);
+        return 1;
+
+    } finally {
+        if (fileWriter != null) {
+            try {
+                fileWriter.close();
+            } catch (IOException e) {
+                System.err.println(
+                    "Error closing log file: " + e.getMessage()
+                );
+            }
+        }
+    }
+}
 
     public String getOutput() {
         return output.toString();
