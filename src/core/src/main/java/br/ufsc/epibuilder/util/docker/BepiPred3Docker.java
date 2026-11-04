@@ -3,13 +3,6 @@ package br.ufsc.epibuilder.util.docker;
 import java.nio.file.Path;
 import java.util.List;
 
-
-
-package br.ufsc.epibuilder.util.docker;
-
-import java.nio.file.Path;
-import java.util.List;
-
 public class BepiPred3Docker extends AbstractDockerExecutor {
 
     public BepiPred3Docker(Path tmpFile, boolean gpuAvailable) {
