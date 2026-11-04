@@ -27,6 +27,7 @@ show_help() {
     echo "  --bepipred_batch INT       Maximum number of proteins submitted for Bepipred processing (default: 100)"
     echo "  --bepipred_gpu             Enable GPU acceleration for Bepipred (default: false)"
     echo "  --task_id INT              Internal task identifier"
+    echo "  --debug                    Show Nextflow process output and disable ANSI logging"
     echo "  --help                     Show this help message and exit"
     echo ""
     echo "Available databases:"
@@ -56,6 +57,7 @@ IDENTITY=90
 WORD_SIZE=4
 BEPIPRED_BATCH=100
 BEPIPRED_GPU="false"
+DEBUG="false"
 
 SCRIPT_PATH="$(readlink -f "$0")"
 SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
@@ -141,6 +143,10 @@ while [[ $# -gt 0 ]]; do
             BEPIPRED_GPU="true"
             shift
             ;;
+        --debug)
+            DEBUG="true"
+            shift
+            ;;
         --help)
             show_help
             exit 0
@@ -178,6 +184,11 @@ NF_CMD+=" --word-size \"$WORD_SIZE\""
 NF_CMD+=" --jar \"$JAR_PATH\""
 NF_CMD+=" --bepipred_batch \"$BEPIPRED_BATCH\""
 NF_CMD+=" --bepipred_gpu \"$BEPIPRED_GPU\""
+
+# --debug enables process output and expanded Nextflow console logging
+if [[ "$DEBUG" == "true" ]]; then
+    NF_CMD+=" -process.echo -ansi-log false"
+fi
 
 # Add Nextflow reports if BASENAME is defined
 [[ -n "$OUTPUT_DIR" ]] && NF_CMD+=" \
