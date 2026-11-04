@@ -24,7 +24,7 @@ show_help() {
     echo "  --proteomes FILE           Path to proteomes file (format: alias1=path1:alias2=path2)"
     echo "  --cover INT                BLAST minimum coverage cutoff (default: 90)"
     echo "  --identity INT             BLAST minimum identity cutoff (default: 90)"
-    echo "  --bepipred_batch INT       Maximum number of proteins submitted for Bepipred processing (default: 100)"
+    echo "  --bepipred_batch INT       Optional BepiPred batch size (default: 2^32-1)"
     echo "  --bepipred_gpu             Enable GPU acceleration for Bepipred (default: false)"
     echo "  --task_id INT              Internal task identifier"
     echo "  --debug                    Show Nextflow process output and disable ANSI logging"
@@ -182,7 +182,7 @@ NF_CMD+=" --cover \"$COVER\""
 NF_CMD+=" --identity \"$IDENTITY\""
 NF_CMD+=" --word-size \"$WORD_SIZE\""
 NF_CMD+=" --jar \"$JAR_PATH\""
-NF_CMD+=" --bepipred_batch \"$BEPIPRED_BATCH\""
+[[ -n "$BEPIPRED_BATCH" ]] && NF_CMD+=" --bepipred_batch \"$BEPIPRED_BATCH\""
 NF_CMD+=" --bepipred_gpu \"$BEPIPRED_GPU\""
 
 # --debug enables process output and expanded Nextflow console logging
