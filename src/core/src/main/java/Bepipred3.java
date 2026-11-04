@@ -123,20 +123,6 @@ public class Bepipred3 implements Callable<Integer> {
     }
 
     // === Métodos auxiliares ===
-
-    private static boolean checkGpuSupport() {
-        try {
-            ProcessBuilder pb = new ProcessBuilder(
-                    "bash", "-c", "docker run --rm --runtime=nvidia --gpus all ubuntu nvidia-smi > /dev/null 2>&1"
-            );
-            Process process = pb.start();
-            int exitCode = process.waitFor();
-            return exitCode == 0;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
     private static void runCommand(List<String> command) throws IOException, InterruptedException {
         ProcessBuilder pb = new ProcessBuilder(command);
         pb.redirectErrorStream(true);
