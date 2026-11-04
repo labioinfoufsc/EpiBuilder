@@ -74,6 +74,7 @@ public abstract class AbstractDockerExecutor implements Callable<Integer> {
             this.commandExecuted = String.join(" ", command);
             System.out.println(this.commandExecuted);
             pb.redirectErrorStream(true);
+            pb.inheritIO();
 
             Process process = pb.start();
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));) {
