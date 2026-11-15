@@ -105,7 +105,6 @@ public class SubcellularLocalization implements Callable<Integer> {
         } finally {
             // Limpa diretório temporário
 //            deleteDirectory(tmpDir.toFile());
-            System.out.println("[INFO] Temporary directory removed.");
         }
 
         return 0;
@@ -192,7 +191,11 @@ public class SubcellularLocalization implements Callable<Integer> {
                 "-r", tsvFile.toString()
         );
 
-        new PSORTbDocker(tmpFile,flag, tsvFile).call();
+        int exitCode = new PSORTbDocker(tmpFile, flag, tsvFile).call();
+        if (exitCode != 0) {
+            System.out.println("[ERROR] PSORTb returned non-zero exit code: " + exitCode);
+            System.exit(1);
+        }
     }
 
     private void createEmptyLocalization(Path outputFile) throws IOException {
