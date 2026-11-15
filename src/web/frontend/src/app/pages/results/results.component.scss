@@ -1,3 +1,30 @@
 a > i {
     color: #0f72b9 !important;
 }
+
+/* Compact, collapsible parameters inside the Task card */
+.task-parameters {
+    > summary {
+        cursor: pointer;
+        user-select: none;
+        list-style: none;
+    }
+
+    > summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .task-parameters-chevron {
+        display: inline-block;
+        transition: transform 0.15s ease;
+    }
+
+    &[open] .task-parameters-chevron {
+        transform: rotate(90deg);
+    }
+
+    .task-parameters-grid {
+        font-size: 0.93rem;
+        line-height: 1.4;
+    }
+}

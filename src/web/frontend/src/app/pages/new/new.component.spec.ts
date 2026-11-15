@@ -17,7 +17,21 @@ describe('NewComponent', () => {
     fixture.detectChanges();
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
-  });
+      it('should create', () => {
+        expect(component).toBeTruthy();
+      });
+
+    it('should default to BepiPred', () => {
+      expect(component.myForm.get('predictionType')?.value)
+        .toBe('bepipred');
+    });
+
+    it('should update the threshold when EpiDope is selected', () => {
+      component.myForm.get('predictionType')?.setValue('epidope');
+
+      component.onPredictionTypeChange();
+
+      expect(component.myForm.get('bepipredThreshold')?.value)
+        .toBe(0.818);
+    });
 });

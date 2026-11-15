@@ -1,211 +1,195 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
 show_help() {
-    echo ""
-    echo "Usage: epibuilder [OPTIONS]"
-    echo ""
-    echo "Required parameters:"
-    echo "  --input_file PATH          Path to the input file"
-    echo ""
-    echo "Optional parameters:"
-    echo "  --desc_file PATH          Description protein: tsv file contains Id\tDescription"
-    echo "  --loc                      Subcellular localization: 'animal', 'plant', 'fungi', 'arch', 'gram_pos', 'gram_neg'"
-    echo "                              animal     - Eukaryote - Animal"
-    echo "                              plant      - Eukaryote - Plant"
-    echo "                              fungi      - Eukaryote - Fungi"
-    echo "                              arch       - Archaea"
-    echo "                              gram_pos   - Bacteria Gram +"
-    echo "                              gram_neg   - Bacteria Gram -"
-    echo "  --min-length INT           Minimum length"
-    echo "  --max-length INT           Maximum length"
-    echo "  --threshold FLOAT          Threshold value"
-    echo "  --output NAME              Basename for output files"
-    echo "  --search MODE              Search mode: 'none', 'blast', etc. (default: 'none')"
-    echo "  --proteomes FILE           Path to proteomes file (format: alias1=path1:alias2=path2)"
-    echo "  --cover INT                BLAST minimum coverage cutoff (default: 90)"
-    echo "  --identity INT             BLAST minimum identity cutoff (default: 90)"
-    echo "  --bepipred_batch INT       Optional BepiPred batch size (default: 2^32-1)"
-    echo "  --bepipred_gpu             Enable GPU acceleration for Bepipred (default: false)"
-    echo "  --task_id INT              Internal task identifier"
-    echo "  --debug                    Show Nextflow process output and disable ANSI logging"
-    echo "  --help                     Show this help message and exit"
-    echo ""
-    echo "Available databases:"
-    echo "  /db/iedb.fasta"
-    echo "      Epitope sequences obtained from https://www.iedb.org/"
-    echo ""
-    echo "  /db/uniprot.fasta"
-    echo "      Protein sequences obtained from https://www.uniprot.org/"
-    if [ -f /db/uniprot_release_notes.txt ]; then
-        RELEASE_LINE=$(head -n 1 /db/uniprot_release_notes.txt)
-        echo "      Release: $RELEASE_LINE"
-    fi
-    echo ""
-    echo "Example:"
-    echo "  epibuilder --input_file /fasta/ebola.fasta --min-length 8 --max-length 30 --threshold 0.1512 --output /data/result_ebola \\"
-    echo "             --proteomes iedb=/db/iedb.fasta:uniprot=/db/uniprot.fasta --cover 85 --identity 80"
-    echo ""
-    echo "  # With GPU acceleration:"
-    echo "  epibuilder --input_file /fasta/ebola.fasta --bepipred_gpu"
-    echo ""
+    cat <<'HELP'
+Usage: epibuilder.sh --input_file PATH --output DIR [OPTIONS]
+
+Required parameters:
+  --input_file PATH          Path to input FASTA or CSV file
+  --output DIR               Directory for results and Nextflow reports
+
+Optional parameters:
+  --pred MODE                Prediction method: bepipred (default) or epidope
+  --desc_file PATH           Protein descriptions TSV (ID, description)
+  --loc TYPE                 Localization: none, animal, plant, fungi, arch,
+                             gram_pos or gram_neg
+  --min-length INT           Minimum epitope length
+  --max-length INT           Maximum epitope length
+  --threshold FLOAT          Score threshold
+  --search MODE              Search mode (default: none)
+  --proteomes STRING         Proteomes as alias=path:alias2=path2
+  --cover INT                BLAST minimum coverage (default: 90)
+  --identity INT             BLAST minimum identity (default: 90)
+  --word-size INT            BLAST word size (default: 4)
+  --batch INT       Optional batch size; omitted by default
+  --bepipred_gpu             Enable GPU acceleration for BepiPred
+  --task_id INT              Internal task identifier
+  --debug                    Show Nextflow process output, disable ANSI logging
+  --help                     Show this help
+
+Examples:
+  epibuilder.sh --input_file fasta/input.fasta --output results --pred bepipred
+  epibuilder.sh --input_file fasta/input.fasta --output results --pred epidope --batch 500
+HELP
 }
 
 # Default values
+INPUT_FILE=""
+OUTPUT_DIR=""
+DESC_FILE=""
+LOC=""
+MIN_LENGTH=""
+MAX_LENGTH=""
+THRESHOLD=""
+PROTEOMES=""
 SEARCH="none"
-COVER=90
-IDENTITY=90
-WORD_SIZE=4
-BEPIPRED_BATCH=""
+COVER="90"
+IDENTITY="90"
+WORD_SIZE="4"
+BATCH=""
 BEPIPRED_GPU="false"
+PRED="bepipred"
 DEBUG="false"
+TASK_ID=""
 
 SCRIPT_PATH="$(readlink -f "$0")"
 SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
 MAIN_NF="$SCRIPT_DIR/main.nf"
 JAR_PATH="$SCRIPT_DIR/epibuilder-core.jar"
-TASK_ID=""
 
 # Parse arguments
-while [[ $# -gt 0 ]]; do
-    key="$1"
-    case $key in
-        --input_file)
-            INPUT_FILE="$2"
-            shift
-            shift
+while (( $# > 0 )); do
+    case "$1" in
+        --help|-h)
+            show_help
+            exit 0
             ;;
-        --desc_file)
-            DESC_FILE="$2"
-            shift
-            shift
-            ;;
-        --task_id)                
-            TASK_ID="$2"
-            shift
-            shift
-            ;;
-        --loc)
-            LOC="$2"
-            shift
-            shift
-            ;;
-        --min-length)
-            MIN_LENGTH="$2"
-            shift
-            shift
-            ;;
-        --max-length)
-            MAX_LENGTH="$2"
-            shift
-            shift
-            ;;
-        --threshold)
-            THRESHOLD="$2"
-            shift
-            shift
-            ;;
-        --output)
-            OUTPUT_DIR="$2"
-            shift
-            shift
-            ;;
-        --search)
-            SEARCH="$2"
-            shift
-            shift
-            ;;
-        --proteomes)
-            PROTEOMES="$2"
-            shift
-            shift
-            ;;
-        --cover)
-            COVER="$2"
-            shift
-            shift
-            ;;
-        --identity)
-            IDENTITY="$2"
-            shift
-            shift
-            ;;
-        --word-size)
-            WORD_SIZE="$2"
-            shift
-            shift
-            ;;
-        --bepipred_batch)
-            BEPIPRED_BATCH="$2"
-            shift
-            shift
-            ;;
+
         --bepipred_gpu)
             BEPIPRED_GPU="true"
             shift
             ;;
+
         --debug)
             DEBUG="true"
             shift
             ;;
-        --help)
-            show_help
-            exit 0
+
+        --input_file|--output|--desc_file|--loc|--min-length|--max-length|\
+        --threshold|--search|--proteomes|--cover|--identity|--word-size|\
+        --batch|--pred|--task_id)
+            key="$1"
+
+            if (( $# < 2 )) || [[ -z "$2" || "$2" == --* ]]; then
+                echo "ERROR: $key requires a value" >&2
+                exit 2
+            fi
+
+            value="$2"
+
+            case "$key" in
+                --input_file) INPUT_FILE="$value" ;;
+                --output) OUTPUT_DIR="$value" ;;
+                --desc_file) DESC_FILE="$value" ;;
+                --loc) LOC="$value" ;;
+                --min-length) MIN_LENGTH="$value" ;;
+                --max-length) MAX_LENGTH="$value" ;;
+                --threshold) THRESHOLD="$value" ;;
+                --search) SEARCH="$value" ;;
+                --proteomes) PROTEOMES="$value" ;;
+                --cover) COVER="$value" ;;
+                --identity) IDENTITY="$value" ;;
+                --word-size) WORD_SIZE="$value" ;;
+                --batch) BATCH="$value" ;;
+                --pred) PRED="${value,,}" ;;
+                --task_id) TASK_ID="$value" ;;
+            esac
+
+            shift 2
             ;;
+
         *)
-            echo "Error: Unknown parameter '$1'"
-            show_help
-            exit 1
+            echo "ERROR: unknown parameter '$1'" >&2
+            show_help >&2
+            exit 2
             ;;
     esac
 done
 
-# Check required parameters
-if [[ -z "$INPUT_FILE" ]]; then
-    echo "Error: --input_file is required"
-    show_help
-    exit 1
+# Validate required parameters
+[[ -n "$INPUT_FILE" ]] || {
+    echo 'ERROR: --input_file is required' >&2
+    exit 2
+}
+
+[[ -n "$OUTPUT_DIR" ]] || {
+    echo 'ERROR: --output is required' >&2
+    exit 2
+}
+
+# Validate prediction method
+case "$PRED" in
+    bepipred|epidope)
+        ;;
+    *)
+        echo 'ERROR: --pred must be bepipred or epidope' >&2
+        exit 2
+        ;;
+esac
+
+# Build Nextflow command
+cmd=(nextflow run "$MAIN_NF"
+    --input_file "$INPUT_FILE"
+    --search "$SEARCH"
+    --output_dir "$OUTPUT_DIR"
+    --cover "$COVER"
+    --identity "$IDENTITY"
+    --word-size "$WORD_SIZE"
+    --jar "$JAR_PATH"
+    --bepipred_gpu "$BEPIPRED_GPU"
+    --pred "$PRED"
+)
+
+# Optional parameters
+[[ -n "$DESC_FILE" ]] && cmd+=(--desc_file "$DESC_FILE")
+[[ -n "$LOC" ]] && cmd+=(--loc "$LOC")
+[[ -n "$MIN_LENGTH" ]] && cmd+=(--min-length "$MIN_LENGTH")
+[[ -n "$MAX_LENGTH" ]] && cmd+=(--max-length "$MAX_LENGTH")
+[[ -n "$THRESHOLD" ]] && cmd+=(--threshold "$THRESHOLD")
+[[ -n "$PROTEOMES" ]] && cmd+=(--proteomes "$PROTEOMES")
+[[ -n "$BATCH" ]] && cmd+=(--batch "$BATCH")
+
+# Enable Nextflow debug
+if [[ "$DEBUG" == true ]]; then
+    cmd+=(-process.echo -ansi-log false)
 fi
 
-[[ -n "$OUTPUT_DIR" ]] && mkdir -p "$OUTPUT_DIR/reports"
+# Nextflow reports
+mkdir -p "$OUTPUT_DIR/reports"
 
-# Build Nextflow command with all parameters
-NF_CMD="nextflow run \"$MAIN_NF\" --input_file \"$INPUT_FILE\" --search \"$SEARCH\""
+cmd+=(
+    -with-report "$OUTPUT_DIR/reports/report.html"
+    -with-trace "$OUTPUT_DIR/reports/trace.txt"
+    -with-timeline "$OUTPUT_DIR/reports/timeline.html"
+    -with-dag "$OUTPUT_DIR/reports/flowchart.png"
+)
 
-[[ -n "$DESC_FILE" ]] && NF_CMD+=" --desc_file \"$DESC_FILE\""
-[[ -n "$LOC" ]] && NF_CMD+=" --loc \"$LOC\""
-[[ -n "$MIN_LENGTH" ]] && NF_CMD+=" --min-length \"$MIN_LENGTH\""
-[[ -n "$MAX_LENGTH" ]] && NF_CMD+=" --max-length \"$MAX_LENGTH\""
-[[ -n "$THRESHOLD" ]] && NF_CMD+=" --threshold \"$THRESHOLD\""
-[[ -n "$OUTPUT_DIR" ]] && NF_CMD+=" --output_dir \"$OUTPUT_DIR\""
-[[ -n "$PROTEOMES" ]] && NF_CMD+=" --proteomes \"$PROTEOMES\""
-NF_CMD+=" --cover \"$COVER\""
-NF_CMD+=" --identity \"$IDENTITY\""
-NF_CMD+=" --word-size \"$WORD_SIZE\""
-NF_CMD+=" --jar \"$JAR_PATH\""
-[[ -n "$BEPIPRED_BATCH" ]] && NF_CMD+=" --bepipred_batch \"$BEPIPRED_BATCH\""
-NF_CMD+=" --bepipred_gpu \"$BEPIPRED_GPU\""
-
-# --debug enables process output and expanded Nextflow console logging
-if [[ "$DEBUG" == "true" ]]; then
-    NF_CMD+=" -process.echo -ansi-log false"
-fi
-
-# Add Nextflow reports if BASENAME is defined
-[[ -n "$OUTPUT_DIR" ]] && NF_CMD+=" \
-    -with-report $OUTPUT_DIR/reports/report.html \
-    -with-trace $OUTPUT_DIR/reports/trace.txt \
-    -with-timeline $OUTPUT_DIR/reports/timeline.html \
-    -with-dag $OUTPUT_DIR/reports/flowchart.png"
+printf 'Prediction method: %s\n' "$PRED"
+printf 'Nextflow command: '
+printf '%q ' "${cmd[@]}"
+printf '\n'
 
 # Execute pipeline
-eval $NF_CMD
-EXIT_CODE=$?
+if "${cmd[@]}"; then
+    echo 'Pipeline finished successfully'
 
-if [[ $EXIT_CODE -eq 0 ]]; then
-    echo "Pipeline finished successfully"
     if [[ -n "$TASK_ID" ]]; then
-        curl -X POST "http://epibuilder-web:8080/epitopes/tasks/${TASK_ID}/complete"
+        curl -f -X POST \
+            "http://epibuilder-web:8080/epitopes/tasks/${TASK_ID}/complete"
     fi
 else
-    echo "Pipeline failed with exit code $EXIT_CODE"
+    status=$?
+    echo "Pipeline failed with exit code $status" >&2
+    exit "$status"
 fi

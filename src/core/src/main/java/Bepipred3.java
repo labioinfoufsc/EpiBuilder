@@ -104,6 +104,7 @@ public class Bepipred3 implements Callable<Integer> {
                     String resp = Files.lines(path)
                             .skip(1)
                             .collect(Collectors.joining(System.lineSeparator()));
+                    resp+=System.lineSeparator();
                     bepipredOut.append(resp);
                     System.out.println("[INFO] Analysis completed inside container.");
                 }

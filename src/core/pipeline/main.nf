@@ -11,9 +11,11 @@ params.output_dir     = params.output_dir     ?: null
 params.identity       = params.identity       ?: 90
 params.cover          = params.cover          ?: 90
 params.proteomes      = params.proteomes      ?: null
-params.bepipred_batch = params.bepipred_batch ?: null
-params.bepipred_gpu   = params.bepipred_gpu ?: false
-params.desc_file      = params.desc_file    ?: null
+params.batch          = params.batch          ?: null
+params.bepipred_gpu   = params.bepipred_gpu   ?: false
+params.desc_file      = params.desc_file      ?: null
+params.pred           = params.pred           ?: "bepipred"
+
 
 epibuilder_jar = params.jar ? file(params.jar) : file("${projectDir}/epibuilder-core.jar")
 
@@ -91,10 +93,14 @@ process prepare_csv {
     path 'valid_proteins.fasta', emit: valid_proteins
 
     script:
+
+    def args = []
+    args << "--prediction ${params.pred}"
+
     """
     #!/bin/bash
     set -e
-    java -cp ${epibuilder_jar} FastaFromBepiPredCSV --input ${input_file} --output valid_proteins.fasta
+    java -cp ${epibuilder_jar} FastaFromCSV --input ${input_file} --output valid_proteins.fasta ${args.join(' ')}
     """
 }
 
@@ -162,11 +168,9 @@ process run_bepipred {
     def gpuFlag = params.bepipred_gpu.toString().toBoolean() ? "--use-gpu" : ""
 
     // Only pass batch size when explicitly provided
-    def batchFlag = params.bepipred_batch != null ?
-        "-s ${params.bepipred_batch}" : ""
+    def batchFlag = params.batch != null ?
+        "-s ${params.batch}" : ""
 
-    def batchInfo = params.bepipred_batch != null ?
-        params.bepipred_batch : "Java default"
 
     """
     #!/bin/bash
@@ -177,7 +181,7 @@ process run_bepipred {
 
     {
         echo "[INFO] Starting BepiPred3..."
-        echo "[INFO] Batch size: ${batchInfo}"
+        echo "[INFO] Batch size: ${params.batch ?: 'default'}"
         echo "[INFO] GPU enabled: ${params.bepipred_gpu}"
 
         java -cp ${epibuilder_jar} Bepipred3 \
@@ -190,6 +194,37 @@ process run_bepipred {
     """
 }
 
+process run_epidope {
+    tag 'epidope'
+
+    //publishDir resultsDir, mode: 'copy', overwrite: true, pattern: 'epidope.csv'
+    publishDir "${params.output_dir}",
+            mode: 'copy',
+            overwrite: true
+
+    input:
+    path input_file
+
+    output:
+    path 'epidope.csv', emit: output
+
+    script:
+
+    def batchFlag = params.batch != null ?
+            "-s ${params.batch}" : ""
+
+    """
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    # Only pass batch size when explicitly provided
+    echo "[INFO] Running Epidope (batch=${params.batch ?: 'default'})"
+    # Running Epidope
+
+    java -cp "${epibuilder_jar}" Epidope -i "${input_file}" -o epidope.csv ${batchFlag}
+
+    """
+}
 
 
 /*
@@ -227,6 +262,9 @@ process run_epibuilder {
 
     script:
     def args = []
+
+    args << "--prediction ${params.pred}"
+
     if (params.minLength) {
         args << "--min-length ${params.minLength}"
     }
@@ -242,48 +280,6 @@ process run_epibuilder {
 
     """
     java -jar ${epibuilder_jar} --input ${input_file} ${descArg} ${localizationArg} ${args.join(' ')}
-    """
-}
-
-process run_epibuilder_csv {
-    tag 'epibuilder'
-
-    publishDir "${params.output_dir}", mode: 'copy', overwrite: true
-
-    container = ''
-
-    input:
-    path input_file
-    path desc_file, stageAs: 'description.tsv'
-    path localization_file, stageAs: 'localization.tsv'
-
-    output:
-    path 'epitopes.fasta', emit: epitopes
-    path 'epitope-detail.tsv', emit: epitope_detail
-    path 'topology.tsv', emit: topology
-    path 'protein-summary.tsv', emit: protein_summary
-
-    script:
-    def args = []
-    if (params.minLength) {
-        args << "--min-length ${params.minLength}"
-    }
-    if (params.maxLength) {
-        args << "--max-length ${params.maxLength}"
-    }
-    if (params.threshold) {
-        args << "--threshold ${params.threshold}"
-    }
-    
-    def descArg = desc_file ? "--description_file ${desc_file}" : ""
-
-    def localizationArg = localization_file ? "--localization_file ${localization_file}" : ""
-
-    def cmd = "java -jar ${epibuilder_jar} --input ${input_file} ${args.join(' ')} --output results"
-
-    """
-    ${cmd} > epibuilder.log
-    cp -r results/* .
     """
 }
 
@@ -358,24 +354,41 @@ workflow {
 
     // Processa o input dependendo do tipo
     if (params.input_file.endsWith('.fasta')) {
-        // Para FASTA: valida -> bepipred -> epibuilder
-        def fasta_files = validate_fasta(input_file_path)
-        valid_proteins_ch = fasta_files.valid_proteins
-        description_ch = fasta_files.description
+            // Validate FASTA
+            def fasta_files = validate_fasta(input_file_path)
 
-        def bepipred_out = run_bepipred(fasta_files.valid_proteins)
-        epibuilder_input_ch = bepipred_out.output
-        //Teste INICIO
-        // Aguarda a conclusão de todas as tarefas do BepiPred
-        def bepipred_done_ch = bepipred_out.output
-            .collect()
-            .map { true }
-        
-        // Bloqueia a localização até o BepiPred terminar
-        valid_proteins_ch = valid_proteins_ch
-            .combine(bepipred_done_ch)
-            .map { proteins, done -> proteins }
-        //Teste FIM
+            valid_proteins_ch = fasta_files.valid_proteins
+            description_ch = fasta_files.description
+
+            // Select prediction method
+            def prediction_output_ch
+
+            if (params.pred == 'bepipred') {
+                prediction_output_ch = run_bepipred(
+                    fasta_files.valid_proteins
+                ).output
+
+            } else if (params.pred == 'epidope') {
+                prediction_output_ch = run_epidope(
+                    fasta_files.valid_proteins
+                ).output
+
+            } else {
+                error "Unknown prediction method: ${params.pred}"
+            }
+
+            // Prediction output for EpiBuilder
+            epibuilder_input_ch = prediction_output_ch
+
+            // Wait for all prediction tasks to complete
+            def prediction_done_ch = prediction_output_ch
+                .collect()
+                .map { true }
+
+            // Localization starts only after prediction completes
+            valid_proteins_ch = valid_proteins_ch
+                .combine(prediction_done_ch)
+                .map { proteins, done -> proteins }
 
     } else if (params.input_file.endsWith('.csv')) {
         // Para CSV: prepara -> valida -> epibuilder (sem bepipred)
@@ -408,32 +421,5 @@ workflow {
     } else {
         export_excel(epibuilder.epitope_detail, epibuilder.protein_summary, epibuilder.topology)
     }
-
-
-
-
-    /**if (params.input_file.endsWith('.fasta')) {
-        def files = validate_fasta(input_file_path)
-        if (files.valid_proteins) {
-            run_bepipred(files.valid_proteins)
-            run_localization(files.valid_proteins, params.loc)
-            epibuilder = run_epibuilder(run_bepipred.out, files.description, run_localization.output)
-        }else {
-            error "Review the fasta file, ${input_file} invalid proteins "
-        }
-    } else if (params.input_file.endsWith('.csv')) {
-        def files = prepare_csv(input_file_path)
-        if (files.valid_proteins) {
-            run_localization(files.valid_proteins, params.loc)
-            epibuilder = run_epibuilder(input_file_path,file('OPTIONAL_FILE'), run_localization.output)
-        }else {
-            error "Review the csv file, ${input_file} invalid proteins "
-        }
-    } else {
-        error 'Unsupported file type. Use .fasta or .csv'
-    }**/
-
-
-    //Executing blast
 
 }

@@ -19,6 +19,7 @@ RUN unzip /tmp/bepipred3.zip -d / && \
     rm -f /tmp/bepipred3.zip
 
 COPY src/bepipred3/bepipred3_custom.py /
+COPY src/bepipred3/bepipred3.py /bp3/
 
 RUN python3 -m venv /venv
 

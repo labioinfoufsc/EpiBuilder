@@ -1,4 +1,3 @@
-import br.ufsc.epibuilder.util.EpidopeScoresConverter;
 import br.ufsc.epibuilder.util.docker.EpidopeDocker;
 import org.biojava.nbio.core.sequence.ProteinSequence;
 import org.biojava.nbio.core.sequence.io.FastaReaderHelper;
@@ -69,8 +68,8 @@ public class Epidope implements Callable<Integer> {
 
             Integer batchSize = size != null ?  size : Integer.MAX_VALUE;
 
-            StringBuilder bepipredOut = new StringBuilder();
-            bepipredOut.append("Accession,Residue,Epidope-v0.3 score,Epidope-v0.3 linear epitope score\n");
+            StringBuilder epidopeOut = new StringBuilder();
+            epidopeOut.append("position/header\taminoacid\tscore\n");
             for (int i = 0; i < list.size(); i += batchSize) {
                 int end = Math.min(i + batchSize, list.size());
                 List<ProteinSequence> batch = list.subList(i, end);
@@ -90,18 +89,17 @@ public class Epidope implements Callable<Integer> {
                 int exitCode = new EpidopeDocker(inputTmp).call();
                 if(exitCode==0) {
                     Path path = tmpDir.resolve("epidope_scores.csv");
-                    Path outputConverted = tmpDir.resolve("epidope_scores_converted.csv");
-                    EpidopeScoresConverter.convert(path, outputConverted);
 
-                    String resp = Files.lines(outputConverted)
+                    String resp = Files.lines(path)
                             .skip(1)
                             .collect(Collectors.joining(System.lineSeparator()));
-                    bepipredOut.append(resp);
+                    resp+=System.lineSeparator();
+                    epidopeOut.append(resp);
                     System.out.println("[INFO] Analysis completed inside container.");
                 }
             }
 
-            Files.writeString(output.toAbsolutePath(), bepipredOut.toString());
+            Files.writeString(output.toAbsolutePath(), epidopeOut.toString());
 
             System.out.println("[INFO] Results copied to: " + output.toAbsolutePath());
             deleteRecursively(tmpDir);

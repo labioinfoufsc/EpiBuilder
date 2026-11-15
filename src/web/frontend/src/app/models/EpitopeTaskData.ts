@@ -27,5 +27,6 @@ export class EpitopeTaskData {
     organism?: 'Animal' | 'Plant' | 'Fungi';
     bacterialType?: 'Gram positive' | 'Gram negative';
   };
+  predictionType?: 'bepipred' | 'epidope';
 }
 

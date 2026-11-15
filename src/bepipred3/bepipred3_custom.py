@@ -14,6 +14,8 @@ parser.add_argument("-add_seq_len", action="store_true", dest="add_seq_len", hel
 parser.add_argument("-esm_dir", action="store", default= WORK_DIR / "esm_encodings", dest="esm_dir", type=Path, help="Directory to save esm encodings to. Default is current working directory.")
 parser.add_argument("-top", action="store", default=0.2, type=float, dest="top_cands", help="Top percentage of epitope residues Default is top 20 pct.")
 parser.add_argument("-rolling_window_size", default=9, type=int, dest="rolling_window_size", help="Window size to use for rolling average on B-cell epitope probability scores. Default is 9.")
+parser.add_argument("-batch_size", "--batch_size", default=10, type=int, dest="batch_size", help="Number of protein sequences per ESM-2 batch. Default is 10."
+)
 
 args = parser.parse_args()
 fasta_file = args.fasta_file
@@ -22,9 +24,10 @@ add_seq_len = args.add_seq_len
 esm_dir = args.esm_dir
 top_cands = args.top_cands
 rolling_window_size = args.rolling_window_size
+batch_size = args.batch_size
 
 #on webservices, we have the esm2 model stored locally. To work you need both esm2_t33_650M_UR50D.pt and the esm2_t33_650M_UR50D-contact-regression.pt stored in same directory
-MyAntigens = bepipred3.Antigens(fasta_file, esm_dir, add_seq_len=add_seq_len, run_esm_model_local=str(WORK_DIR / "models" / "esm2_t33_650M_UR50D.pt") )
+MyAntigens = bepipred3.Antigens(fasta_file, esm_dir, add_seq_len=add_seq_len, run_esm_model_local=str(WORK_DIR / "models" / "esm2_t33_650M_UR50D.pt"), batch_size=batch_size)
 
 #MyAntigens = bepipred3.Antigens(fasta_file, esm_dir, add_seq_len=add_seq_len)
 MyBP3EnsemblePredict = bepipred3.BP3EnsemblePredict(MyAntigens, rolling_window_size=rolling_window_size, top_pred_pct = top_cands)

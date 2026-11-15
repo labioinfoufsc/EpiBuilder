@@ -14,6 +14,7 @@ public class BlastpDocker extends AbstractDockerExecutor {
                         "-outfmt", "\"6 qacc sacc pident qcovs qseq sseq\"" ,
                         "-task", "blastp-short" ,
                         "-word_size", "4",
+                        "-num_threads", String.valueOf(Runtime.getRuntime().availableProcessors()),
                         ">", output.toString()),
                 false);
     }

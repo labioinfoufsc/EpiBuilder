@@ -43,7 +43,6 @@ export class NewComponent {
     { label: 'Gram-negative', value: 'GRAM_NEGATIVE' }
   ];
 
-
   constructor(
     private fb: FormBuilder,
     private epitopesService: EpitopesService,
@@ -197,6 +196,7 @@ export class NewComponent {
   resetForm(): void {
     this.myForm = this.fb.group({
       runName: 'epibuilder-task',
+      predictionType: ['bepipred', Validators.required],
       file: [null],
       inputType: 'file',
       manualSequence: '',
@@ -216,6 +216,19 @@ export class NewComponent {
         bacterialType: ['GRAM_POSITIVE', Validators.required],
       }),
     });
+
+    // Automatically update the threshold when the prediction method changes
+    const thresholdControl = this.myForm.get('bepipredThreshold');
+
+    this.myForm.get('predictionType')?.valueChanges.subscribe(
+      (predictionType: string) => {
+        const threshold = predictionType === 'epidope'
+          ? 0.818
+          : 0.1512;
+
+        thresholdControl?.setValue(threshold);
+      }
+    );
 
 
     const fileInput = document.getElementById('fileToProcess') as HTMLInputElement;
@@ -350,11 +363,12 @@ export class NewComponent {
       user: this.loginService.getUser(),
       runName: this.myForm.get('runName')?.value,
       actionType: this.myForm.get('actionType')?.value.toUpperCase(),
+      predictionType: this.myForm.get('predictionType')?.value,
       doBlast: this.myForm.get('doBlast')?.value === 'no_search' ? false : true,
     };
 
     if (this.myForm.get('actionType')?.value === 'default') {
-      taskData.bepipredThreshold = 0.1512;
+      taskData.bepipredThreshold = this.getDefaultThreshold();
       taskData.minEpitopeLength = 10;
       taskData.maxEpitopeLength = 30;
       taskData.biologicalClassification = null;
@@ -663,11 +677,24 @@ export class NewComponent {
     this.myForm.get("maxEpitopeLength")?.setValue(30);
   }
 
+  getDefaultThreshold(): number {
+    return this.myForm.get('predictionType')?.value === 'epidope'
+      ? 0.818
+      : 0.1512;
+  }
+
+  onPredictionTypeChange(): void {
+    this.resetThreshold();
+  }
   /**
    * Resets the bepipredThreshold to the default value of 0.1512.
    */
   resetThreshold(): void {
-    this.myForm.get("bepipredThreshold")?.setValue(0.1512);
+    const predictionType = this.myForm.get('predictionType')?.value;
+
+    this.myForm.get('bepipredThreshold')?.setValue(
+      predictionType === 'epidope' ? 0.818 : 0.1512
+    );
   }
 
   /**

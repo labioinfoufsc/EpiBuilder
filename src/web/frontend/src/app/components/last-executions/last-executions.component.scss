@@ -43,3 +43,33 @@ i {
   height: 3rem;
   color: white;
 }
+// Sortable table headers. Keep the table style provided by Bootstrap.
+.table-sort-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.25rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.table-sort-button:hover {
+  text-decoration: underline;
+}
+
+.table-sort-button:focus-visible {
+  outline: 2px solid #0f72b9;
+  outline-offset: 2px;
+}
+
+.table-sort-icon {
+  font-size: 0.75rem;
+  opacity: 0.8;
+}

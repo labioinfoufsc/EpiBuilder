@@ -37,6 +37,10 @@ export class LastExecutionsComponent implements OnDestroy {
     'Actions'
   ];
 
+  // Default: newest task first. Keep this selection after refresh/import.
+  sortColumn: string = 'Started At';
+  sortDirection: 'asc' | 'desc' = 'desc';
+
   constructor(
     private epitopeService: EpitopesService,
     private loginService: LoginService,
@@ -78,8 +82,89 @@ export class LastExecutionsComponent implements OnDestroy {
         task.taskStatus?.status === 'FAILED' ||
         task.taskStatus?.status === 'IMPORTED'
       );
-      this.executedTasks = filteredTasks;
+      this.executedTasks = this.sortTasks(filteredTasks);
     });
+  }
+
+
+  // Clicking a header toggles between ascending and descending order.
+  sortBy(column: string): void {
+    if (column === 'Actions') return;
+
+    if (this.sortColumn === column) {
+      this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.sortColumn = column;
+      this.sortDirection = ['Started At', 'Completed At', 'Duration'].includes(column)
+        ? 'desc'
+        : 'asc';
+    }
+
+    this.executedTasks = this.sortTasks(this.executedTasks);
+  }
+
+  getAriaSort(column: string): 'ascending' | 'descending' | 'none' | null {
+    if (column === 'Actions') return null;
+    if (column !== this.sortColumn) return 'none';
+    return this.sortDirection === 'asc' ? 'ascending' : 'descending';
+  }
+
+  private sortTasks(tasks: EpitopeTaskData[]): EpitopeTaskData[] {
+    return [...tasks].sort((a, b) => {
+      const left = this.getSortValue(a);
+      const right = this.getSortValue(b);
+
+      // Missing dates/values are always placed at the end.
+      if (left === null && right === null) return 0;
+      if (left === null) return 1;
+      if (right === null) return -1;
+
+      const comparison = typeof left === 'number' && typeof right === 'number'
+        ? left - right
+        : String(left).localeCompare(String(right), undefined, {
+            sensitivity: 'base', numeric: true
+          });
+
+      return this.sortDirection === 'asc' ? comparison : -comparison;
+    });
+  }
+
+  private getSortValue(task: EpitopeTaskData): string | number | null {
+    switch (this.sortColumn) {
+      case 'Task':
+        return task.runName || null;
+      case 'Started At':
+        return this.getTimestamp(task.executionDate);
+      case 'Completed At':
+        return this.getTimestamp(task.finishedDate);
+      case 'Duration': {
+        const start = this.getTimestamp(task.executionDate);
+        const end = this.getTimestamp(task.finishedDate);
+        return start !== null && end !== null ? end - start : null;
+      }
+      case 'Proteome size':
+        return task.proteomeSize != null && task.proteomeSize > 0
+          ? task.proteomeSize
+          : null;
+      case 'Status': {
+        // Match the label displayed in the Status column.
+        switch (task.taskStatus?.status) {
+          case 'COMPLETED': return 'Finished';
+          case 'FAILED': return 'Failed';
+          case 'IMPORTED': return 'Imported';
+          case 'RUNNING': return 'Running';
+          default: return task.taskStatus?.status ?? null;
+        }
+      }
+      default:
+        return null;
+    }
+  }
+
+  private getTimestamp(date: Date | string | null | undefined): number | null {
+    if (date == null || date === '') return null;
+    const timestamp = new Date(date).getTime();
+    return Number.isNaN(timestamp) ? null : timestamp;
   }
 
   downloadTask(task: EpitopeTaskData): void {

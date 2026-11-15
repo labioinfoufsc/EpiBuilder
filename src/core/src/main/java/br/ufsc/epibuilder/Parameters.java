@@ -46,6 +46,7 @@ public class Parameters {
     public static LocalizationType LOCALIZATION_TYPE = null;
     public static File LOCALIZATION_FILE;
     public static File DESCRIPTION_FILE;
+    public static PredictionType PREDICTION_TYPE = PredictionType.bepipred;
 
     public enum FileType {
         csv, fasta
@@ -55,4 +56,15 @@ public class Parameters {
     }
 
 
+    public enum PredictionType {
+        bepipred ("BepiPred v3.0"), epidope ("Epidope v0.3");
+        private String description;
+        private PredictionType(String description){
+            this.description=description;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+    }
 }

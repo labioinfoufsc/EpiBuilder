@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import br.ufsc.epibuilder.Parameters;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
@@ -152,4 +153,10 @@ public class EpitopeTaskData {
     @Column
     private Integer maxEpitopeLength;
 
+    /**
+     * Epitope prediction method (bepipred or epidope)
+     */
+    @Column
+    @Enumerated(EnumType.STRING)
+    private Parameters.PredictionType predictionType = Parameters.PredictionType.bepipred;
 }

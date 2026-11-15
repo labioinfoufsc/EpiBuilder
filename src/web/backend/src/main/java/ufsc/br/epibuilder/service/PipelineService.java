@@ -22,6 +22,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import br.ufsc.epibuilder.Parameters;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -172,7 +173,8 @@ public class PipelineService {
                 .append("bioinfoufsc/epibuilder-core:latest epibuilder ")
                 .append("--input_file ").append(taskData.getFile().getAbsolutePath()).append(" ")
                 .append("--output ").append(taskData.getCompleteBasename()).append(" ")
-                .append("--task_id ").append(taskData.getId()).append(" ");
+                .append("--task_id ").append(taskData.getId()).append(" ")
+                .append("--pred ").append(taskData.getPredictionType()).append(" ");
 
         addDefaultParameters(taskData);
         addClassificationParameter(taskData, cmd);
@@ -184,7 +186,7 @@ public class PipelineService {
 
     private void addDefaultParameters(EpitopeTaskData taskData) {
         if (ActionType.DEFAULT.toString().equalsIgnoreCase(taskData.getActionType().getDesc())) {
-            taskData.setBepipredThreshold(0.1512);
+            taskData.setBepipredThreshold(taskData.getPredictionType() == Parameters.PredictionType.epidope ? 0.818 : 0.1512);
             taskData.setMinEpitopeLength(10);
             taskData.setMaxEpitopeLength(30);
         }

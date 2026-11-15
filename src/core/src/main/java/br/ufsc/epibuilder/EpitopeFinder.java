@@ -1,6 +1,5 @@
 package br.ufsc.epibuilder;
 
-import br.ufsc.epibuilder.bepipred.BepiPredRunner;
 import br.ufsc.epibuilder.blast.Blast;
 import static br.ufsc.epibuilder.blast.BlastRunner.getBlastResults;
 import br.ufsc.epibuilder.blast.ReportBlastJoiner;
@@ -22,7 +21,7 @@ import java.util.*;
 
 import static br.ufsc.epibuilder.Parameters.*;
 
-import br.ufsc.epibuilder.converter.BepiPred3Converter;
+import br.ufsc.epibuilder.converter.CSVConverter;
 
 import static br.ufsc.epibuilder.entity.SoftwareBcellEnum.CHOU_FOSMAN;
 import static br.ufsc.epibuilder.entity.SoftwareBcellEnum.EMINI;
@@ -38,17 +37,13 @@ import br.ufsc.epibuilder.entity.report.Report;
 import br.ufsc.epibuilder.localization.LocalizationRunner;
 import br.ufsc.epibuilder.proteomics.ProteomicCalculator;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import br.ufsc.epibuilder.util.FastaUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.biojava.nbio.core.exceptions.CompoundNotFoundException;
-import org.biojava.nbio.core.sequence.ProteinSequence;
-import org.biojava.nbio.core.sequence.io.FastaReaderHelper;
 
 /**
  *
@@ -102,9 +97,16 @@ public class EpitopeFinder {
             sout("Process started: ");
             ArrayList<ProteinConverter> proteins = new ArrayList<>();
 
-            sout("Loading BepiPred-3.0 - CSV file");
-            proteins = BepiPred3Converter.getBepipred3FromBiolib(INPUT);
-            sout("BepiPred-3.0 - Done");
+            sout("Loading "+PREDICTION_TYPE+ " - CSV file");
+            if(PREDICTION_TYPE == PredictionType.epidope){
+                proteins = CSVConverter.getProteinFromEpidopeCSV(INPUT);
+            }else{
+                proteins = CSVConverter.getProteinFromCSV(INPUT);
+            }
+            sout("Loading "+PREDICTION_TYPE+ " - Done");
+
+
+
 
             sout("\t Proteins FASTA - done\t");
             String fasta = saveRandomFileName(DESTINATION_FOLDER , "proteins.fasta", generateReportFastaProteins(proteins));

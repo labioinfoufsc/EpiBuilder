@@ -26,7 +26,25 @@
                   <div class="card-header custom-header">
                     <b>Basic Task Information</b>
                   </div>
+                    <!-- Epitope Prediction Method -->
+
                   <div class="card-body p-3">
+                      <div class="mb-3">
+                          <label for="predictionType" class="form-label fw-bold">
+                              Epitope Prediction Method: BepiPred v3.0
+                          </label>
+                          <!--select
+                                  id="predictionType"
+                                  class="form-select"
+                                  formControlName="predictionType">
+                              <option value="bepipred">BepiPred v3.0</option>
+                              <option value="epidope">EpiDope v0.3</option>
+                          </select>
+
+                          <small class="text-muted d-block mt-1">
+                              Select the method used for B-cell epitope prediction.
+                          </small-->
+                      </div>
                     <div class="mb-3">
                       <label for="run-name" class="form-label fw-bold">Your Task Name:</label>
                       <input type="text" formControlName="runName" class="form-control" id="run-name" required />
@@ -161,35 +179,67 @@
                         </div>
 
                         <br>
-                        <label for="bepipredThreshold" class="form-label fw-bold">
-                          BepiPred Threshold (default = 0.1512)
-                        </label>
-                        <small class="text-muted d-block mt-1">
-                          <i style="color: #ffc107 !important" class="fa-solid fa-circle-info"></i>
-                          BepiPred searches for B cell epitopes
-                        </small>
+                          <label for="bepipredThreshold" class="form-label fw-bold">
+                              {{ myForm.get('predictionType')?.value === 'epidope'
+                              ? 'EpiDope Threshold (default = 0.818)'
+                              : 'BepiPred Threshold (default = 0.1512)' }}
+                          </label>
 
-                        <div class="row align-items-center">
-                          <div class="col">
-                            <input type="range" class="form-range" formControlName="bepipredThreshold" min="0.0"
-                              max="1.0" step="0.01" id="bepipredThreshold" (input)="updateThreshold($event)" />
-                            <div class="d-flex justify-content-between mt-1">
-                              <small class="text-muted">0.0</small>
-                              <small class="text-muted">1.0</small>
-                            </div>
-                          </div>
+                          <small class="text-muted d-block mt-1">
+                              <i style="color: #ffc107 !important"
+                                 class="fa-solid fa-circle-info"></i>
+                              {{ myForm.get('predictionType')?.value === 'epidope'
+                              ? 'EpiDope predicts B-cell epitopes.'
+                              : 'BepiPred predicts B-cell epitopes.' }}
+                          </small>
 
-                          <div class="col-auto">
-                            <input type="number" class="form-control w-auto" formControlName="bepipredThreshold"
-                              min="0.0" max="1.0" step="0.01" (input)="syncSlider($event)" />
-                          </div>
+                          <!-- Slider Epitope Threshold -->
+                          <div class="row align-items-center ">
 
-                          <div class="col-auto">
-                            <button class="btn btn-outline-secondary" type="button" (click)="resetThreshold()">
-                              <i class="fa-solid fa-rotate-left" style="color: white !important"></i>
-                            </button>
+                              <!-- Slider -->
+                              <div class="col">
+                                  <input
+                                          type="range"
+                                          class="form-range"
+                                          id="bepipredThreshold"
+                                          min="0"
+                                          max="1"
+                                          step="0.0001"
+                                          [value]="myForm.get('bepipredThreshold')?.value"
+                                          (input)="updateThreshold($event)"
+                                  />
+
+                                  <div class="d-flex justify-content-between mt-1">
+                                      <small class="text-muted">0.0</small>
+                                      <small class="text-muted">1.0</small>
+                                  </div>
+                              </div>
+
+                              <!-- Numeric input -->
+                              <div class="col-auto">
+                                  <input
+                                          style="width: 120px;"
+                                          type="number"
+                                          class="form-control w-auto"
+                                          formControlName="bepipredThreshold"
+                                          min="0"
+                                          max="1"
+                                          step="0.0001"
+                                  />
+                              </div>
+
+                              <!-- Reset button -->
+                              <div class="col-auto">
+                                  <button
+                                          type="button"
+                                          class="btn btn-outline-secondary"
+                                          (click)="resetThreshold()"
+                                          title="Reset threshold"
+                                          aria-label="Reset prediction threshold">
+                                      <i class="fa-solid fa-rotate-left" style="color: white !important"></i>
+                                  </button>
+                              </div>
                           </div>
-                        </div>
                       </div>
 
                       <!-- Slider Min Epitope Length -->
@@ -214,7 +264,7 @@
                           </div>
 
                           <div class="col-auto">
-                            <button class="btn btn-outline-secondary" type="button" (click)="resetMinEpitopeLength()">
+                            <button class="btn btn-outline-secondary" type="button" (click)="resetMinEpitopeLength()" >
                               <i class="fa-solid fa-rotate-left" style="color: white !important"></i>
                             </button>
                           </div>
